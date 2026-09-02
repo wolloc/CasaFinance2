@@ -11,6 +11,7 @@ import { ApiService } from '../../services/api.js';
 import { triggerHaptic } from '../../utils/haptics.js';
 import { IOSBottomSheet } from '../common/IOSBottomSheet.js';
 import { SimplifiedFilterBar } from '../common/SimplifiedFilterBar.js';
+import { EditOccurrenceModal } from './EditOccurrenceModal.js';
 import {
   Search,
   CreditCard,
@@ -28,6 +29,7 @@ import {
   User,
   Users,
   Scale,
+  Pencil,
   Clock,
   XCircle
 } from 'lucide-react';
@@ -46,6 +48,8 @@ export interface UnifiedTimelineItem {
   categoryColor: string;
   categoryId?: string | null;
   paymentMethodId?: string;
+  cardId?: string;
+  accountId?: string;
   paymentMethodName: string;
   cardOrAccountName: string;
   buyerName: string;
@@ -134,6 +138,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
   const [refundReason, setRefundReason] = useState<string>('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPayingOccurrence, setIsPayingOccurrence] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // Fetch occurrences for the current active month
   const loadOccurrences = async (monthStr: string) => {
@@ -201,38 +206,52 @@ export const TransactionsTimeline: React.FC<Props> = ({
       const bill = occ.recurring_bill;
       if (!bill) return;
 
-      const alreadyHasTx = transactions.some(
-        (t) => t.description?.toLowerCase().includes(bill.title.toLowerCase()) && t.transaction_date.startsWith(currentMonth)
+      const billDescription = occ.description || bill.description || occ.title || 'Conta Fixa';
+      const alreadyHasTx = Boolean(occ.paid_transaction_id) || transactions.some(
+        (t) => t.description?.toLowerCase().includes(billDescription.toLowerCase()) && t.transaction_date.startsWith(currentMonth)
       );
 
       if (!alreadyHasTx) {
-        const cat = categories.find((c) => c.id === bill.category_id);
-        const card = cards.find((c) => c.id === bill.default_card_id);
-        const acc = accounts.find((a) => a.id === bill.default_account_id);
-        const pm = paymentMethods.find((p) => p.id === bill.payment_method_id);
+        const categoryId = occ.category_id ?? bill.category_id;
+        const paymentMethodId = occ.payment_method_id ?? bill.payment_method_id;
+        const cardId = occ.card_id ?? bill.card_id;
+        const accountId = occ.account_id ?? bill.account_id;
+        const payerId = occ.payer_user_id ?? bill.payer_user_id;
+        const buyerId = occ.buyer_user_id ?? bill.buyer_user_id;
+        const beneficiaryType = occ.beneficiary_type ?? bill.beneficiary_type ?? 'both';
+        const cat = categories.find((c) => c.id === categoryId);
+        const card = cards.find((c) => c.id === cardId);
+        const acc = accounts.find((a) => a.id === accountId);
+        const pm = paymentMethods.find((p) => p.id === paymentMethodId);
 
         list.push({
           id: occ.id,
           source: 'recurring_bill_occurrence',
           date: occ.due_date,
-          title: bill.title,
-          merchant: bill.title,
+          title: billDescription,
+          merchant: bill.merchant || billDescription,
           amount: occ.amount,
           type: 'expense',
           status: occ.status === 'paid' ? 'completed' : 'pending',
           isRecurring: true,
           categoryName: cat?.name || 'Contas Fixas',
           categoryColor: cat?.color || '#a855f7',
-          categoryId: bill.category_id,
-          paymentMethodId: bill.payment_method_id,
+          categoryId,
+          paymentMethodId,
+          cardId: cardId || undefined,
+          accountId: accountId || undefined,
           paymentMethodName: pm?.name || 'Recorrente',
           cardOrAccountName: card?.name || acc?.name || 'Conta Padrão',
-          buyerName: bill.responsible_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
-          buyerId: bill.responsible_user_id,
-          payerName: bill.responsible_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
-          payerId: bill.responsible_user_id,
-          beneficiaryType: bill.beneficiary_type || 'both',
-          splits: [
+          buyerName: buyerId === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
+          buyerId,
+          payerName: payerId === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
+          payerId,
+          beneficiaryType,
+          splits: beneficiaryType === 'wallace' ? [{
+            userId: 'usr-wallace-001', userName: 'Wallace', percentage: 100, amount: occ.amount
+          }] : beneficiaryType === 'guilherme' ? [{
+            userId: 'usr-guilherme-002', userName: 'Guilherme', percentage: 100, amount: occ.amount
+          }] : [
             {
               userId: 'usr-wallace-001',
               userName: 'Wallace',
@@ -714,6 +733,19 @@ export const TransactionsTimeline: React.FC<Props> = ({
               {selectedItem.source === 'recurring_bill_occurrence' && selectedItem.status === 'pending' && (
                 <button
                   type="button"
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    setIsEditing(true);
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-touch cursor-pointer shadow-md"
+                >
+                  <Pencil className="w-4 h-4" />
+                  <span>Ajustar esta Conta Fixa</span>
+                </button>
+              )}
+              {selectedItem.source === 'recurring_bill_occurrence' && selectedItem.status === 'pending' && (
+                <button
+                  type="button"
                   onClick={() => handlePayOccurrence(selectedItem.id)}
                   disabled={isPayingOccurrence}
                   className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-touch cursor-pointer shadow-md"
@@ -771,6 +803,22 @@ export const TransactionsTimeline: React.FC<Props> = ({
           </div>
         </IOSBottomSheet>
       )}
+
+      <EditOccurrenceModal
+        isOpen={isEditing}
+        onClose={() => setIsEditing(false)}
+        item={selectedItem}
+        householdId={householdId}
+        userId={userId}
+        accounts={accounts}
+        cards={cards}
+        categories={categories}
+        paymentMethods={paymentMethods}
+        onSuccess={async () => {
+          await loadOccurrences(currentMonth);
+          onRefresh();
+        }}
+      />
     </div>
   );
 };

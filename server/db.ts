@@ -2096,6 +2096,7 @@ class DatabaseStore {
       payer_user_id: string;
       beneficiary_type: BeneficiaryType;
       auto_generate?: boolean;
+      projection_months?: number;
       notes?: string;
     }
   ) {
@@ -2127,7 +2128,7 @@ class DatabaseStore {
     this.recurringBills.set(id, bill);
 
     // Automatically generate occurrence for the current month AND projected future months
-    const projectionMonths = Number((data as any).projection_months) || 12;
+    const projectionMonths = Math.min(60, Math.max(1, Number(data.projection_months) || 12));
     const [curYearStr, curMonthStr] = now.substring(0, 7).split('-');
     let curYear = parseInt(curYearStr, 10);
     let curMonth = parseInt(curMonthStr, 10);
@@ -3338,4 +3339,3 @@ class DatabaseStore {
 }
 
 export const db = new DatabaseStore();
-

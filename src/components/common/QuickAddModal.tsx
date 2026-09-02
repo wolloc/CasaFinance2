@@ -74,6 +74,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [customWallacePct, setCustomWallacePct] = useState<number>(50);
   const [installmentsCount, setInstallmentsCount] = useState<number>(1);
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [dueDay, setDueDay] = useState<number>(10);
+  const [projectionMonths, setProjectionMonths] = useState<number>(12);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -89,6 +91,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       setCustomWallacePct(50);
       setInstallmentsCount(1);
       setIsRecurring(false);
+      setDueDay(10);
+      setProjectionMonths(12);
       setPayerUserId(currentUser.id);
       setBuyerUserId(currentUser.id);
       setErrorMessage(null);
@@ -166,6 +170,22 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       }
       setCardId('');
     }
+  };
+
+  const handleToggleRecurring = () => {
+    const nextValue = !isRecurring;
+    triggerHaptic('selection');
+    setIsRecurring(nextValue);
+    if (!nextValue) return;
+
+    setInstallmentsCount(1);
+    const fixaCategory = categories.find(
+      (category) => category.name.toLowerCase() === 'fixa' || category.id === 'cat-fixa'
+    ) || categories.find((category) => category.name.toLowerCase().includes('fixa'));
+    setCategoryId(fixaCategory?.id || 'cat-fixa');
+    setBeneficiaryType('both');
+    setCustomWallacePct(50);
+    handlePaymentMethodChange('pm-pix');
   };
 
   // Apply preset with 1-tap
@@ -254,23 +274,41 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      await ApiService.createTransaction(householdId, currentUser.id, {
-        description: finalDesc,
-        merchant: merchant.trim() || undefined,
-        total_amount: numericAmount,
-        transaction_type: 'expense',
-        payment_method_id: paymentMethodId,
-        account_id: paymentMethodId !== 'pm-credit' ? accountId : null,
-        card_id: paymentMethodId === 'pm-credit' ? cardId : null,
-        category_id: categoryId,
-        buyer_user_id: buyerUserId,
-        payer_user_id: payerUserId,
-        beneficiary_type: beneficiaryType,
-        transaction_date: new Date().toISOString().split('T')[0],
-        installments_count: installmentsCount,
-        is_recurring: isRecurring,
-        splits: getSplits()
-      });
+      if (isRecurring) {
+        await ApiService.createRecurringBill(householdId, currentUser.id, {
+          description: finalDesc,
+          merchant: merchant.trim() || finalDesc,
+          expected_amount: numericAmount,
+          due_day: dueDay,
+          frequency: 'monthly',
+          category_id: categoryId,
+          payment_method_id: paymentMethodId,
+          account_id: paymentMethodId !== 'pm-credit' ? accountId : undefined,
+          card_id: paymentMethodId === 'pm-credit' ? cardId : undefined,
+          buyer_user_id: buyerUserId,
+          payer_user_id: payerUserId,
+          beneficiary_type: beneficiaryType,
+          auto_generate: true,
+          projection_months: projectionMonths
+        });
+      } else {
+        await ApiService.createTransaction(householdId, currentUser.id, {
+          description: finalDesc,
+          merchant: merchant.trim() || undefined,
+          total_amount: numericAmount,
+          transaction_type: 'expense',
+          payment_method_id: paymentMethodId,
+          account_id: paymentMethodId !== 'pm-credit' ? accountId : null,
+          card_id: paymentMethodId === 'pm-credit' ? cardId : null,
+          category_id: categoryId,
+          buyer_user_id: buyerUserId,
+          payer_user_id: payerUserId,
+          beneficiary_type: beneficiaryType,
+          transaction_date: new Date().toISOString().split('T')[0],
+          installments_count: installmentsCount,
+          splits: getSplits()
+        });
+      }
 
       triggerHaptic('success');
       onSuccess();
@@ -284,6 +322,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
+  const displayedCategories = expenseCategories.some((c) => c.name.toLowerCase() === 'fixa' || c.id === 'cat-fixa')
+    ? expenseCategories
+    : [{ id: 'cat-fixa', household_id: householdId, name: 'Fixa', type: 'expense', color: '#8b5cf6', icon: 'repeat', is_system: true, is_active: true } as Category, ...expenseCategories];
 
   return (
     <IOSBottomSheet
@@ -399,7 +440,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               required
             >
               <option value="" disabled>Selecione uma Categoria...</option>
-              {expenseCategories.map((c) => (
+              {displayedCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   🏷️ {c.name}
                 </option>
@@ -594,11 +635,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
           {/* Flag de Conta Fixa / Recorrente */}
           <div
-            onClick={() => {
-              triggerHaptic('selection');
-              setIsRecurring(!isRecurring);
-              if (!isRecurring) setInstallmentsCount(1);
-            }}
+            onClick={handleToggleRecurring}
             className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between mt-2 ${
               isRecurring
                 ? 'bg-purple-950/40 border-purple-500/40 text-white'
@@ -615,7 +652,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-bold text-white block">
-                  Conta Fixa / Recorrente Mensal
+                  Conta Fixa
                 </span>
                 <span className="text-[10px] text-slate-400">
                   {isRecurring
@@ -634,6 +671,37 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               {isRecurring && <span className="text-xs font-black">✓</span>}
             </div>
           </div>
+
+          {isRecurring && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <label className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <span className="text-xs font-bold text-slate-200 block">Dia do Vencimento</span>
+                <span className="text-[10px] text-slate-400 block mb-2">Dia limite de pagamento no mês</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={dueDay}
+                  onChange={(event) => setDueDay(Math.min(31, Math.max(1, Number(event.target.value) || 1)))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs font-bold focus:outline-none focus:border-purple-500"
+                />
+              </label>
+              <label className="p-3 rounded-xl bg-slate-950 border border-purple-500/30">
+                <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" /> Projetar por quantos meses?
+                </span>
+                <span className="text-[10px] text-slate-400 block mb-2">Gera ocorrências futuras na timeline</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={projectionMonths}
+                  onChange={(event) => setProjectionMonths(Math.min(60, Math.max(1, Number(event.target.value) || 1)))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-purple-500/50 text-white text-xs font-bold focus:outline-none focus:border-purple-400"
+                />
+              </label>
+            </div>
+          )}
         </div>
 
         {/* 5. Division / Split Selector (4 Simple Buttons: 50/50, 100% Wallace, 100% Guilherme, Custom) */}
