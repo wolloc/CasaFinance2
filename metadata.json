@@ -1,0 +1,6 @@
+{
+  "name": "Casa Finance",
+  "description": "Sistema financeiro compartilhado e inteligente para gestão da vida financeira individual e conjunta do casal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

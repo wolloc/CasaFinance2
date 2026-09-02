@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* iOS Safe Area Inset Variables & Helpers */
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 12px);
+  }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+  .pl-safe {
+    padding-left: max(env(safe-area-inset-left, 0px), 16px);
+  }
+  .pr-safe {
+    padding-right: max(env(safe-area-inset-right, 0px), 16px);
+  }
+  .min-h-touch {
+    min-height: 44px;
+  }
+  .min-w-touch {
+    min-width: 44px;
+  }
+}
+
+/* Custom Scrollbar and iOS touch manipulation */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbars for smooth horizontal iOS carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
