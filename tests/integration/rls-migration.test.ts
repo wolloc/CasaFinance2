@@ -28,4 +28,12 @@ describe('contrato de RLS Supabase', () => {
     assert.match(sql, /members_insert[\s\S]+is_household_owner\(household_id\)/i);
     assert.doesNotMatch(sql, /create policy .*households for insert/is);
   });
+
+  it('valida e normaliza o fuso horario antes de persistir a casa', async () => {
+    const sql = await readFile(new URL('../../supabase/migrations/202609030005_validate_bootstrap_timezone.sql', import.meta.url), 'utf8');
+    assert.match(sql, /from pg_catalog\.pg_timezone_names/i);
+    assert.match(sql, /where name = trim\(household_timezone\)/i);
+    assert.match(sql, /values \(trim\(household_name\), household_currency, trim\(household_timezone\)\)/i);
+    assert.match(sql, /revoke all on function public\.bootstrap_household\(text, char, text\) from public, anon/i);
+  });
 });

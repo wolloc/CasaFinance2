@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -27,6 +27,11 @@ select id, 'first' from public.bootstrap_household('Casa Teste A');
 select is((select count(*) from public.households), 1::bigint, 'first household is visible to its creator');
 select is((select role::text from public.household_members where profile_id = auth.uid()), 'owner', 'creator is associated as owner');
 select ok(public.is_active_household_member((select id from test_households where label = 'first')), 'Wallace can access the first household');
+select throws_ok(
+  $$select public.bootstrap_household('Casa Invalida', 'BRL', 'Not/A_Timezone')$$,
+  '22023', 'timezone must be a valid IANA time zone', 'bootstrap rejects an invalid time zone'
+);
+select is((select count(*) from public.households), 1::bigint, 'invalid bootstrap leaves no orphan household');
 
 insert into public.household_members (household_id, profile_id, role)
 values ((select id from test_households where label = 'first'), '10000000-0000-4000-8000-000000000002', 'member');
