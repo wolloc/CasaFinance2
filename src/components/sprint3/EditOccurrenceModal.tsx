@@ -199,7 +199,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       title={item?.isRecurring ? 'Ajustar Conta Fixa deste Mês' : 'Editar Lançamento'}
       subtitle={
         item?.isRecurring
-          ? 'Atualize o valor real, meio de pagamento ou responsável desta ocorrência'
+          ? 'Atualize o valor real, meio de pagamento, comprador ou divisão desta ocorrência'
           : 'Edite os valores e divisões contábeis'
       }
     >
@@ -376,20 +376,22 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           </div>
         </div>
 
-        {/* 5. RESPONSÁVEL POR PAGAR */}
+        {/* 5. COMPRADOR: quem iniciou/gerou a despesa */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-            Quem Paga
+            Comprador
           </label>
+          <span className="text-[10px] text-slate-500 block">Quem iniciou ou gerou esta despesa</span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('selection');
-                setPayerUserId('usr-wallace-001');
+                setBuyerUserId('usr-wallace-001');
               }}
+              aria-pressed={buyerUserId === 'usr-wallace-001'}
               className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
-                payerUserId === 'usr-wallace-001'
+                buyerUserId === 'usr-wallace-001'
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
               }`}
@@ -401,10 +403,11 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
               type="button"
               onClick={() => {
                 triggerHaptic('selection');
-                setPayerUserId('usr-guilherme-002');
+                setBuyerUserId('usr-guilherme-002');
               }}
+              aria-pressed={buyerUserId === 'usr-guilherme-002'}
               className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
-                payerUserId === 'usr-guilherme-002'
+                buyerUserId === 'usr-guilherme-002'
                   ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
               }`}
