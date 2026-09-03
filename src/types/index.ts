@@ -1,4 +1,6 @@
-export type AccountType = 'checking' | 'savings' | 'cash' | 'meal_benefit' | 'digital_wallet' | 'other';
+export * from './database';
+
+export type AccountType = 'checking' | 'savings' | 'cash' | 'investment' | 'meal_benefit' | 'digital_wallet' | 'other';
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'invoice_payment' | 'adjustment';
 export type BeneficiaryType = 'wallace' | 'guilherme' | 'both' | 'custom';
 export type InvoiceStatus = 'open' | 'closed' | 'paid' | 'overdue';
@@ -519,4 +521,3 @@ export interface MerchantCategoryRule {
   created_at: string;
   updated_at: string;
 }
-
