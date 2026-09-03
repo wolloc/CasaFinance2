@@ -19,8 +19,9 @@ financeiras comuns.
    `auth.users`.
 2. O cliente autenticado chama somente
    `rpc('bootstrap_household', { household_name: 'Minha casa' })`.
-3. A funcao valida `auth.uid()`, cria a casa e associa o chamador como `owner` na
-   mesma transacao. Se qualquer etapa falhar, nada e persistido.
+3. A funcao valida `auth.uid()`, o nome, o codigo de moeda e o fuso IANA, cria a
+   casa e associa o chamador como `owner` na mesma transacao. Se qualquer etapa
+   falhar, nada e persistido.
 4. Nao existe politica de `INSERT` direto em `households`. Isso impede casas
    orfas e resolve o bootstrap sem abrir uma excecao RLS generica.
 
@@ -51,7 +52,7 @@ garante que os dados do teste nunca sejam seeds.
 
 1. Instale a Supabase CLI e autentique-se fora do frontend.
 2. Na raiz do repositorio, associe o projeto: `supabase link --project-ref REF`.
-3. Confira o plano com `supabase db diff --linked` e revise os quatro arquivos em
+3. Confira o plano com `supabase db diff --linked` e revise os cinco arquivos em
    `supabase/migrations`.
 4. Aplique em ordem com `supabase db push --linked`.
 5. Em ambiente local descartavel, valide com `supabase start` e
