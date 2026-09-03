@@ -175,14 +175,25 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const handleToggleRecurring = () => {
     const nextValue = !isRecurring;
     triggerHaptic('selection');
-    setIsRecurring(nextValue);
-    if (!nextValue) return;
 
-    setInstallmentsCount(1);
+    if (!nextValue) {
+      setIsRecurring(false);
+      return;
+    }
+
     const fixaCategory = categories.find(
       (category) => category.name.toLowerCase() === 'fixa' || category.id === 'cat-fixa'
     ) || categories.find((category) => category.name.toLowerCase().includes('fixa'));
-    setCategoryId(fixaCategory?.id || 'cat-fixa');
+
+    if (!fixaCategory) {
+      setErrorMessage('Cadastre ou ative a categoria "Fixa" antes de criar uma conta fixa.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsRecurring(true);
+    setInstallmentsCount(1);
+    setCategoryId(fixaCategory.id);
     setBeneficiaryType('both');
     setCustomWallacePct(50);
     handlePaymentMethodChange('pm-pix');
@@ -288,6 +299,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           buyer_user_id: buyerUserId,
           payer_user_id: payerUserId,
           beneficiary_type: beneficiaryType,
+          wallace_percentage: beneficiaryType === 'custom' ? customWallacePct : undefined,
           auto_generate: true,
           projection_months: projectionMonths
         });
@@ -322,9 +334,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
-  const displayedCategories = expenseCategories.some((c) => c.name.toLowerCase() === 'fixa' || c.id === 'cat-fixa')
-    ? expenseCategories
-    : [{ id: 'cat-fixa', household_id: householdId, name: 'Fixa', type: 'expense', color: '#8b5cf6', icon: 'repeat', is_system: true, is_active: true } as Category, ...expenseCategories];
+  const displayedCategories = expenseCategories;
 
   return (
     <IOSBottomSheet
