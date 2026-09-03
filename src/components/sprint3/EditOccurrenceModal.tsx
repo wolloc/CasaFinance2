@@ -128,6 +128,21 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       return;
     }
 
+    if (!categoryId) {
+      setError('Selecione uma categoria.');
+      return;
+    }
+
+    if (paymentMethodId === 'pm-credit' && !cardId) {
+      setError('Selecione o cartão de crédito utilizado.');
+      return;
+    }
+
+    if (paymentMethodId !== 'pm-credit' && !accountId) {
+      setError('Selecione a conta ou carteira utilizada.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
@@ -139,8 +154,8 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           description: description.trim() || item.title,
           due_date: date,
           payment_method_id: paymentMethodId,
-          account_id: paymentMethodId !== 'pm-credit' ? accountId : undefined,
-          card_id: paymentMethodId === 'pm-credit' ? cardId : undefined,
+          account_id: paymentMethodId !== 'pm-credit' ? accountId : null,
+          card_id: paymentMethodId === 'pm-credit' ? cardId : null,
           payer_user_id: payerUserId,
           buyer_user_id: buyerUserId,
           beneficiary_type: beneficiaryType,
