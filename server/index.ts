@@ -3,6 +3,8 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { db } from './db.js';
 import { processReceiptImageOcr, processInvoicePdf } from './geminiOcr.js';
+import crypto from 'crypto';
+import type { InvoiceParsedItem } from '../src/types/index.js';
 
 const app = express();
 const PORT = 3000;
@@ -734,10 +736,16 @@ app.post('/api/households/:householdId/ocr/receipt', requireHouseholdAccess, asy
     const { userId } = getSecurityContext(req);
     const { base64_image, mime_type, file_name } = req.body;
 
-    if (!base64_image) {
+    if (typeof base64_image !== 'string' || !base64_image) {
       res.status(400).json({ error: 'Imagem base64 é obrigatória para processar o OCR.' });
       return;
     }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime_type || 'image/jpeg') || Buffer.byteLength(base64_image, 'base64') > 10 * 1024 * 1024) {
+      res.status(415).json({ error: 'Use uma imagem JPG, PNG ou WEBP de até 10 MB.' }); return;
+    }
+    const fingerprint = crypto.createHash('sha256').update(Buffer.from(base64_image, 'base64')).digest('hex');
+    const duplicate = db.findDocumentImportByFingerprint(householdId, fingerprint);
+    if (duplicate) { res.status(409).json({ error: 'Este documento já foi enviado.', duplicate_import_id: duplicate.id }); return; }
 
     // Salvar registro de importação
     const docImport = db.saveDocumentImport({
@@ -745,13 +753,14 @@ app.post('/api/households/:householdId/ocr/receipt', requireHouseholdAccess, asy
       uploaded_by: userId,
       document_type: 'RECEIPT',
       file_url: file_name || 'receipt_capture.jpg',
-      status: 'PROCESSING'
+      status: 'PROCESSING', document_fingerprint: fingerprint
     });
 
     const ocrResult = await processReceiptImageOcr(householdId, base64_image, mime_type || 'image/jpeg');
+    ocrResult.document_fingerprint = fingerprint;
 
     db.updateDocumentImport(docImport.id, {
-      status: 'SUCCESS',
+      status: 'AWAITING_REVIEW',
       raw_ocr_response: ocrResult
     });
 
@@ -760,11 +769,11 @@ app.post('/api/households/:householdId/ocr/receipt', requireHouseholdAccess, asy
       import_id: docImport.id,
       data: ocrResult
     });
-  } catch (error: any) {
-    console.error('Erro na rota OCR de recibos:', error);
+  } catch (error: unknown) {
+    console.error('Receipt OCR request failed', { error: error instanceof Error ? error.name : 'UnknownError' });
     res.status(500).json({
       error: 'Falha ao processar o OCR do comprovante via IA.',
-      details: error.message
+      details: 'Revise o formato do arquivo e tente novamente.'
     });
   }
 });
@@ -776,25 +785,32 @@ app.post('/api/households/:householdId/ocr/invoice-pdf', requireHouseholdAccess,
     const { userId } = getSecurityContext(req);
     const { base64_pdf, raw_text, card_id, file_name } = req.body;
 
-    if (!base64_pdf && !raw_text) {
+    if ((!base64_pdf || typeof base64_pdf !== 'string') && (!raw_text || typeof raw_text !== 'string')) {
       res.status(400).json({ error: 'Conteúdo do arquivo PDF (base64 ou texto extraído) é obrigatório.' });
       return;
     }
+    const payload = (base64_pdf || raw_text) as string;
+    if (base64_pdf && Buffer.byteLength(base64_pdf, 'base64') > 10 * 1024 * 1024) {
+      res.status(413).json({ error: 'A fatura deve ter no máximo 10 MB.' }); return;
+    }
+    const fingerprint = crypto.createHash('sha256').update(base64_pdf ? Buffer.from(base64_pdf, 'base64') : payload).digest('hex');
+    const duplicate = db.findDocumentImportByFingerprint(householdId, fingerprint);
+    if (duplicate) { res.status(409).json({ error: 'Esta fatura já foi enviada.', duplicate_import_id: duplicate.id }); return; }
 
     const docImport = db.saveDocumentImport({
       household_id: householdId,
       uploaded_by: userId,
       document_type: 'INVOICE',
       file_url: file_name || 'fatura_cartao.pdf',
-      status: 'PROCESSING'
+      status: 'PROCESSING', document_fingerprint: fingerprint
     });
 
     const isBase64 = Boolean(base64_pdf);
-    const payload = base64_pdf || raw_text;
     const invoiceResult = await processInvoicePdf(householdId, payload, isBase64, card_id);
+    invoiceResult.document_fingerprint = fingerprint;
 
     db.updateDocumentImport(docImport.id, {
-      status: 'SUCCESS',
+      status: 'AWAITING_REVIEW',
       raw_ocr_response: invoiceResult
     });
 
@@ -803,12 +819,54 @@ app.post('/api/households/:householdId/ocr/invoice-pdf', requireHouseholdAccess,
       import_id: docImport.id,
       data: invoiceResult
     });
-  } catch (error: any) {
-    console.error('Erro na rota de importação de fatura PDF:', error);
+  } catch (error: unknown) {
+    console.error('Invoice OCR request failed', { error: error instanceof Error ? error.name : 'UnknownError' });
     res.status(500).json({
       error: 'Falha ao processar a fatura em PDF via IA.',
-      details: error.message
+      details: 'Revise o formato do arquivo e tente novamente.'
     });
+  }
+});
+
+// A IA apenas sugere. Somente esta confirmação explícita cria despesas.
+app.post('/api/households/:householdId/ocr/imports/:importId/confirm', requireHouseholdAccess, (req: Request, res: Response) => {
+  try {
+    const { householdId, importId } = req.params;
+    const { userId } = getSecurityContext(req);
+    const doc = db.documentImports.get(importId);
+    if (!doc || doc.household_id !== householdId) { res.status(404).json({ error: 'Importação não encontrada.' }); return; }
+    if (doc.status !== 'AWAITING_REVIEW' || !doc.raw_ocr_response) { res.status(409).json({ error: 'Importação indisponível para confirmação.' }); return; }
+    const submitted = Array.isArray(req.body?.items) ? req.body.items as InvoiceParsedItem[] : [];
+    if (!req.body?.confirmed || !submitted.length) { res.status(400).json({ error: 'A revisão e a confirmação explícita são obrigatórias.' }); return; }
+    const originalById = new Map(doc.raw_ocr_response.items.map((item) => [item.id, item]));
+    const seen = new Set<string>();
+    const items = submitted.filter((item) => {
+      const original = originalById.get(item.id);
+      if (!original || seen.has(item.id) || original.reconciliation_status === 'ALREADY_REGISTERED') return false;
+      seen.add(item.id);
+      return item.selected && Number.isFinite(item.amount) && item.amount > 0;
+    });
+    if (!items.length) { res.status(400).json({ error: 'Selecione ao menos um item válido e não duplicado.' }); return; }
+    const members = Array.from(db.householdMembers.values()).filter((member) => member.household_id === householdId && member.is_active).slice(0, 2);
+    const created = items.map((item) => {
+      const cardId = doc.raw_ocr_response?.suggested_card_id;
+      const accountId = doc.raw_ocr_response?.suggested_account_id;
+      const credit = Boolean(cardId);
+      return db.createTransaction(householdId, userId, {
+        description: item.description, merchant: item.description, total_amount: item.amount,
+        transaction_type: 'expense', payment_method_id: credit ? 'pm-credit' : (doc.raw_ocr_response?.payment_method_detected === 'PIX' ? 'pm-pix' : 'pm-debit'),
+        card_id: credit ? cardId : null, account_id: credit ? null : accountId,
+        category_id: item.suggested_category_id, buyer_user_id: userId, payer_user_id: userId,
+        beneficiary_type: members.length === 2 ? 'both' : 'custom', transaction_date: item.transaction_date,
+        competence_month: doc.raw_ocr_response?.invoice_competence || item.transaction_date?.slice(0, 7), status: 'completed',
+        notes: `Importado após revisão humana (${importId})${item.installment_info && item.installment_info.total_installments > 1 ? ` · parcela ${item.installment_info.current_installment}/${item.installment_info.total_installments}` : ''}`,
+        splits: members.map((member) => ({ responsible_user_id: member.user_id, percentage: 100 / members.length, amount: item.amount / members.length }))
+      });
+    });
+    db.updateDocumentImport(importId, { status: 'CONFIRMED', confirmed_at: new Date().toISOString(), confirmed_by: userId, created_transaction_ids: created.map((item) => item.id) });
+    res.status(201).json({ success: true, transaction_ids: created.map((item) => item.id) });
+  } catch (error: unknown) {
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Não foi possível confirmar a importação.' });
   }
 });
 

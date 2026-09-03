@@ -37,7 +37,8 @@ import type {
   ProtectedFund,
   ReserveDrainage,
   MoneyMovement,
-  CreateMoneyMovementInput
+  CreateMoneyMovementInput,
+  StandardizedOcrResponse
 } from '../src/types/index.js';
 import { validateMoneyMovement } from '../src/domain/moneyMovements.js';
 
@@ -3525,8 +3526,9 @@ class DatabaseStore {
     uploaded_by: string;
     document_type: 'RECEIPT' | 'INVOICE';
     file_url?: string;
-    status: 'PROCESSING' | 'SUCCESS' | 'FAILED';
-    raw_ocr_response?: any;
+    status: 'PROCESSING' | 'AWAITING_REVIEW' | 'CONFIRMED' | 'FAILED';
+    raw_ocr_response?: StandardizedOcrResponse;
+    document_fingerprint: string;
   }): DocumentImport {
     const id = uuidv4();
     const doc: DocumentImport = {
@@ -3537,6 +3539,7 @@ class DatabaseStore {
       document_type: data.document_type,
       status: data.status,
       raw_ocr_response: data.raw_ocr_response,
+      document_fingerprint: data.document_fingerprint,
       created_at: new Date().toISOString()
     };
     this.documentImports.set(id, doc);
@@ -3555,6 +3558,12 @@ class DatabaseStore {
     return Array.from(this.documentImports.values())
       .filter((d) => d.household_id === householdId)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+
+  public findDocumentImportByFingerprint(householdId: string, fingerprint: string): DocumentImport | undefined {
+    return Array.from(this.documentImports.values()).find((item) =>
+      item.household_id === householdId && item.document_fingerprint === fingerprint && item.status !== 'FAILED'
+    );
   }
 
   // ==========================================================================

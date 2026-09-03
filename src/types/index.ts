@@ -542,6 +542,7 @@ export type DocumentType = 'RECEIPT' | 'INVOICE';
 export type PaymentMethodDetected = 'PORTO' | 'INFINITY' | 'MULTIPLO' | 'ITI' | 'PIX' | 'DEBIT' | 'UNKNOWN';
 
 export interface InvoiceParsedItem {
+  id: string;
   description: string;
   amount: number;
   transaction_date?: string;
@@ -555,6 +556,9 @@ export interface InvoiceParsedItem {
   matched_transaction_id?: string;
   match_confidence?: number;
   match_reason?: string;
+  needs_review: boolean;
+  review_reasons: string[];
+  selected: boolean;
 }
 
 export interface StandardizedOcrResponse {
@@ -570,6 +574,11 @@ export interface StandardizedOcrResponse {
   confidence_score?: number;
   items: InvoiceParsedItem[];
   raw_text?: string;
+  invoice_competence?: string;
+  invoice_due_date?: string;
+  document_fingerprint: string;
+  document_duplicate: boolean;
+  requires_user_review: true;
 }
 
 export interface DocumentImport {
@@ -578,7 +587,11 @@ export interface DocumentImport {
   uploaded_by: string;
   file_url?: string;
   document_type: DocumentType;
-  status: 'PROCESSING' | 'SUCCESS' | 'FAILED';
+  status: 'PROCESSING' | 'AWAITING_REVIEW' | 'CONFIRMED' | 'FAILED';
+  document_fingerprint: string;
+  confirmed_at?: string;
+  confirmed_by?: string;
+  created_transaction_ids?: string[];
   raw_ocr_response?: StandardizedOcrResponse;
   created_at: string;
 }
