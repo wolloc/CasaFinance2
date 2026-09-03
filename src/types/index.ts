@@ -2,6 +2,46 @@ export * from './database';
 
 export type AccountType = 'checking' | 'savings' | 'cash' | 'investment' | 'meal_benefit' | 'digital_wallet' | 'other';
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'invoice_payment' | 'adjustment';
+export type MoneyMovementType = 'income' | 'transfer' | 'investment_deposit' | 'investment_withdrawal' | 'invoice_payment' | 'loan_disbursement';
+export type MoneyMovementStatus = 'projected' | 'realized';
+
+export interface LoanInstallmentProjection {
+  number: number;
+  due_date: string;
+  amount: number;
+  status: 'projected' | 'paid';
+}
+
+export interface MoneyMovement {
+  id: string;
+  household_id: string;
+  created_by_user_id: string;
+  type: MoneyMovementType;
+  amount: number;
+  description: string;
+  beneficiary_user_id?: string | null;
+  source_account_id?: string | null;
+  destination_account_id?: string | null;
+  category_id?: string | null;
+  card_id?: string | null;
+  invoice_reference?: string | null;
+  competence_month: string;
+  movement_date: string;
+  status: MoneyMovementStatus;
+  notes?: string;
+  effective_funder_user_id?: string | null;
+  loan?: {
+    lender: string;
+    installment_count: number;
+    first_due_date: string;
+    installments: LoanInstallmentProjection[];
+  } | null;
+  created_at: string;
+}
+
+export interface CreateMoneyMovementInput extends Omit<MoneyMovement, 'id' | 'household_id' | 'created_by_user_id' | 'created_at' | 'effective_funder_user_id' | 'loan'> {
+  loan?: { lender: string; installment_count: number; first_due_date: string } | null;
+}
 export type BeneficiaryType = 'wallace' | 'guilherme' | 'both' | 'custom';
 export type InvoiceStatus = 'open' | 'closed' | 'paid' | 'overdue';
 export type InstallmentStatus = 'scheduled' | 'billed' | 'paid' | 'cancelled';

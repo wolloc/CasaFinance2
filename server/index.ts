@@ -276,6 +276,19 @@ app.get('/api/households/:householdId/transactions', requireHouseholdAccess, (re
   res.json({ transactions });
 });
 
+app.get('/api/households/:householdId/money-movements', requireHouseholdAccess, (req, res) => {
+  res.json({ movements: db.getMoneyMovements(req.params.householdId) });
+});
+
+app.post('/api/households/:householdId/money-movements', requireHouseholdAccess, (req, res) => {
+  try {
+    const { userId } = getSecurityContext(req);
+    res.status(201).json({ movement: db.createMoneyMovement(req.params.householdId, userId, req.body) });
+  } catch (error: unknown) {
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Erro ao registrar movimentação.' });
+  }
+});
+
 app.post('/api/households/:householdId/transactions', requireHouseholdAccess, (req, res) => {
   try {
     const { householdId } = req.params;
