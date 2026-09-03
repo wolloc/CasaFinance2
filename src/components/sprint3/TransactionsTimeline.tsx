@@ -207,9 +207,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
       if (!bill) return;
 
       const billDescription = occ.description || bill.description || occ.title || 'Conta Fixa';
-      const alreadyHasTx = Boolean(occ.paid_transaction_id) || transactions.some(
-        (t) => t.description?.toLowerCase().includes(billDescription.toLowerCase()) && t.transaction_date.startsWith(currentMonth)
-      );
+      // A ocorrência só deixa a projeção quando está vinculada à transação que a quitou.
+      // Comparar descrições pode esconder contas distintas com nomes semelhantes.
+      const alreadyHasTx = Boolean(occ.paid_transaction_id);
 
       if (!alreadyHasTx) {
         const categoryId = occ.category_id ?? bill.category_id;
@@ -223,6 +223,8 @@ export const TransactionsTimeline: React.FC<Props> = ({
         const card = cards.find((c) => c.id === cardId);
         const acc = accounts.find((a) => a.id === accountId);
         const pm = paymentMethods.find((p) => p.id === paymentMethodId);
+        const wallaceAmount = Number((occ.amount / 2).toFixed(2));
+        const guilhermeAmount = Number((occ.amount - wallaceAmount).toFixed(2));
 
         list.push({
           id: occ.id,
@@ -256,13 +258,13 @@ export const TransactionsTimeline: React.FC<Props> = ({
               userId: 'usr-wallace-001',
               userName: 'Wallace',
               percentage: 50,
-              amount: occ.amount / 2
+              amount: wallaceAmount
             },
             {
               userId: 'usr-guilherme-002',
               userName: 'Guilherme',
               percentage: 50,
-              amount: occ.amount / 2
+              amount: guilhermeAmount
             }
           ],
           rawOccurrence: occ
