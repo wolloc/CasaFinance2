@@ -34,8 +34,11 @@ import type {
   DocumentImport,
   MerchantCategoryRule,
   ProtectedFund,
-  ReserveDrainage
+  ReserveDrainage,
+  MoneyMovement,
+  CreateMoneyMovementInput
 } from '../src/types/index.js';
+import { validateMoneyMovement } from '../src/domain/moneyMovements.js';
 
 // Database in-memory store with relational integrity and RLS controls
 class DatabaseStore {
@@ -48,6 +51,7 @@ class DatabaseStore {
   public categories: Map<string, Category> = new Map();
   public protectedFunds: Map<string, ProtectedFund> = new Map();
   public reserveDrainages: Map<string, ReserveDrainage> = new Map();
+  public moneyMovements: Map<string, MoneyMovement> = new Map();
   public transactions: Map<string, Transaction> = new Map();
   public transactionSplits: Map<string, TransactionSplit> = new Map();
   public installmentPlans: Map<string, InstallmentPlan> = new Map();
@@ -376,6 +380,44 @@ class DatabaseStore {
 
     // Add Audit Log
     this.addAuditLog(mainHousehold.id, wallace.id, 'INSERT', 'households', mainHousehold.id, null, mainHousehold as unknown as Record<string, unknown>, 'Wallace');
+  }
+
+  public getMoneyMovements(householdId: string): MoneyMovement[] {
+    return Array.from(this.moneyMovements.values())
+      .filter((movement) => movement.household_id === householdId)
+      .sort((a, b) => b.movement_date.localeCompare(a.movement_date));
+  }
+
+  public createMoneyMovement(householdId: string, userId: string, input: CreateMoneyMovementInput): MoneyMovement {
+    const accounts = Array.from(this.accounts.values()).filter((account) => account.household_id === householdId);
+    validateMoneyMovement(input, accounts);
+    const source = input.source_account_id ? this.accounts.get(input.source_account_id) : undefined;
+    const destination = input.destination_account_id ? this.accounts.get(input.destination_account_id) : undefined;
+    const realized = input.status === 'realized';
+    const now = new Date().toISOString();
+    const installments = input.loan ? Array.from({ length: input.loan.installment_count }, (_, index) => {
+      const due = new Date(`${input.loan!.first_due_date}T12:00:00`);
+      due.setUTCMonth(due.getUTCMonth() + index);
+      const baseCents = Math.floor(Math.round(input.amount * 100) / input.loan!.installment_count);
+      const residue = index === 0 ? Math.round(input.amount * 100) - baseCents * input.loan!.installment_count : 0;
+      return { number: index + 1, due_date: due.toISOString().slice(0, 10), amount: (baseCents + residue) / 100, status: 'projected' as const };
+    }) : undefined;
+    const movement: MoneyMovement = {
+      ...input,
+      id: uuidv4(), household_id: householdId, created_by_user_id: userId, created_at: now,
+      effective_funder_user_id: input.type === 'invoice_payment' ? source?.owner_user_id ?? null : null,
+      loan: input.loan && installments ? { ...input.loan, installments } : null
+    };
+
+    if (realized) {
+      if (source) source.current_balance = Number((source.current_balance - input.amount).toFixed(2));
+      if (destination) destination.current_balance = Number((destination.current_balance + input.amount).toFixed(2));
+      if (source) source.updated_at = now;
+      if (destination) destination.updated_at = now;
+    }
+    this.moneyMovements.set(movement.id, movement);
+    this.addAuditLog(householdId, userId, 'INSERT', 'money_movements', movement.id, null, movement as unknown as Record<string, unknown>);
+    return movement;
   }
 
   private seedInitialRecurringBills(householdId: string, wallaceId: string, guilhermeId: string, now: string) {

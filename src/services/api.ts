@@ -15,7 +15,9 @@ import type {
   DashboardFullResponse,
   MonthlyCommitmentProjection,
   ProtectedFund,
-  ReserveDrainage
+  ReserveDrainage,
+  MoneyMovement,
+  CreateMoneyMovementInput
 } from '../types';
 
 export interface LoginResponse {
@@ -38,6 +40,13 @@ export interface SecuritySuiteResult {
 }
 
 export class ApiService {
+  public static async getMoneyMovements(householdId: string, userId: string): Promise<{ movements: MoneyMovement[] }> {
+    return this.safeFetchJson(`/api/households/${householdId}/money-movements`, { headers: this.getHeaders(userId, householdId) }, { movements: [] });
+  }
+
+  public static async createMoneyMovement(householdId: string, userId: string, data: CreateMoneyMovementInput): Promise<{ movement: MoneyMovement }> {
+    return this.safeFetchJson(`/api/households/${householdId}/money-movements`, { method: 'POST', headers: this.getHeaders(userId, householdId), body: JSON.stringify(data) });
+  }
   private static getHeaders(userId?: string, householdId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

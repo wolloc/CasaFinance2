@@ -166,6 +166,7 @@ const AppContent: React.FC = () => {
                   householdId={activeHousehold.id}
                   currentUser={currentUser}
                   accounts={accounts}
+                  cards={cards}
                   categories={categories}
                   transactions={transactions}
                   paymentMethods={paymentMethods}

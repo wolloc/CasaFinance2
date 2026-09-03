@@ -1,11 +1,12 @@
 import React from 'react';
 import { Entradas } from './Entradas.js';
-import type { Account, Category, PaymentMethod, Transaction, User } from '../../types/index.js';
+import type { Account, Card, Category, PaymentMethod, Transaction, User } from '../../types/index.js';
 
 export interface IncomeManagerProps {
   householdId: string;
   currentUser: User;
   accounts: Account[];
+  cards: Card[];
   categories: Category[];
   transactions: Transaction[];
   paymentMethods: PaymentMethod[];
