@@ -9,7 +9,7 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "APP_ENV=test tsx --test src/domain/*.test.ts server/**/*.test.ts tests/integration/*.test.ts",
+    "test": "APP_ENV=test tsx --test src/**/*.test.ts server/**/*.test.ts tests/integration/*.test.ts",
     "test:unit": "APP_ENV=test tsx --test src/domain/*.test.ts server/config/*.test.ts server/observability/*.test.ts",
     "test:integration": "APP_ENV=test tsx --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
