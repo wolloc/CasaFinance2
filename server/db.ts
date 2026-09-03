@@ -2095,6 +2095,7 @@ class DatabaseStore {
       buyer_user_id: string;
       payer_user_id: string;
       beneficiary_type: BeneficiaryType;
+      wallace_percentage?: number;
       auto_generate?: boolean;
       projection_months?: number;
       notes?: string;
@@ -2118,6 +2119,10 @@ class DatabaseStore {
       account_id: data.account_id || null,
       card_id: data.card_id || null,
       beneficiary_type: data.beneficiary_type || 'both',
+      wallace_percentage:
+        data.beneficiary_type === 'custom'
+          ? Math.min(100, Math.max(0, Number(data.wallace_percentage) || 50))
+          : undefined,
       is_active: true,
       auto_generate: data.auto_generate !== false,
       notes: data.notes,
@@ -2232,6 +2237,7 @@ class DatabaseStore {
           payer_user_id: bill.payer_user_id,
           buyer_user_id: bill.buyer_user_id,
           beneficiary_type: bill.beneficiary_type,
+          wallace_percentage: bill.wallace_percentage,
           category_id: bill.category_id,
           description: bill.description,
           created_at: now
@@ -2306,6 +2312,9 @@ class DatabaseStore {
     if (data.payer_user_id !== undefined) occ.payer_user_id = data.payer_user_id;
     if (data.buyer_user_id !== undefined) occ.buyer_user_id = data.buyer_user_id;
     if (data.beneficiary_type !== undefined) occ.beneficiary_type = data.beneficiary_type;
+    if (data.wallace_percentage !== undefined) {
+      occ.wallace_percentage = Math.min(100, Math.max(0, Number(data.wallace_percentage) || 50));
+    }
     if (data.description !== undefined) occ.description = data.description;
     if (data.category_id !== undefined) occ.category_id = data.category_id;
 
@@ -2361,6 +2370,10 @@ class DatabaseStore {
     const finalBuyer = occ.buyer_user_id || bill?.buyer_user_id || userId;
     const finalPayer = occ.payer_user_id || bill?.payer_user_id || userId;
     const finalBeneficiary = occ.beneficiary_type || bill?.beneficiary_type || 'both';
+    const finalWallacePercentage = Math.min(
+      100,
+      Math.max(0, Number(occ.wallace_percentage ?? bill?.wallace_percentage) || 50)
+    );
     const finalCategoryId = occ.category_id !== undefined ? occ.category_id : bill?.category_id;
     const finalDescription = occ.description || bill?.description || 'Conta Fixa';
 
@@ -2409,6 +2422,27 @@ class DatabaseStore {
         responsible_user_id: guilhermeId,
         percentage: 50,
         amount: Number((finalAmount - half).toFixed(2)),
+        created_at: now
+      });
+    } else if (finalBeneficiary === 'custom') {
+      const totalCents = Math.round(finalAmount * 100);
+      const wallaceCents = Math.round((totalCents * finalWallacePercentage) / 100);
+      const guilhermeCents = totalCents - wallaceCents;
+
+      this.transactionSplits.set(`${txId}-w`, {
+        id: `${txId}-w`,
+        transaction_id: txId,
+        responsible_user_id: wallaceId,
+        percentage: finalWallacePercentage,
+        amount: wallaceCents / 100,
+        created_at: now
+      });
+      this.transactionSplits.set(`${txId}-g`, {
+        id: `${txId}-g`,
+        transaction_id: txId,
+        responsible_user_id: guilhermeId,
+        percentage: 100 - finalWallacePercentage,
+        amount: guilhermeCents / 100,
         created_at: now
       });
     } else {
