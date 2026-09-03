@@ -36,4 +36,16 @@ describe('contrato de RLS Supabase', () => {
     assert.match(sql, /values \(trim\(household_name\), household_currency, trim\(household_timezone\)\)/i);
     assert.match(sql, /revoke all on function public\.bootstrap_household\(text, char, text\) from public, anon/i);
   });
+
+  it('restringe o bootstrap aos fusos compativeis com Intl.DateTimeFormat', async () => {
+    const sql = await readFile(new URL('../../supabase/migrations/202609030006_require_intl_timezone.sql', import.meta.url), 'utf8');
+    assert.match(sql, /security definer/i);
+    assert.match(sql, /set search_path = public, pg_temp/i);
+    assert.match(sql, /trim\(household_timezone\) not in \('America\/Sao_Paulo'\)/i);
+    assert.doesNotMatch(sql, /pg_timezone_names/i);
+    assert.match(sql, /insert into public\.households[\s\S]+insert into public\.household_members/i);
+    assert.match(sql, /revoke all on function public\.bootstrap_household\(text, char, text\) from public, anon/i);
+    assert.match(sql, /grant execute on function public\.bootstrap_household\(text, char, text\) to authenticated/i);
+  });
+
 });

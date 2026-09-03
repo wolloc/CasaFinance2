@@ -52,7 +52,7 @@ garante que os dados do teste nunca sejam seeds.
 
 1. Instale a Supabase CLI e autentique-se fora do frontend.
 2. Na raiz do repositorio, associe o projeto: `supabase link --project-ref REF`.
-3. Confira o plano com `supabase db diff --linked` e revise os cinco arquivos em
+3. Confira o plano com `supabase db diff --linked` e revise os seis arquivos em
    `supabase/migrations`.
 4. Aplique em ordem com `supabase db push --linked`.
 5. Em ambiente local descartavel, valide com `supabase start` e
