@@ -2101,18 +2101,60 @@ class DatabaseStore {
       notes?: string;
     }
   ) {
+    const description = data.description?.trim();
+    const expectedAmount = Number(data.expected_amount);
+    const dueDay = Math.trunc(Number(data.due_day));
+    const buyerUserId = data.buyer_user_id || userId;
+    const payerUserId = data.payer_user_id || userId;
+    const validBeneficiaryTypes: BeneficiaryType[] = ['both', 'wallace', 'guilherme', 'custom'];
+
+    if (!description) throw new Error('Descrição da conta fixa é obrigatória');
+    if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
+      throw new Error('Valor da conta fixa deve ser maior que zero');
+    }
+    if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
+      throw new Error('Dia de vencimento deve estar entre 1 e 31');
+    }
+    if (!this.paymentMethods.has(data.payment_method_id)) {
+      throw new Error('Meio de pagamento inválido');
+    }
+    if (!this.hasHouseholdAccess(buyerUserId, householdId) || !this.hasHouseholdAccess(payerUserId, householdId)) {
+      throw new Error('Comprador e pagador devem pertencer à casa');
+    }
+    if (data.category_id) {
+      const category = this.categories.get(data.category_id);
+      if (!category || category.household_id !== householdId || !category.is_active) {
+        throw new Error('Categoria inválida para esta casa');
+      }
+    }
+    if (data.account_id) {
+      const account = this.accounts.get(data.account_id);
+      if (!account || account.household_id !== householdId || !account.is_active) {
+        throw new Error('Conta inválida para esta casa');
+      }
+    }
+    if (data.card_id) {
+      const card = this.cards.get(data.card_id);
+      if (!card || card.household_id !== householdId || !card.is_active) {
+        throw new Error('Cartão inválido para esta casa');
+      }
+    }
+    if (!validBeneficiaryTypes.includes(data.beneficiary_type)) {
+      throw new Error('Divisão de responsabilidade inválida');
+    }
+
     const now = new Date().toISOString();
     const id = uuidv4();
     const bill: RecurringBill = {
       id,
       household_id: householdId,
       created_by_user_id: userId,
-      buyer_user_id: data.buyer_user_id || userId,
-      payer_user_id: data.payer_user_id || userId,
-      description: data.description,
+      buyer_user_id: buyerUserId,
+      payer_user_id: payerUserId,
+      description,
       merchant: data.merchant,
-      expected_amount: Number(data.expected_amount),
-      due_day: Number(data.due_day),
+      expected_amount: expectedAmount,
+      due_day: dueDay,
       frequency: data.frequency || 'monthly',
       category_id: data.category_id || null,
       payment_method_id: data.payment_method_id,
@@ -2137,7 +2179,13 @@ class DatabaseStore {
     const projectionMonths = Number.isFinite(requestedProjectionMonths)
       ? Math.min(60, Math.max(1, Math.trunc(requestedProjectionMonths)))
       : 12;
-    const [curYearStr, curMonthStr] = now.substring(0, 7).split('-');
+    const householdTimeZone = this.households.get(householdId)?.timezone || 'America/Sao_Paulo';
+    const currentCompetence = new Intl.DateTimeFormat('en-CA', {
+      timeZone: householdTimeZone,
+      year: 'numeric',
+      month: '2-digit'
+    }).format(new Date());
+    const [curYearStr, curMonthStr] = currentCompetence.split('-');
     let curYear = parseInt(curYearStr, 10);
     let curMonth = parseInt(curMonthStr, 10);
 
