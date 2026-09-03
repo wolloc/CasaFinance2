@@ -13,6 +13,9 @@ import { HomeDashboard } from './components/dashboard/HomeDashboard.js';
 import { DraggableFloatingActions } from './components/common/DraggableFloatingActions.js';
 import { triggerHaptic } from './utils/haptics.js';
 import { PwaUpdateNotice } from './components/common/PwaUpdateNotice.js';
+import { SupabaseAuthProvider, useSupabaseAuth } from './context/SupabaseAuthContext.js';
+import { AuthScreen } from './components/auth/AuthScreen.js';
+import { PendingHouseholdScreen } from './components/auth/PendingHouseholdScreen.js';
 import {
   LayoutDashboard,
   Receipt,
@@ -336,10 +339,24 @@ const AppContent: React.FC = () => {
   );
 };
 
+function AuthenticatedAppBoundary() {
+  const { user, isLoading } = useSupabaseAuth();
+
+  if (isLoading) {
+    return <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-sm font-semibold text-slate-300">Recuperando sessão segura…</div>;
+  }
+
+  if (!user) return <AuthScreen />;
+
+  // Deliberately do not mount the legacy AuthProvider here. It initializes the
+  // in-memory demo identity, which must never be confused with a Supabase user.
+  return <PendingHouseholdScreen />;
+}
+
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SupabaseAuthProvider>
+      <AuthenticatedAppBoundary />
+    </SupabaseAuthProvider>
   );
 }
