@@ -1,3 +1,5 @@
+import { processLedger, type FinancialResource, type LedgerEvent } from './ledger.js';
+
 /**
  * Regras financeiras puras do Casa Finance.
  *
@@ -107,46 +109,33 @@ export function splitInstallments(total: number, count: number): number[] {
  * resultado. Uma compra no cartão afeta despesa e fatura, nunca a conta.
  */
 export function calculateFinancialPosition(input: FinancialPositionInput): FinancialPosition {
-  const accounts = new Map(Object.entries(input.accountBalances).map(([id, value]) => [id, toCents(value)]));
-  const invoices = new Map(Object.entries(input.invoiceBalances ?? {}).map(([id, value]) => [id, toCents(value)]));
-  let income = 0;
-  let expenses = 0;
-
-  const change = (balances: Map<string, number>, id: string, delta: number): void => {
-    balances.set(id, (balances.get(id) ?? 0) + delta);
-  };
-
-  for (const entry of input.entries) {
-    if (entry.status !== 'effective') continue;
-    const amount = assertPositiveAmount(entry.amount);
-
+  const resources = new Map<string, FinancialResource>();
+  Object.keys(input.accountBalances).forEach((id) => resources.set(id, { id, kind: 'account' }));
+  Object.keys(input.invoiceBalances ?? {}).forEach((id) => resources.set(id, { id, kind: 'credit_card' }));
+  const ledgerEvents: LedgerEvent[] = input.entries.map((entry) => {
+    const common = { id: entry.id, amount: entry.amount, status: entry.status === 'effective' ? 'realized' as const : 'projected' as const, competenceMonth: 'legacy' };
     switch (entry.type) {
-      case 'income':
-        change(accounts, entry.accountId, amount);
-        income += amount;
-        break;
-      case 'expense':
-        change(accounts, entry.accountId, -amount);
-        expenses += amount;
-        break;
+      case 'income': resources.set(entry.accountId, resources.get(entry.accountId) ?? { id: entry.accountId, kind: 'account' }); return { ...common, type: 'income', destinationResourceId: entry.accountId };
+      case 'expense': resources.set(entry.accountId, resources.get(entry.accountId) ?? { id: entry.accountId, kind: 'account' }); return { ...common, type: 'expense', sourceResourceId: entry.accountId };
       case 'transfer':
-        change(accounts, entry.sourceAccountId, -amount);
-        change(accounts, entry.destinationAccountId, amount);
-        break;
-      case 'card_purchase':
-        change(invoices, entry.cardId, amount);
-        expenses += amount;
-        break;
-      case 'invoice_payment': {
-        const outstanding = invoices.get(entry.cardId) ?? 0;
-        if (amount > outstanding) throw new Error('Pagamento maior que a obrigação do cartão.');
-        change(accounts, entry.sourceAccountId, -amount);
-        change(invoices, entry.cardId, -amount);
-        break;
-      }
+        resources.set(entry.sourceAccountId, resources.get(entry.sourceAccountId) ?? { id: entry.sourceAccountId, kind: 'account' });
+        resources.set(entry.destinationAccountId, resources.get(entry.destinationAccountId) ?? { id: entry.destinationAccountId, kind: 'account' });
+        return { ...common, type: 'transfer', sourceResourceId: entry.sourceAccountId, destinationResourceId: entry.destinationAccountId };
+      case 'card_purchase': resources.set(entry.cardId, resources.get(entry.cardId) ?? { id: entry.cardId, kind: 'credit_card' }); return { ...common, type: 'expense', sourceResourceId: entry.cardId };
+      case 'invoice_payment':
+        resources.set(entry.sourceAccountId, resources.get(entry.sourceAccountId) ?? { id: entry.sourceAccountId, kind: 'account' });
+        resources.set(entry.cardId, resources.get(entry.cardId) ?? { id: entry.cardId, kind: 'credit_card' });
+        return { ...common, type: 'credit_card_payment', sourceResourceId: entry.sourceAccountId, cardResourceId: entry.cardId };
     }
+  });
+  const ledger = processLedger([...resources.values()], ledgerEvents);
+  const accounts = new Map(Object.entries(input.accountBalances).map(([id, value]) => [id, toCents(value) + toCents(ledger.realizedBalances[id] ?? 0)]));
+  const invoices = new Map(Object.entries(input.invoiceBalances ?? {}).map(([id, value]) => [id, toCents(value) + toCents(ledger.realizedBalances[id] ?? 0)]));
+  for (const [id, delta] of Object.entries(ledger.realizedBalances)) {
+    const target = resources.get(id)?.kind === 'credit_card' ? invoices : accounts;
+    if (!target.has(id)) target.set(id, toCents(delta));
   }
-
+  for (const balance of invoices.values()) if (balance < 0) throw new Error('Pagamento maior que a obrigação do cartão.');
   const bankAssets = [...accounts.values()].reduce((sum, value) => sum + value, 0);
   const cardLiabilities = [...invoices.values()].reduce((sum, value) => sum + value, 0);
 
@@ -156,9 +145,9 @@ export function calculateFinancialPosition(input: FinancialPositionInput): Finan
     bankAssets: fromCents(bankAssets),
     cardLiabilities: fromCents(cardLiabilities),
     netWorth: fromCents(bankAssets - cardLiabilities),
-    income: fromCents(income),
-    expenses: fromCents(expenses),
-    result: fromCents(income - expenses)
+    income: ledger.realizedIncome,
+    expenses: ledger.realizedExpenses,
+    result: ledger.realizedResult
   };
 }
 
