@@ -5,9 +5,12 @@ import { db } from './db.js';
 import { processReceiptImageOcr, processInvoicePdf } from './geminiOcr.js';
 import crypto from 'crypto';
 import type { InvoiceParsedItem } from '../src/types/index.js';
+import { loadConfig } from './config/env.js';
+import { globalErrorHandler } from './http/errors.js';
+import { log } from './observability/logger.js';
 
-const app = express();
-const PORT = 3000;
+export const app = express();
+const config = loadConfig();
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
@@ -49,8 +52,15 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     app: 'Casa Finance',
-    version: '1.0.0-sprint1',
-    timestamp: new Date().toISOString()
+    environment: config.environment,
+    version: config.commitSha,
+    timestamp: new Date().toISOString(),
+    checks: {
+      api: 'ok',
+      persistence: config.databaseUrl ? 'configured' : 'in_memory',
+      supabase: config.supabaseUrl ? 'configured' : 'not_configured',
+      gemini: config.geminiApiKey ? 'configured' : 'not_configured'
+    }
   });
 });
 
@@ -1017,19 +1027,7 @@ app.all('/api/*', (req: Request, res: Response) => {
   });
 });
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  if (req.path.startsWith('/api')) {
-    console.error('[API Server Error]:', err);
-    res.status(err.status || 500).json({
-      success: false,
-      data: [],
-      error: err.message || 'Erro interno no servidor',
-      message: 'Sem dados para o período'
-    });
-    return;
-  }
-  next(err);
-});
+app.use(globalErrorHandler);
 
 // Vite Middleware & Static Serving Setup
 async function startServer() {
@@ -1047,9 +1045,9 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(config.port, '0.0.0.0', () => {
+    log('info', 'server_started', { port: config.port, environment: config.environment, version: config.commitSha });
   });
 }
 
-startServer();
+if (config.environment !== 'test') void startServer();
