@@ -2180,12 +2180,13 @@ class DatabaseStore {
       ? Math.min(60, Math.max(1, Math.trunc(requestedProjectionMonths)))
       : 12;
     const householdTimeZone = this.households.get(householdId)?.timezone || 'America/Sao_Paulo';
-    const currentCompetence = new Intl.DateTimeFormat('en-CA', {
+    const competenceParts = new Intl.DateTimeFormat('en-US', {
       timeZone: householdTimeZone,
       year: 'numeric',
       month: '2-digit'
-    }).format(new Date());
-    const [curYearStr, curMonthStr] = currentCompetence.split('-');
+    }).formatToParts(new Date());
+    const curYearStr = competenceParts.find((part) => part.type === 'year')?.value || String(new Date().getUTCFullYear());
+    const curMonthStr = competenceParts.find((part) => part.type === 'month')?.value || String(new Date().getUTCMonth() + 1);
     let curYear = parseInt(curYearStr, 10);
     let curMonth = parseInt(curMonthStr, 10);
 
