@@ -145,7 +145,8 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
     onCategoryChange(e.target.value);
   };
 
-  const activeCategoryObj = categories.find((c) => c.id === selectedCategory);
+  const expenseCategories = categories.filter((c) => c.type === 'expense' && c.is_active !== false);
+  const activeCategoryObj = expenseCategories.find((c) => c.id === selectedCategory);
 
   const hasActiveFilters =
     selectedResponsible !== 'all' ||
@@ -248,12 +249,12 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
         )}
       </div>
 
-      {/* 2. FILTROS RÁPIDOS PRINCIPAIS: Responsável (Todos, Wallace, Guilherme) + Categoria + Contas Fixas */}
+      {/* 2. FILTROS RÁPIDOS PRINCIPAIS: Comprador (Todos, Wallace, Guilherme) + Categoria + Contas Fixas */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5">
-        {/* Responsável: Todos, Wallace, Guilherme */}
+        {/* Comprador: Todos, Wallace, Guilherme */}
         <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-2xl border border-slate-800/80 text-xs font-bold w-full sm:w-auto">
           <span className="text-[10px] text-slate-500 uppercase tracking-wider pl-1.5 pr-0.5 hidden xs:inline">
-            Resp:
+            Comprador:
           </span>
 
           <button
@@ -361,7 +362,7 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
                 <option value="all" className="bg-slate-900 text-white">
                   Todas as Categorias
                 </option>
-                {categories.map((cat) => (
+                {expenseCategories.map((cat) => (
                   <option key={cat.id} value={cat.id} className="bg-slate-900 text-white">
                     {cat.name}
                   </option>

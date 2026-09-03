@@ -286,6 +286,7 @@ export interface RecurringBill {
   account_id?: string | null;
   card_id?: string | null;
   beneficiary_type: BeneficiaryType;
+  wallace_percentage?: number;
   is_active: boolean;
   auto_generate: boolean;
   notes?: string;
@@ -311,6 +312,7 @@ export interface BillOccurrence {
   payer_user_id?: string;
   buyer_user_id?: string;
   beneficiary_type?: BeneficiaryType;
+  wallace_percentage?: number;
   description?: string;
   category_id?: string | null;
   recurring_bill?: RecurringBill;

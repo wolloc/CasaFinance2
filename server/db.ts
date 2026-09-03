@@ -2095,28 +2095,76 @@ class DatabaseStore {
       buyer_user_id: string;
       payer_user_id: string;
       beneficiary_type: BeneficiaryType;
+      wallace_percentage?: number;
       auto_generate?: boolean;
+      projection_months?: number;
       notes?: string;
     }
   ) {
+    const description = data.description?.trim();
+    const expectedAmount = Number(data.expected_amount);
+    const dueDay = Math.trunc(Number(data.due_day));
+    const buyerUserId = data.buyer_user_id || userId;
+    const payerUserId = data.payer_user_id || userId;
+    const validBeneficiaryTypes: BeneficiaryType[] = ['both', 'wallace', 'guilherme', 'custom'];
+
+    if (!description) throw new Error('Descrição da conta fixa é obrigatória');
+    if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
+      throw new Error('Valor da conta fixa deve ser maior que zero');
+    }
+    if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
+      throw new Error('Dia de vencimento deve estar entre 1 e 31');
+    }
+    if (!this.paymentMethods.has(data.payment_method_id)) {
+      throw new Error('Meio de pagamento inválido');
+    }
+    if (!this.hasHouseholdAccess(buyerUserId, householdId) || !this.hasHouseholdAccess(payerUserId, householdId)) {
+      throw new Error('Comprador e pagador devem pertencer à casa');
+    }
+    if (data.category_id) {
+      const category = this.categories.get(data.category_id);
+      if (!category || category.household_id !== householdId || !category.is_active) {
+        throw new Error('Categoria inválida para esta casa');
+      }
+    }
+    if (data.account_id) {
+      const account = this.accounts.get(data.account_id);
+      if (!account || account.household_id !== householdId || !account.is_active) {
+        throw new Error('Conta inválida para esta casa');
+      }
+    }
+    if (data.card_id) {
+      const card = this.cards.get(data.card_id);
+      if (!card || card.household_id !== householdId || !card.is_active) {
+        throw new Error('Cartão inválido para esta casa');
+      }
+    }
+    if (!validBeneficiaryTypes.includes(data.beneficiary_type)) {
+      throw new Error('Divisão de responsabilidade inválida');
+    }
+
     const now = new Date().toISOString();
     const id = uuidv4();
     const bill: RecurringBill = {
       id,
       household_id: householdId,
       created_by_user_id: userId,
-      buyer_user_id: data.buyer_user_id || userId,
-      payer_user_id: data.payer_user_id || userId,
-      description: data.description,
+      buyer_user_id: buyerUserId,
+      payer_user_id: payerUserId,
+      description,
       merchant: data.merchant,
-      expected_amount: Number(data.expected_amount),
-      due_day: Number(data.due_day),
+      expected_amount: expectedAmount,
+      due_day: dueDay,
       frequency: data.frequency || 'monthly',
       category_id: data.category_id || null,
       payment_method_id: data.payment_method_id,
       account_id: data.account_id || null,
       card_id: data.card_id || null,
       beneficiary_type: data.beneficiary_type || 'both',
+      wallace_percentage:
+        data.beneficiary_type === 'custom'
+          ? Math.min(100, Math.max(0, Number(data.wallace_percentage) || 50))
+          : undefined,
       is_active: true,
       auto_generate: data.auto_generate !== false,
       notes: data.notes,
@@ -2127,8 +2175,18 @@ class DatabaseStore {
     this.recurringBills.set(id, bill);
 
     // Automatically generate occurrence for the current month AND projected future months
-    const projectionMonths = Number((data as any).projection_months) || 12;
-    const [curYearStr, curMonthStr] = now.substring(0, 7).split('-');
+    const requestedProjectionMonths = Number(data.projection_months);
+    const projectionMonths = Number.isFinite(requestedProjectionMonths)
+      ? Math.min(60, Math.max(1, Math.trunc(requestedProjectionMonths)))
+      : 12;
+    const householdTimeZone = this.households.get(householdId)?.timezone || 'America/Sao_Paulo';
+    const competenceParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: householdTimeZone,
+      year: 'numeric',
+      month: '2-digit'
+    }).formatToParts(new Date());
+    const curYearStr = competenceParts.find((part) => part.type === 'year')?.value || String(new Date().getUTCFullYear());
+    const curMonthStr = competenceParts.find((part) => part.type === 'month')?.value || String(new Date().getUTCMonth() + 1);
     let curYear = parseInt(curYearStr, 10);
     let curMonth = parseInt(curMonthStr, 10);
 
@@ -2140,7 +2198,7 @@ class DatabaseStore {
         y += 1;
       }
       const monthKey = `${y}-${String(m).padStart(2, '0')}`;
-      this.generateOccurrencesForMonth(householdId, monthKey);
+      this.generateOccurrencesForMonth(householdId, monthKey, id);
     }
 
     const user = this.users.get(userId);
@@ -2186,7 +2244,7 @@ class DatabaseStore {
     return { success: true };
   }
 
-  public generateOccurrencesForMonth(householdId: string, monthYear: string) {
+  public generateOccurrencesForMonth(householdId: string, monthYear: string, recurringBillId?: string) {
     const now = new Date().toISOString();
     const [yearStr, monthStr] = monthYear.split('-');
     const year = parseInt(yearStr, 10);
@@ -2194,7 +2252,11 @@ class DatabaseStore {
 
     let createdCount = 0;
     const bills = Array.from(this.recurringBills.values()).filter(
-      (b) => b.household_id === householdId && b.is_active && b.auto_generate
+      (b) =>
+        b.household_id === householdId &&
+        b.is_active &&
+        b.auto_generate &&
+        (!recurringBillId || b.id === recurringBillId)
     );
 
     for (const bill of bills) {
@@ -2224,6 +2286,7 @@ class DatabaseStore {
           payer_user_id: bill.payer_user_id,
           buyer_user_id: bill.buyer_user_id,
           beneficiary_type: bill.beneficiary_type,
+          wallace_percentage: bill.wallace_percentage,
           category_id: bill.category_id,
           description: bill.description,
           created_at: now
@@ -2298,6 +2361,9 @@ class DatabaseStore {
     if (data.payer_user_id !== undefined) occ.payer_user_id = data.payer_user_id;
     if (data.buyer_user_id !== undefined) occ.buyer_user_id = data.buyer_user_id;
     if (data.beneficiary_type !== undefined) occ.beneficiary_type = data.beneficiary_type;
+    if (data.wallace_percentage !== undefined) {
+      occ.wallace_percentage = Math.min(100, Math.max(0, Number(data.wallace_percentage) || 50));
+    }
     if (data.description !== undefined) occ.description = data.description;
     if (data.category_id !== undefined) occ.category_id = data.category_id;
 
@@ -2339,6 +2405,10 @@ class DatabaseStore {
       throw new Error('Ocorrência não encontrada');
     }
 
+    if (occ.status === 'paid' || occ.paid_transaction_id) {
+      throw new Error('Esta ocorrência já foi paga');
+    }
+
     const bill = this.recurringBills.get(occ.recurring_bill_id);
     const now = new Date().toISOString();
 
@@ -2349,6 +2419,10 @@ class DatabaseStore {
     const finalBuyer = occ.buyer_user_id || bill?.buyer_user_id || userId;
     const finalPayer = occ.payer_user_id || bill?.payer_user_id || userId;
     const finalBeneficiary = occ.beneficiary_type || bill?.beneficiary_type || 'both';
+    const finalWallacePercentage = Math.min(
+      100,
+      Math.max(0, Number(occ.wallace_percentage ?? bill?.wallace_percentage) || 50)
+    );
     const finalCategoryId = occ.category_id !== undefined ? occ.category_id : bill?.category_id;
     const finalDescription = occ.description || bill?.description || 'Conta Fixa';
 
@@ -2399,6 +2473,27 @@ class DatabaseStore {
         amount: Number((finalAmount - half).toFixed(2)),
         created_at: now
       });
+    } else if (finalBeneficiary === 'custom') {
+      const totalCents = Math.round(finalAmount * 100);
+      const wallaceCents = Math.round((totalCents * finalWallacePercentage) / 100);
+      const guilhermeCents = totalCents - wallaceCents;
+
+      this.transactionSplits.set(`${txId}-w`, {
+        id: `${txId}-w`,
+        transaction_id: txId,
+        responsible_user_id: wallaceId,
+        percentage: finalWallacePercentage,
+        amount: wallaceCents / 100,
+        created_at: now
+      });
+      this.transactionSplits.set(`${txId}-g`, {
+        id: `${txId}-g`,
+        transaction_id: txId,
+        responsible_user_id: guilhermeId,
+        percentage: 100 - finalWallacePercentage,
+        amount: guilhermeCents / 100,
+        created_at: now
+      });
     } else {
       const respId = finalBeneficiary === 'guilherme' ? guilhermeId : wallaceId;
       this.transactionSplits.set(`${txId}-resp`, {
@@ -2417,8 +2512,8 @@ class DatabaseStore {
     occ.paid_at = now;
 
     // Deduct account balance if paid from debit/pix/cash
-    if (bill?.account_id) {
-      const acc = this.accounts.get(bill.account_id);
+    if (finalAccountId) {
+      const acc = this.accounts.get(finalAccountId);
       if (acc) {
         acc.current_balance = Number((acc.current_balance - occ.amount).toFixed(2));
         acc.updated_at = now;
@@ -3338,4 +3433,3 @@ class DatabaseStore {
 }
 
 export const db = new DatabaseStore();
-

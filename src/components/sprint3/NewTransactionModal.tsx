@@ -630,6 +630,48 @@ export const NewTransactionModal: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Comprador: quem iniciou/gerou a despesa, independente do pagador e da divisão */}
+          <div className="space-y-1.5 pt-1">
+            <div>
+              <label className="text-[10px] text-slate-400 block font-medium">Comprador</label>
+              <span className="text-[10px] text-slate-500">Quem iniciou ou gerou esta despesa</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setBuyerUserId('usr-wallace-001');
+                }}
+                aria-pressed={buyerUserId === 'usr-wallace-001'}
+                className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
+                  buyerUserId === 'usr-wallace-001'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>Wallace</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setBuyerUserId('usr-guilherme-002');
+                }}
+                aria-pressed={buyerUserId === 'usr-guilherme-002'}
+                className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
+                  buyerUserId === 'usr-guilherme-002'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>Guilherme</span>
+              </button>
+            </div>
+          </div>
+
           {/* Módulo de Parcelamento (1x a 24x) para Cartão de Crédito e Compras Parceladas */}
           {paymentMethodId === 'pm-credit' && !isRecurring && (
             <div className="p-3.5 bg-slate-950/90 rounded-2xl border border-blue-500/30 space-y-2.5">

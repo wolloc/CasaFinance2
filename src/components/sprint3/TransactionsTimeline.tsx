@@ -11,6 +11,7 @@ import { ApiService } from '../../services/api.js';
 import { triggerHaptic } from '../../utils/haptics.js';
 import { IOSBottomSheet } from '../common/IOSBottomSheet.js';
 import { SimplifiedFilterBar } from '../common/SimplifiedFilterBar.js';
+import { EditOccurrenceModal } from './EditOccurrenceModal.js';
 import {
   Search,
   CreditCard,
@@ -28,6 +29,7 @@ import {
   User,
   Users,
   Scale,
+  Pencil,
   Clock,
   XCircle
 } from 'lucide-react';
@@ -46,6 +48,8 @@ export interface UnifiedTimelineItem {
   categoryColor: string;
   categoryId?: string | null;
   paymentMethodId?: string;
+  cardId?: string;
+  accountId?: string;
   paymentMethodName: string;
   cardOrAccountName: string;
   buyerName: string;
@@ -53,6 +57,7 @@ export interface UnifiedTimelineItem {
   payerName: string;
   payerId: string;
   beneficiaryType: BeneficiaryType;
+  wallacePercentage?: number;
   splits: Array<{
     userId: string;
     userName: string;
@@ -134,6 +139,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
   const [refundReason, setRefundReason] = useState<string>('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPayingOccurrence, setIsPayingOccurrence] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // Fetch occurrences for the current active month
   const loadOccurrences = async (monthStr: string) => {
@@ -201,49 +207,72 @@ export const TransactionsTimeline: React.FC<Props> = ({
       const bill = occ.recurring_bill;
       if (!bill) return;
 
-      const alreadyHasTx = transactions.some(
-        (t) => t.description?.toLowerCase().includes(bill.title.toLowerCase()) && t.transaction_date.startsWith(currentMonth)
-      );
+      const billDescription = occ.description || bill.description || occ.title || 'Conta Fixa';
+      // A ocorrência só deixa a projeção quando está vinculada à transação que a quitou.
+      // Comparar descrições pode esconder contas distintas com nomes semelhantes.
+      const alreadyHasTx = Boolean(occ.paid_transaction_id);
 
       if (!alreadyHasTx) {
-        const cat = categories.find((c) => c.id === bill.category_id);
-        const card = cards.find((c) => c.id === bill.default_card_id);
-        const acc = accounts.find((a) => a.id === bill.default_account_id);
-        const pm = paymentMethods.find((p) => p.id === bill.payment_method_id);
+        const categoryId = occ.category_id ?? bill.category_id;
+        const paymentMethodId = occ.payment_method_id ?? bill.payment_method_id;
+        const cardId = occ.card_id ?? bill.card_id;
+        const accountId = occ.account_id ?? bill.account_id;
+        const payerId = occ.payer_user_id ?? bill.payer_user_id;
+        const buyerId = occ.buyer_user_id ?? bill.buyer_user_id;
+        const beneficiaryType = occ.beneficiary_type ?? bill.beneficiary_type ?? 'both';
+        const cat = categories.find((c) => c.id === categoryId);
+        const card = cards.find((c) => c.id === cardId);
+        const acc = accounts.find((a) => a.id === accountId);
+        const pm = paymentMethods.find((p) => p.id === paymentMethodId);
+        const wallacePercentage =
+          beneficiaryType === 'custom'
+            ? Math.min(100, Math.max(0, Number(occ.wallace_percentage ?? bill.wallace_percentage) || 50))
+            : 50;
+        const totalCents = Math.round(occ.amount * 100);
+        const wallaceCents = Math.round((totalCents * wallacePercentage) / 100);
+        const wallaceAmount = wallaceCents / 100;
+        const guilhermeAmount = (totalCents - wallaceCents) / 100;
 
         list.push({
           id: occ.id,
           source: 'recurring_bill_occurrence',
           date: occ.due_date,
-          title: bill.title,
-          merchant: bill.title,
+          title: billDescription,
+          merchant: bill.merchant || billDescription,
           amount: occ.amount,
           type: 'expense',
           status: occ.status === 'paid' ? 'completed' : 'pending',
           isRecurring: true,
           categoryName: cat?.name || 'Contas Fixas',
           categoryColor: cat?.color || '#a855f7',
-          categoryId: bill.category_id,
-          paymentMethodId: bill.payment_method_id,
+          categoryId,
+          paymentMethodId,
+          cardId: cardId || undefined,
+          accountId: accountId || undefined,
           paymentMethodName: pm?.name || 'Recorrente',
           cardOrAccountName: card?.name || acc?.name || 'Conta Padrão',
-          buyerName: bill.responsible_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
-          buyerId: bill.responsible_user_id,
-          payerName: bill.responsible_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
-          payerId: bill.responsible_user_id,
-          beneficiaryType: bill.beneficiary_type || 'both',
-          splits: [
+          buyerName: buyerId === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
+          buyerId,
+          payerName: payerId === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
+          payerId,
+          beneficiaryType,
+          wallacePercentage,
+          splits: beneficiaryType === 'wallace' ? [{
+            userId: 'usr-wallace-001', userName: 'Wallace', percentage: 100, amount: occ.amount
+          }] : beneficiaryType === 'guilherme' ? [{
+            userId: 'usr-guilherme-002', userName: 'Guilherme', percentage: 100, amount: occ.amount
+          }] : [
             {
               userId: 'usr-wallace-001',
               userName: 'Wallace',
-              percentage: 50,
-              amount: occ.amount / 2
+              percentage: beneficiaryType === 'custom' ? wallacePercentage : 50,
+              amount: wallaceAmount
             },
             {
               userId: 'usr-guilherme-002',
               userName: 'Guilherme',
-              percentage: 50,
-              amount: occ.amount / 2
+              percentage: beneficiaryType === 'custom' ? 100 - wallacePercentage : 50,
+              amount: guilhermeAmount
             }
           ],
           rawOccurrence: occ
@@ -274,22 +303,10 @@ export const TransactionsTimeline: React.FC<Props> = ({
         }
       }
 
-      // 3. Quick Filter: Responsável ("Todos", "Wallace", "Guilherme")
-      if (currentResponsible === 'wallace') {
-        const isWallaceInvolved =
-          item.beneficiaryType === 'wallace' ||
-          item.buyerId === 'usr-wallace-001' ||
-          item.payerId === 'usr-wallace-001' ||
-          item.splits.some((s) => s.userId === 'usr-wallace-001' && s.percentage > 0);
-        if (!isWallaceInvolved) return false;
-      } else if (currentResponsible === 'guilherme') {
-        const isGuiInvolved =
-          item.beneficiaryType === 'guilherme' ||
-          item.buyerId === 'usr-guilherme-002' ||
-          item.payerId === 'usr-guilherme-002' ||
-          item.splits.some((s) => s.userId === 'usr-guilherme-002' && s.percentage > 0);
-        if (!isGuiInvolved) return false;
-      }
+      // 3. Filtro de Comprador: considera exclusivamente quem iniciou/gerou a despesa.
+      // Pagador e divisão de responsabilidade permanecem conceitos independentes.
+      if (currentResponsible === 'wallace' && item.buyerId !== 'usr-wallace-001') return false;
+      if (currentResponsible === 'guilherme' && item.buyerId !== 'usr-guilherme-002') return false;
 
       // 4. Quick Filter: Categoria
       if (currentCategory !== 'all') {
@@ -506,7 +523,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
             <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
               {searchTerm || currentResponsible !== 'all' || currentCategory !== 'all'
                 ? 'Nenhum resultado corresponde aos filtros ativos.'
-                : 'Toque em "+ Novo" para cadastrar uma despesa ou receita.'}
+                : 'Toque em "+ Nova despesa" para cadastrar uma saída.'}
             </p>
           </div>
         ) : (
@@ -589,7 +606,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Linha Inferior: BADGES CONTEXTUAIS (Fixa, Status de Pagamento, Responsável) */}
+                {/* Linha Inferior: recorrência, status, comprador e divisão de responsabilidade */}
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1.5 flex-wrap">
                   {/* Badges de Recorrência e Status */}
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -600,7 +617,16 @@ export const TransactionsTimeline: React.FC<Props> = ({
                       </span>
                     )}
 
-                    {/* 2. BADGE DE STATUS DE PAGAMENTO */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                      item.buyerId === 'usr-wallace-001'
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                    }`}>
+                      <User className="w-2.5 h-2.5" />
+                      Comprador: {item.buyerName}
+                    </span>
+
+                    {/* Badge de status de pagamento */}
                     {isCancelled ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
                         <XCircle className="w-2.5 h-2.5" />
@@ -619,7 +645,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
                     )}
                   </div>
 
-                  {/* 3. BADGE DE RESPONSÁVEL */}
+                  {/* Badge da divisão de responsabilidade */}
                   <div className="flex items-center gap-1 font-bold">
                     {isWallaceOnly ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -687,6 +713,15 @@ export const TransactionsTimeline: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Comprador */}
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comprador</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-white">
+                <User className="w-3.5 h-3.5 text-blue-400" />
+                {selectedItem.buyerName}
+              </span>
+            </div>
+
             {/* Divisão / Responsabilidades */}
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -711,6 +746,19 @@ export const TransactionsTimeline: React.FC<Props> = ({
 
             {/* Ações: Pagar ocorrência pendente / Estornar / Excluir */}
             <div className="pt-2 space-y-2">
+              {selectedItem.source === 'recurring_bill_occurrence' && selectedItem.status === 'pending' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    setIsEditing(true);
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-touch cursor-pointer shadow-md"
+                >
+                  <Pencil className="w-4 h-4" />
+                  <span>Ajustar esta Conta Fixa</span>
+                </button>
+              )}
               {selectedItem.source === 'recurring_bill_occurrence' && selectedItem.status === 'pending' && (
                 <button
                   type="button"
@@ -771,6 +819,22 @@ export const TransactionsTimeline: React.FC<Props> = ({
           </div>
         </IOSBottomSheet>
       )}
+
+      <EditOccurrenceModal
+        isOpen={isEditing}
+        onClose={() => setIsEditing(false)}
+        item={selectedItem}
+        householdId={householdId}
+        userId={userId}
+        accounts={accounts}
+        cards={cards}
+        categories={categories}
+        paymentMethods={paymentMethods}
+        onSuccess={async () => {
+          await loadOccurrences(currentMonth);
+          onRefresh();
+        }}
+      />
     </div>
   );
 };

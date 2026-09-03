@@ -59,6 +59,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
   const [payerUserId, setPayerUserId] = useState<string>('usr-wallace-001');
   const [buyerUserId, setBuyerUserId] = useState<string>('usr-wallace-001');
   const [beneficiaryType, setBeneficiaryType] = useState<BeneficiaryType>('both');
+  const [customWallacePct, setCustomWallacePct] = useState<number>(50);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +81,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       setPayerUserId(item.payerId || 'usr-wallace-001');
       setBuyerUserId(item.buyerId || 'usr-wallace-001');
       setBeneficiaryType(item.beneficiaryType || 'both');
+      setCustomWallacePct(item.wallacePercentage ?? 50);
       setError(null);
     }
   }, [isOpen, item]);
@@ -128,6 +130,21 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       return;
     }
 
+    if (!categoryId) {
+      setError('Selecione uma categoria.');
+      return;
+    }
+
+    if (paymentMethodId === 'pm-credit' && !cardId) {
+      setError('Selecione o cartão de crédito utilizado.');
+      return;
+    }
+
+    if (paymentMethodId !== 'pm-credit' && !accountId) {
+      setError('Selecione a conta ou carteira utilizada.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
@@ -139,11 +156,12 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           description: description.trim() || item.title,
           due_date: date,
           payment_method_id: paymentMethodId,
-          account_id: paymentMethodId !== 'pm-credit' ? accountId : undefined,
-          card_id: paymentMethodId === 'pm-credit' ? cardId : undefined,
+          account_id: paymentMethodId !== 'pm-credit' ? accountId : null,
+          card_id: paymentMethodId === 'pm-credit' ? cardId : null,
           payer_user_id: payerUserId,
           buyer_user_id: buyerUserId,
           beneficiary_type: beneficiaryType,
+          wallace_percentage: beneficiaryType === 'custom' ? customWallacePct : undefined,
           category_id: categoryId || undefined
         });
       } else {
@@ -181,7 +199,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       title={item?.isRecurring ? 'Ajustar Conta Fixa deste Mês' : 'Editar Lançamento'}
       subtitle={
         item?.isRecurring
-          ? 'Atualize o valor real, meio de pagamento ou responsável desta ocorrência'
+          ? 'Atualize o valor real, meio de pagamento, comprador ou divisão desta ocorrência'
           : 'Edite os valores e divisões contábeis'
       }
     >
@@ -358,20 +376,22 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           </div>
         </div>
 
-        {/* 5. RESPONSÁVEL POR PAGAR */}
+        {/* 5. COMPRADOR: quem iniciou/gerou a despesa */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-            Quem Paga
+            Comprador
           </label>
+          <span className="text-[10px] text-slate-500 block">Quem iniciou ou gerou esta despesa</span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('selection');
-                setPayerUserId('usr-wallace-001');
+                setBuyerUserId('usr-wallace-001');
               }}
+              aria-pressed={buyerUserId === 'usr-wallace-001'}
               className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
-                payerUserId === 'usr-wallace-001'
+                buyerUserId === 'usr-wallace-001'
                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
               }`}
@@ -383,10 +403,11 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
               type="button"
               onClick={() => {
                 triggerHaptic('selection');
-                setPayerUserId('usr-guilherme-002');
+                setBuyerUserId('usr-guilherme-002');
               }}
+              aria-pressed={buyerUserId === 'usr-guilherme-002'}
               className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold border min-h-touch ${
-                payerUserId === 'usr-guilherme-002'
+                buyerUserId === 'usr-guilherme-002'
                   ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
               }`}
@@ -402,7 +423,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Divisão de Responsabilidade
           </label>
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
             <button
               type="button"
               onClick={() => {
@@ -442,7 +463,38 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
               <UserIcon className="w-3.5 h-3.5" />
               <span>Guilherme 100%</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('selection');
+                setBeneficiaryType('custom');
+              }}
+              className={`py-2 rounded-xl flex items-center justify-center gap-1 transition-all min-h-touch ${
+                beneficiaryType === 'custom' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Personalizada</span>
+            </button>
           </div>
+
+          {beneficiaryType === 'custom' && (
+            <div className="p-3 rounded-xl bg-slate-950 border border-purple-500/30 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-emerald-400">Wallace {customWallacePct}%</span>
+                <span className="text-indigo-400">Guilherme {100 - customWallacePct}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={customWallacePct}
+                onChange={(event) => setCustomWallacePct(Number(event.target.value))}
+                className="w-full accent-purple-500"
+                aria-label="Percentual de responsabilidade do Wallace"
+              />
+            </div>
+          )}
         </div>
 
         {/* 7. BOTÃO DE CONFIRMAR ALTERAÇÕES */}
