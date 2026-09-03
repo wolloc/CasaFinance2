@@ -36,7 +36,6 @@ export function PendingHouseholdScreen() {
           {success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
           <button type="submit" disabled={isSubmitting} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Home className="h-5 w-5" />}{isSubmitting ? 'Criando sua Casa…' : 'Criar minha Casa'}</button>
         </form>
-        {error && <p role="alert" className="mt-4 text-sm text-rose-300">{error}</p>}
         <button type="button" onClick={signOut} disabled={isSubmitting} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-60">
           {isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
           Sair

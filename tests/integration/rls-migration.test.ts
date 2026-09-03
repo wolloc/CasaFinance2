@@ -48,4 +48,14 @@ describe('contrato de RLS Supabase', () => {
     assert.match(sql, /grant execute on function public\.bootstrap_household\(text, char, text\) to authenticated/i);
   });
 
+  it('serializa chamadas concorrentes e retorna a Casa existente', async () => {
+    const sql = await readFile(new URL('../../supabase/migrations/202609030007_atomic_bootstrap_household.sql', import.meta.url), 'utf8');
+    assert.match(sql, /pg_advisory_xact_lock/i);
+    assert.match(sql, /hashtextextended\(caller_id::text/i);
+    assert.match(sql, /member\.profile_id = caller_id[\s\S]+member\.deactivated_at is null/i);
+    assert.match(sql, /if existing_household\.id is not null then[\s\S]+return existing_household/i);
+    assert.match(sql, /insert into public\.households[\s\S]+insert into public\.household_members/i);
+    assert.match(sql, /revoke all on function public\.bootstrap_household\(text, char, text\) from public, anon/i);
+  });
+
 });
