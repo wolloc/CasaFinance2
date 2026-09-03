@@ -6,6 +6,7 @@ export interface AppConfig {
   commitSha: string;
   databaseUrl?: string;
   supabaseUrl?: string;
+  supabasePublishableKey?: string;
   geminiApiKey?: string;
   appUrl?: string;
   corsOrigins: readonly string[];
@@ -29,14 +30,15 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     commitSha: source.COMMIT_SHA ?? 'local',
     databaseUrl: source.DATABASE_URL,
     supabaseUrl: source.SUPABASE_URL,
+    supabasePublishableKey: source.SUPABASE_PUBLISHABLE_KEY,
     geminiApiKey: source.GEMINI_API_KEY,
     appUrl: source.APP_URL,
     corsOrigins: (source.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean),
     enforceHttps: source.ENFORCE_HTTPS === 'true' || environment === 'production'
   };
 
-  if ((config.environment === 'staging' || config.environment === 'production') && (!config.databaseUrl || !config.supabaseUrl || !config.appUrl)) {
-    throw new Error('DATABASE_URL, SUPABASE_URL e APP_URL sao obrigatorias em staging e production.');
+  if ((config.environment === 'staging' || config.environment === 'production') && (!config.databaseUrl || !config.supabaseUrl || !config.supabasePublishableKey || !config.appUrl)) {
+    throw new Error('DATABASE_URL, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY e APP_URL sao obrigatorias em staging e production.');
   }
   if (config.enforceHttps && !config.appUrl) throw new Error('APP_URL e obrigatoria quando ENFORCE_HTTPS esta ativo.');
   if (config.appUrl) validateHttpsUrl(config.appUrl, config.environment);

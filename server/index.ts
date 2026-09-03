@@ -9,6 +9,7 @@ import { loadConfig } from './config/env.js';
 import { globalErrorHandler } from './http/errors.js';
 import { log } from './observability/logger.js';
 import { securityMiddleware } from './http/security.js';
+import { renderRuntimeConfig } from './http/runtimeConfig.js';
 
 export const app = express();
 const config = loadConfig();
@@ -19,6 +20,11 @@ app.use(securityMiddleware({ allowedOrigins: config.corsOrigins, enforceHttps: c
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
+
+app.get('/runtime-config.js', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.type('application/javascript').send(renderRuntimeConfig(config));
+});
 
 // Helper middleware for session/user headers
 function getSecurityContext(req: Request) {
