@@ -2128,7 +2128,10 @@ class DatabaseStore {
     this.recurringBills.set(id, bill);
 
     // Automatically generate occurrence for the current month AND projected future months
-    const projectionMonths = Math.min(60, Math.max(1, Number(data.projection_months) || 12));
+    const requestedProjectionMonths = Number(data.projection_months);
+    const projectionMonths = Number.isFinite(requestedProjectionMonths)
+      ? Math.min(60, Math.max(1, Math.trunc(requestedProjectionMonths)))
+      : 12;
     const [curYearStr, curMonthStr] = now.substring(0, 7).split('-');
     let curYear = parseInt(curYearStr, 10);
     let curMonth = parseInt(curMonthStr, 10);
@@ -2141,7 +2144,7 @@ class DatabaseStore {
         y += 1;
       }
       const monthKey = `${y}-${String(m).padStart(2, '0')}`;
-      this.generateOccurrencesForMonth(householdId, monthKey);
+      this.generateOccurrencesForMonth(householdId, monthKey, id);
     }
 
     const user = this.users.get(userId);
@@ -2187,7 +2190,7 @@ class DatabaseStore {
     return { success: true };
   }
 
-  public generateOccurrencesForMonth(householdId: string, monthYear: string) {
+  public generateOccurrencesForMonth(householdId: string, monthYear: string, recurringBillId?: string) {
     const now = new Date().toISOString();
     const [yearStr, monthStr] = monthYear.split('-');
     const year = parseInt(yearStr, 10);
@@ -2195,7 +2198,11 @@ class DatabaseStore {
 
     let createdCount = 0;
     const bills = Array.from(this.recurringBills.values()).filter(
-      (b) => b.household_id === householdId && b.is_active && b.auto_generate
+      (b) =>
+        b.household_id === householdId &&
+        b.is_active &&
+        b.auto_generate &&
+        (!recurringBillId || b.id === recurringBillId)
     );
 
     for (const bill of bills) {
@@ -2340,6 +2347,10 @@ class DatabaseStore {
       throw new Error('Ocorrência não encontrada');
     }
 
+    if (occ.status === 'paid' || occ.paid_transaction_id) {
+      throw new Error('Esta ocorrência já foi paga');
+    }
+
     const bill = this.recurringBills.get(occ.recurring_bill_id);
     const now = new Date().toISOString();
 
@@ -2418,8 +2429,8 @@ class DatabaseStore {
     occ.paid_at = now;
 
     // Deduct account balance if paid from debit/pix/cash
-    if (bill?.account_id) {
-      const acc = this.accounts.get(bill.account_id);
+    if (finalAccountId) {
+      const acc = this.accounts.get(finalAccountId);
       if (acc) {
         acc.current_balance = Number((acc.current_balance - occ.amount).toFixed(2));
         acc.updated_at = now;
