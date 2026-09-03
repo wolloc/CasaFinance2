@@ -16,6 +16,17 @@ before(async () => {
 after(() => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())));
 
 describe('API e isolamento equivalente a RLS', () => {
+  it('entrega somente configuracao publica sem cache', async () => {
+    const response = await fetch(`${baseUrl}/runtime-config.js`);
+    const body = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type') ?? '', /application\/javascript/);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.match(body, /supabaseUrl/);
+    assert.match(body, /supabasePublishableKey/);
+    assert.doesNotMatch(body, /DATABASE_URL|service_role|secret/i);
+  });
+
   it('informa saude e dependencias sem retornar segredos', async () => {
     const response = await fetch(`${baseUrl}/api/health`);
     const body = await response.json() as { status: string; checks: Record<string, string> };

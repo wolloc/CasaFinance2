@@ -22,7 +22,27 @@ Reservar domínios diferentes, por exemplo `staging.finance.<domínio>` e `finan
 
 ## Secrets fora do Git
 
-Cadastrar diretamente no secret manager do host: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GEMINI_API_KEY`, `APP_URL` e `CORS_ORIGINS`. Definir também `APP_ENV`, `COMMIT_SHA`, `PORT` e `ENFORCE_HTTPS=true`. No GitHub Environment, manter somente `DEPLOY_HOOK_URL`. Rotacionar imediatamente qualquer valor que apareça em log, issue ou chat.
+Cadastrar diretamente no secret manager do host: `DATABASE_URL`, `GEMINI_API_KEY`, `APP_URL` e `CORS_ORIGINS`. Definir também `APP_ENV`, `COMMIT_SHA`, `PORT` e `ENFORCE_HTTPS=true`. No GitHub Environment, manter somente `DEPLOY_HOOK_URL`. Rotacionar imediatamente qualquer valor que apareça em log, issue ou chat.
+
+## Configuração pública do frontend em runtime
+
+Construa a imagem uma única vez, **sem** argumentos `VITE_*`, e promova exatamente o mesmo digest de staging para produção:
+
+```sh
+docker build -t casa-finance:"$COMMIT_SHA" .
+```
+
+Ao iniciar o container, injete `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` como variáveis de runtime próprias do ambiente. O servidor responde `/runtime-config.js` com **somente** esses dois valores públicos; o `index.html` carrega esse script antes do bundle Vite, que pode ler a configuração tipada por `getRuntimeConfig()` em `src/config/runtime.ts`. A resposta usa `Cache-Control: no-store`, portanto trocar de ambiente não exige recompilar o frontend:
+
+```sh
+docker run --rm \
+  --env-file /caminho/seguro/casa-finance-runtime.env \
+  -e SUPABASE_URL="$SUPABASE_URL" \
+  -e SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+  casa-finance:"$COMMIT_SHA"
+```
+
+A URL e a publishable key são configuração pública e aparecerão no navegador por definição. Nunca inclua `service_role`, secret key, `DATABASE_URL` ou senha PostgreSQL nessa rota, em variáveis `VITE_*` ou em build args. Credenciais privilegiadas permanecem no secret manager e são injetadas somente no container em runtime. Staging e produção devem apontar o mesmo digest de imagem, variando apenas a configuração do serviço.
 
 ## Checklist de publicação
 
