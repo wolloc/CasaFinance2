@@ -57,6 +57,7 @@ export interface UnifiedTimelineItem {
   payerName: string;
   payerId: string;
   beneficiaryType: BeneficiaryType;
+  wallacePercentage?: number;
   splits: Array<{
     userId: string;
     userName: string;
@@ -223,8 +224,14 @@ export const TransactionsTimeline: React.FC<Props> = ({
         const card = cards.find((c) => c.id === cardId);
         const acc = accounts.find((a) => a.id === accountId);
         const pm = paymentMethods.find((p) => p.id === paymentMethodId);
-        const wallaceAmount = Number((occ.amount / 2).toFixed(2));
-        const guilhermeAmount = Number((occ.amount - wallaceAmount).toFixed(2));
+        const wallacePercentage =
+          beneficiaryType === 'custom'
+            ? Math.min(100, Math.max(0, Number(occ.wallace_percentage ?? bill.wallace_percentage) || 50))
+            : 50;
+        const totalCents = Math.round(occ.amount * 100);
+        const wallaceCents = Math.round((totalCents * wallacePercentage) / 100);
+        const wallaceAmount = wallaceCents / 100;
+        const guilhermeAmount = (totalCents - wallaceCents) / 100;
 
         list.push({
           id: occ.id,
@@ -249,6 +256,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
           payerName: payerId === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
           payerId,
           beneficiaryType,
+          wallacePercentage,
           splits: beneficiaryType === 'wallace' ? [{
             userId: 'usr-wallace-001', userName: 'Wallace', percentage: 100, amount: occ.amount
           }] : beneficiaryType === 'guilherme' ? [{
@@ -257,13 +265,13 @@ export const TransactionsTimeline: React.FC<Props> = ({
             {
               userId: 'usr-wallace-001',
               userName: 'Wallace',
-              percentage: 50,
+              percentage: beneficiaryType === 'custom' ? wallacePercentage : 50,
               amount: wallaceAmount
             },
             {
               userId: 'usr-guilherme-002',
               userName: 'Guilherme',
-              percentage: 50,
+              percentage: beneficiaryType === 'custom' ? 100 - wallacePercentage : 50,
               amount: guilhermeAmount
             }
           ],
