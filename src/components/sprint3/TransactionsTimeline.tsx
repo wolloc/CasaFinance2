@@ -303,22 +303,10 @@ export const TransactionsTimeline: React.FC<Props> = ({
         }
       }
 
-      // 3. Quick Filter: Responsável ("Todos", "Wallace", "Guilherme")
-      if (currentResponsible === 'wallace') {
-        const isWallaceInvolved =
-          item.beneficiaryType === 'wallace' ||
-          item.buyerId === 'usr-wallace-001' ||
-          item.payerId === 'usr-wallace-001' ||
-          item.splits.some((s) => s.userId === 'usr-wallace-001' && s.percentage > 0);
-        if (!isWallaceInvolved) return false;
-      } else if (currentResponsible === 'guilherme') {
-        const isGuiInvolved =
-          item.beneficiaryType === 'guilherme' ||
-          item.buyerId === 'usr-guilherme-002' ||
-          item.payerId === 'usr-guilherme-002' ||
-          item.splits.some((s) => s.userId === 'usr-guilherme-002' && s.percentage > 0);
-        if (!isGuiInvolved) return false;
-      }
+      // 3. Filtro de Comprador: considera exclusivamente quem iniciou/gerou a despesa.
+      // Pagador e divisão de responsabilidade permanecem conceitos independentes.
+      if (currentResponsible === 'wallace' && item.buyerId !== 'usr-wallace-001') return false;
+      if (currentResponsible === 'guilherme' && item.buyerId !== 'usr-guilherme-002') return false;
 
       // 4. Quick Filter: Categoria
       if (currentCategory !== 'all') {
@@ -535,7 +523,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
             <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
               {searchTerm || currentResponsible !== 'all' || currentCategory !== 'all'
                 ? 'Nenhum resultado corresponde aos filtros ativos.'
-                : 'Toque em "+ Novo" para cadastrar uma despesa ou receita.'}
+                : 'Toque em "+ Nova despesa" para cadastrar uma saída.'}
             </p>
           </div>
         ) : (
@@ -618,7 +606,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Linha Inferior: BADGES CONTEXTUAIS (Fixa, Status de Pagamento, Responsável) */}
+                {/* Linha Inferior: recorrência, status, comprador e divisão de responsabilidade */}
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-1.5 flex-wrap">
                   {/* Badges de Recorrência e Status */}
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -629,7 +617,16 @@ export const TransactionsTimeline: React.FC<Props> = ({
                       </span>
                     )}
 
-                    {/* 2. BADGE DE STATUS DE PAGAMENTO */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                      item.buyerId === 'usr-wallace-001'
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                    }`}>
+                      <User className="w-2.5 h-2.5" />
+                      Comprador: {item.buyerName}
+                    </span>
+
+                    {/* Badge de status de pagamento */}
                     {isCancelled ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
                         <XCircle className="w-2.5 h-2.5" />
@@ -648,7 +645,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
                     )}
                   </div>
 
-                  {/* 3. BADGE DE RESPONSÁVEL */}
+                  {/* Badge da divisão de responsabilidade */}
                   <div className="flex items-center gap-1 font-bold">
                     {isWallaceOnly ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -714,6 +711,15 @@ export const TransactionsTimeline: React.FC<Props> = ({
                   {selectedItem.paymentMethodName}
                 </span>
               </div>
+            </div>
+
+            {/* Comprador */}
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comprador</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-white">
+                <User className="w-3.5 h-3.5 text-blue-400" />
+                {selectedItem.buyerName}
+              </span>
             </div>
 
             {/* Divisão / Responsabilidades */}
