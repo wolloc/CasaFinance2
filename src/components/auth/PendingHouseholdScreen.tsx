@@ -2,6 +2,7 @@ import { Check, Copy, Home, Link, LoaderCircle, LogOut, Plus, ShieldCheck, Users
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { invitationTokenFromSearch, type HouseholdInvitationPreview } from '../../auth/householdInvitations.js';
+import { HouseholdFinancialSetup } from './HouseholdFinancialSetup.js';
 
 export function PendingHouseholdScreen() {
   const { user, household, householdMembers, signOut, isSubmitting, householdLoading, createHousehold, createInvitation, previewInvitation, acceptInvitation, error } = useSupabaseAuth();
@@ -75,7 +76,8 @@ export function PendingHouseholdScreen() {
   };
 
   if (householdLoading) return <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-slate-300">Verificando sua Casa…</main>;
-  if (household) return (
+  if (household) return <HouseholdFinancialSetup />;
+  if (false) return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-4 text-slate-100">
       <section className="w-full max-w-md rounded-3xl border border-emerald-800 bg-slate-900 p-6 shadow-2xl">
         <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-emerald-400" />
