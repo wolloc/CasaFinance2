@@ -7,6 +7,9 @@ export interface AppConfig {
   databaseUrl?: string;
   supabaseUrl?: string;
   geminiApiKey?: string;
+  appUrl?: string;
+  corsOrigins: readonly string[];
+  enforceHttps: boolean;
 }
 
 const environments: readonly AppEnvironment[] = ['development', 'staging', 'production', 'test'];
@@ -26,11 +29,30 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     commitSha: source.COMMIT_SHA ?? 'local',
     databaseUrl: source.DATABASE_URL,
     supabaseUrl: source.SUPABASE_URL,
-    geminiApiKey: source.GEMINI_API_KEY
+    geminiApiKey: source.GEMINI_API_KEY,
+    appUrl: source.APP_URL,
+    corsOrigins: (source.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean),
+    enforceHttps: source.ENFORCE_HTTPS === 'true' || environment === 'production'
   };
 
-  if (config.environment === 'production' && (!config.databaseUrl || !config.supabaseUrl)) {
-    throw new Error('DATABASE_URL e SUPABASE_URL sao obrigatorias em production.');
+  if ((config.environment === 'staging' || config.environment === 'production') && (!config.databaseUrl || !config.supabaseUrl || !config.appUrl)) {
+    throw new Error('DATABASE_URL, SUPABASE_URL e APP_URL sao obrigatorias em staging e production.');
   }
+  if (config.enforceHttps && !config.appUrl) throw new Error('APP_URL e obrigatoria quando ENFORCE_HTTPS esta ativo.');
+  if (config.appUrl) validateHttpsUrl(config.appUrl, config.environment);
+  config.corsOrigins.forEach((origin) => validateHttpsUrl(origin, config.environment));
+  if (config.appUrl && !config.corsOrigins.includes(config.appUrl)) config.corsOrigins = [config.appUrl, ...config.corsOrigins];
   return config;
+}
+
+function validateHttpsUrl(value: string, environment: AppEnvironment): void {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`URL de ambiente invalida: ${value}`);
+  }
+  if ((environment === 'staging' || environment === 'production') && url.protocol !== 'https:') {
+    throw new Error('APP_URL e CORS_ORIGINS devem usar HTTPS fora do desenvolvimento.');
+  }
 }

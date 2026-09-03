@@ -8,9 +8,14 @@ import type { InvoiceParsedItem } from '../src/types/index.js';
 import { loadConfig } from './config/env.js';
 import { globalErrorHandler } from './http/errors.js';
 import { log } from './observability/logger.js';
+import { securityMiddleware } from './http/security.js';
 
 export const app = express();
 const config = loadConfig();
+
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(securityMiddleware({ allowedOrigins: config.corsOrigins, enforceHttps: config.enforceHttps, canonicalUrl: config.appUrl }));
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
