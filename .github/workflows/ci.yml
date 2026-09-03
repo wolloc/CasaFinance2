@@ -6,7 +6,7 @@ on:
       - main
   push:
     branches:
-      - codex/atualizar-modal-de-lancamento-para-contas-fixas
+      - main
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,15 @@ jobs:
 
       - name: TypeScript check
         run: npm run lint
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Secret scan
+        run: npm run check:secrets
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
       - name: Production build
         run: npm run build

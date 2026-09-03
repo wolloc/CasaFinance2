@@ -30,6 +30,8 @@ Plano de retirada posterior:
 
 ## Aplicação
 
+As políticas de isolamento e o procedimento operacional de release estão versionados em `202609030004_rls_release_readiness.sql` e em `docs/operations/release-readiness.md`.
+
 1. Fazer backup e testar em um projeto Supabase de staging restaurado da produção.
 2. Executar `supabase db lint` e revisar conflitos com objetos legados.
 3. Aplicar com `supabase migration up` em uma janela controlada.
