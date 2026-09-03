@@ -12,16 +12,43 @@ export type AcceptInvitationResult = {
   householdId: string;
 };
 
+export type HouseholdInvitationPreview = {
+  householdName: string;
+  expiresAt: string;
+};
+
 type RpcRow = Record<string, string>;
 
-function normalizeInvitationToken(value: string): string {
+export function normalizeInvitationToken(value: string): string {
   const trimmed = value.trim();
   try {
     const url = new URL(trimmed);
-    return url.searchParams.get('invite')?.trim() ?? trimmed;
+    return url.searchParams.get('invitation')?.trim()
+      ?? url.searchParams.get('invite')?.trim()
+      ?? trimmed;
   } catch {
     return trimmed;
   }
+}
+
+export function invitationTokenFromSearch(search: string): string {
+  const params = new URLSearchParams(search);
+  return params.get('invitation')?.trim() ?? params.get('invite')?.trim() ?? '';
+}
+
+export async function previewHouseholdInvitation(
+  client: SupabaseClient,
+  session: Session | null,
+  token: string,
+): Promise<HouseholdInvitationPreview> {
+  if (!session?.user.id) throw new Error('Sessão expirada. Entre novamente para continuar.');
+  const response = await client.rpc('preview_household_invitation', {
+    invitation_token: normalizeInvitationToken(token),
+  }) as { data: RpcRow | RpcRow[] | null; error: Error | null };
+  if (response.error) throw response.error;
+  const row = firstRow(response.data);
+  if (!row?.household_name || !row.expires_at) throw new Error('invitation is invalid');
+  return { householdName: row.household_name, expiresAt: row.expires_at };
 }
 
 function firstRow(data: RpcRow | RpcRow[] | null): RpcRow | null {

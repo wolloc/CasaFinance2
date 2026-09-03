@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitationError } from './householdInvitations.js';
+import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitationError, invitationTokenFromSearch, previewHouseholdInvitation } from './householdInvitations.js';
 
 const session = { user: { id: 'auth-user-123' } } as Session;
 
@@ -36,6 +36,26 @@ test('aceita convite enviando somente token e identidade da sessao', async () =>
 
   assert.deepEqual(await acceptHouseholdInvitation(client, session, 'https://finance.example/?invite=token'), { status: 'accepted', householdId: 'household-1' });
   assert.deepEqual(rpcArgs, { invitation_token: 'token' });
+  assert.equal('user_id' in rpcArgs, false);
+});
+
+test('reconhece o token da URL propria e mantem compatibilidade com links antigos', () => {
+  assert.equal(invitationTokenFromSearch('?invitation=abc123'), 'abc123');
+  assert.equal(invitationTokenFromSearch('?invite=legacy123'), 'legacy123');
+  assert.equal(invitationTokenFromSearch('?other=value'), '');
+});
+
+test('preview retorna somente nome da Casa e expiracao sem enviar identidade', async () => {
+  let rpcArgs: Record<string, unknown> = {};
+  const client = { rpc: async (_name: string, args: Record<string, unknown>) => {
+    rpcArgs = args;
+    return { data: [{ household_name: 'Casa Azul', expires_at: '2026-09-10T00:00:00Z' }], error: null };
+  } } as unknown as SupabaseClient;
+
+  assert.deepEqual(await previewHouseholdInvitation(client, session, 'a'.repeat(64)), {
+    householdName: 'Casa Azul', expiresAt: '2026-09-10T00:00:00Z',
+  });
+  assert.deepEqual(rpcArgs, { invitation_token: 'a'.repeat(64) });
   assert.equal('user_id' in rpcArgs, false);
 });
 
@@ -83,4 +103,41 @@ test('migration corretiva qualifica pgcrypto e preserva o contrato das RPCs', as
   const insertStatement = sql.match(/insert into public\.household_invitations[\s\S]*?returning invitation\.id/i)?.[0] ?? '';
   assert.match(insertStatement, /token_hash/i);
   assert.doesNotMatch(insertStatement, /\btoken\b(?!_hash)/i);
+});
+
+test('migration 010 oferece preview minimo e preserva os contratos de seguranca', async () => {
+  const sql = await readFile(new URL('../../supabase/migrations/202609030010_preview_household_invitation.sql', import.meta.url), 'utf8');
+  assert.match(sql, /returns table \(household_name text, expires_at timestamptz\)/i);
+  assert.match(sql, /security definer/i);
+  assert.match(sql, /set search_path = public, pg_temp/i);
+  assert.match(sql, /auth\.uid\(\)/i);
+  assert.match(sql, /extensions\.digest\(convert_to\(invitation_token, 'UTF8'\), 'sha256'\)/i);
+  assert.match(sql, /accepted_at is not null/i);
+  assert.match(sql, /expires_at <= now\(\)/i);
+  assert.match(sql, /invited_email is not null/i);
+  assert.match(sql, /grant execute on function public\.preview_household_invitation\(text\) to authenticated/i);
+  assert.doesNotMatch(sql, /returns table[^;]*(owner|member_id|email|token_hash)/i);
+  assert.doesNotMatch(sql, /service_role/i);
+  assert.doesNotMatch(sql, /insert into public\.household_invitations/i);
+});
+
+test('onboarding prioriza convite, confirma membership e nao contem forms aninhados', async () => {
+  const source = await readFile(new URL('../components/auth/PendingHouseholdScreen.tsx', import.meta.url), 'utf8');
+  assert.match(source, /Você recebeu um convite/);
+  assert.match(source, /Entrar na \{invitePreview\?\.householdName\}/);
+  assert.match(source, /Você agora faz parte da/);
+  assert.match(source, /Seu papel:[\s\S]*'Membro'/);
+  assert.match(source, /if \(invitePreview \|\| previewLoading\) return/);
+  let formDepth = 0;
+  let maximumFormDepth = 0;
+  for (const tag of source.matchAll(/<\/?form\b/g)) {
+    formDepth += tag[0].startsWith('</') ? -1 : 1;
+    maximumFormDepth = Math.max(maximumFormDepth, formDepth);
+  }
+  assert.equal(maximumFormDepth, 1);
+  assert.equal(formDepth, 0);
+  assert.doesNotMatch(source, /console\.(?:log|info|debug|warn|error)/);
+  const providerSource = await readFile(new URL('../context/SupabaseAuthContext.tsx', import.meta.url), 'utf8');
+  assert.match(providerSource, /acceptHouseholdInvitation[\s\S]*setHousehold\(await findExistingHousehold/);
+  assert.match(providerSource, /setHouseholdRefreshVersion/);
 });
