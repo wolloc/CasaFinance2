@@ -70,7 +70,7 @@ O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, 
 | Saldo real consolidado | soma de contas ativas no dashboard | Não deve aplicar ocorrências `pending`/previstas. Fundos protegidos são exibidos separadamente. |
 | Patrimônio líquido | saldo das contas menos faturas abertas | Não inclui ainda passivos de empréstimos nem integração real com investimentos. |
 | Projeção mensal | `getFutureCommitmentsProjection`: ocorrências fixas pendentes + parcelas agendadas | Risco de duplicar regra, ocorrência e transação; deduplicação por ID/competência agora tem contrato puro. |
-| Saldo projetado | saldo real menos faturas/contas previstas | UI possui fallbacks que recalculam campos; servidor deve ser a única fonte no futuro. |
+| Saldo projetado | `projectDashboardFromLedger` aplica receitas previstas e compromissos aos postings | O DTO `accounting` é calculado no domínio/servidor; o componente principal somente formata os valores. |
 | Acerto do casal | postings e responsabilidades do ledger | Despesa direta deriva o financiador do titular da origem; compra no cartão permanece obrigação projetada até a liquidação, sem inferir financiamento do titular do cartão. |
 
 ## Valores fixos e dados de demonstração
@@ -78,7 +78,7 @@ O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, 
 - IDs centrais: `usr-wallace-001`, `usr-guilherme-002`, `hh-wallace-gui-001`; contas, cartões e categorias usam IDs semeados em `server/db.ts`.
 - Nomes, e-mails, PIX, instituições, saldos, limites, transações, contas fixas, fundos e regras de lojista são seeds no construtor do banco em memória.
 - `AuthContext` inicia Wallace; o middleware também assume Wallace e a Casa quando os headers não existem.
-- `App` inicia a competência em `2026-05`; fallbacks de API e acerto repetem esse mês.
+- `App` inicia a competência na data local da Casa; alguns fallbacks legados da API e do acerto ainda repetem `2026-05`.
 - Filtros e tipos codificam `wallace | guilherme`; não derivam membros da Casa.
 - A suíte HTTP de segurança usa IDs, nomes, datas de maio/junho de 2026 e o casal fixo.
 - O fallback de OCR retorna itens demonstrativos e inclui valor preparado para demonstrar detecção de duplicidade.
@@ -96,7 +96,7 @@ O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, 
 
 5. Integrar gradualmente `src/domain/finance.ts` aos casos de uso do servidor, mantendo handlers, negócio e repositórios separados.
 6. Substituir IDs e união fixa de dois nomes por membros consultados da Casa; acerto deve aceitar N membros mesmo que a UI continue voltada ao casal.
-7. Remover cálculos/fallbacks financeiros duplicados da UI e retornar DTOs versionados pela API.
+7. Versionar o DTO contábil do dashboard e migrar os cartões secundários legados para o mesmo read model já usado pelos indicadores principais.
 8. Garantir idempotência persistida em ocorrências, parcelas, importações e pagamento de fatura (constraints/chaves de negócio).
 9. Alinhar `schema.sql`, interfaces TypeScript e Maps; hoje entidades/campos não têm uma migration executável única.
 

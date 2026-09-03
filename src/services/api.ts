@@ -488,6 +488,19 @@ export class ApiService {
     month?: string
   ): Promise<DashboardFullResponse> {
     const defaultResponse: DashboardFullResponse = {
+      accounting: {
+        realizedIncome: 0,
+        projectedIncome: 0,
+        realizedExpenses: 0,
+        projectedExpenses: 0,
+        cardInvoices: 0,
+        realCashBalance: 0,
+        realizedMonthlyResult: 0,
+        projectedCommitments: 0,
+        projectedEndBalance: 0,
+        accountAndInvestmentAssets: 0,
+        loanObligations: 0
+      },
       summary: {
         valorDisponivelLivre: 0,
         entradasDoMes: 0,

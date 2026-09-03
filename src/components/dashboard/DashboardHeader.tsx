@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Users, User, Calendar, RefreshCw, ChevronDown } from 'lucide-react';
+import { Users, User, Calendar, RefreshCw } from 'lucide-react';
 import type { DashboardPerspective, Category } from '../../types/index.js';
 import { triggerHaptic } from '../../utils/haptics.js';
 
@@ -16,23 +16,16 @@ interface DashboardHeaderProps {
   categories?: Category[];
 }
 
-const CURRENT_MONTH = '2026-05';
-const PREVIOUS_MONTH = '2026-04';
+const monthKey = (offset: number): string => {
+  const date = new Date();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + offset);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 
-const MONTH_OPTIONS = [
-  { value: '2026-01', label: 'Jan / 2026' },
-  { value: '2026-02', label: 'Fev / 2026' },
-  { value: '2026-03', label: 'Mar / 2026' },
-  { value: '2026-04', label: 'Abr / 2026 (Mês Anterior)' },
-  { value: '2026-05', label: 'Mai / 2026 (Mês Atual)' },
-  { value: '2026-06', label: 'Jun / 2026' },
-  { value: '2026-07', label: 'Jul / 2026' },
-  { value: '2026-08', label: 'Ago / 2026' },
-  { value: '2026-09', label: 'Set / 2026' },
-  { value: '2026-10', label: 'Out / 2026' },
-  { value: '2026-11', label: 'Nov / 2026' },
-  { value: '2026-12', label: 'Dez / 2026' }
-];
+const PREVIOUS_MONTH = monthKey(-1);
+const CURRENT_MONTH = monthKey(0);
+const NEXT_MONTH = monthKey(1);
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   perspective,
@@ -44,7 +37,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 }) => {
   const isCurrentMonth = selectedMonth === CURRENT_MONTH;
   const isPreviousMonth = selectedMonth === PREVIOUS_MONTH;
-  const isCustomMonth = !isCurrentMonth && !isPreviousMonth;
+  const isNextMonth = selectedMonth === NEXT_MONTH;
+  const isCustomMonth = !isCurrentMonth && !isPreviousMonth && !isNextMonth;
 
   const handleToggle = (p: DashboardPerspective) => {
     triggerHaptic('selection');
@@ -56,7 +50,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     onMonthChange(month);
   };
 
-  const handleMonthSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleMonthSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     triggerHaptic('selection');
     onMonthChange(e.target.value);
   };
@@ -97,35 +91,25 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <span>Mês Anterior</span>
           </button>
 
-          {/* Seleção de Mês/Ano */}
-          <div
-            className={`relative flex-1 py-1.5 px-2 rounded-xl transition-all flex items-center justify-center gap-1 min-h-touch ${
-              isCustomMonth
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+          <button
+            type="button"
+            onClick={() => handlePeriodClick(NEXT_MONTH)}
+            className={`flex-1 rounded-xl px-2 py-1.5 text-xs transition-all min-h-touch ${isNextMonth ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
           >
-            <Calendar className="w-3 h-3 shrink-0" />
-            <span className="truncate text-xs font-bold">
-              {isCustomMonth
-                ? MONTH_OPTIONS.find((m) => m.value === selectedMonth)?.label.split(' ')[0] || 'Mês/Ano'
-                : 'Mês/Ano'}
-            </span>
-            <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
+            Seguinte
+          </button>
 
-            <select
+          {/* Qualquer competência fora dos atalhos pode ser digitada no controle nativo. */}
+          <div className={`relative flex-1 rounded-xl px-2 py-1.5 min-h-touch ${isCustomMonth ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
+            <span className="flex items-center justify-center gap-1 text-xs font-bold"><Calendar className="h-3 w-3" />{isCustomMonth ? selectedMonth : 'Outro'}</span>
+            <input
               id="select-dashboard-custom-month"
+              type="month"
               value={selectedMonth}
               onChange={handleMonthSelect}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-              aria-label="Selecionar Mês de Competência"
-            >
-              {MONTH_OPTIONS.map((m) => (
-                <option key={m.value} value={m.value} className="bg-slate-900 text-white">
-                  {m.label}
-                </option>
-              ))}
-            </select>
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-label="Selecionar mês personalizado"
+            />
           </div>
         </div>
 

@@ -45,6 +45,7 @@ Este documento é o contrato contábil de referência. Valores monetários são 
 - `calculateFinancialPosition(input)` produz saldos realizados de contas, faturas, patrimônio, receitas, despesas e resultado. Entradas previstas são deliberadamente ignoradas.
 - `calculateSettlement(memberIds, expenses, mode)` compara financiamento e responsabilidade no modo realizado ou projetado sem usar comprador/titular como atalhos.
 - `calculateProjection(realBalance, month, commitments)` deduplica ocorrências pelo ID, inclui apenas previsões da competência e retorna o saldo projetado.
+- `projectDashboardFromLedger(ledger, resources, position)` materializa os indicadores do Dashboard sem permitir que componentes React refaçam fórmulas contábeis.
 
 ## Ledger e matriz de lançamentos
 
