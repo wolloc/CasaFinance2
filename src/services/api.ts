@@ -69,7 +69,7 @@ export class ApiService {
         throw new Error(json.error || json.message || `Erro ${res.status} ao processar requisição`);
       }
       return json as T;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`[ApiService Error] ${url}:`, err);
       if (fallbackData !== undefined) {
         return fallbackData;
@@ -223,13 +223,21 @@ export class ApiService {
   public static async inviteHouseholdMember(
     householdId: string,
     userId: string,
-    data: { name: string; email: string; role?: 'owner' | 'member' }
+    data: { name: string; email: string; role?: 'owner' | 'member'; color?: string; avatar?: string }
   ): Promise<{ member: HouseholdMember }> {
     return this.safeFetchJson(`/api/households/${householdId}/members`, {
       method: 'POST',
       headers: this.getHeaders(userId, householdId),
       body: JSON.stringify(data)
     });
+  }
+
+  public static async updateHousehold(householdId: string, userId: string, name: string): Promise<{ household: Household }> {
+    return this.safeFetchJson(`/api/households/${householdId}`, { method: 'PATCH', headers: this.getHeaders(userId, householdId), body: JSON.stringify({ name }) });
+  }
+
+  public static async updateHouseholdMember(householdId: string, userId: string, memberId: string, data: { name?: string; role?: 'owner' | 'member'; color?: string; avatar?: string; is_active?: boolean }): Promise<{ member: HouseholdMember }> {
+    return this.safeFetchJson(`/api/households/${householdId}/members/${memberId}`, { method: 'PATCH', headers: this.getHeaders(userId, householdId), body: JSON.stringify(data) });
   }
 
   public static async getTransactions(

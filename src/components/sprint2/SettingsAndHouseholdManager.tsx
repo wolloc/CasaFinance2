@@ -10,6 +10,7 @@ import { CategoriesManager } from './CategoriesManager.js';
 import { SqlSchemaViewer } from './SqlSchemaViewer.js';
 import { SecurityAndEdgeTestSuite } from '../sprint8/SecurityAndEdgeTestSuite.js';
 import { AuditLogExplorer } from '../sprint8/AuditLogExplorer.js';
+import { HouseholdCustomization } from '../household/HouseholdCustomization.js';
 import {
   Settings,
   Users,
@@ -124,133 +125,7 @@ export const SettingsAndHouseholdManager: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* SEÇÃO 1: DOMICÍLIO & COMPOSIÇÃO FAMILIAR                                   */}
-      {/* ========================================================================= */}
-      <section id="section-household" className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              1. Domicílio & Composição Familiar
-            </h2>
-          </div>
-          <span className="text-[11px] font-medium text-slate-400">
-            {householdMembers.length} {householdMembers.length === 1 ? 'membro' : 'membros'}
-          </span>
-        </div>
-
-        {/* Card do Domicílio */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-500/20">
-                🏡
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                  Grupo Familiar Ativo
-                </span>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  {activeHousehold?.name || 'Casa Wallace & Guilherme'}
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Fuso: America/Sao_Paulo (GMT-3) • Moeda: Real Brasileiro (BRL)
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              id="btn-invite-member"
-              onClick={() => {
-                setShowInviteModal(true);
-                triggerHaptic('impact-light');
-              }}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all shadow-xs shrink-0"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Convidar / Adicionar Membro</span>
-            </button>
-          </div>
-
-          {/* Lista de Membros da Família */}
-          <div className="space-y-2">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              Participantes Cadastrados
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {householdMembers.length > 0 ? (
-                householdMembers.map((member) => {
-                  const isWallace = member.user?.id === 'usr-wallace-001';
-                  const isGuilherme = member.user?.id === 'usr-guilherme-002';
-                  const initial = member.user?.name?.charAt(0) || 'M';
-                  const isCurrentUser = member.user_id === currentUser.id;
-
-                  return (
-                    <div
-                      key={member.id}
-                      className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                        isCurrentUser
-                          ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60'
-                          : 'bg-slate-50/80 dark:bg-slate-850/60 border-slate-200/80 dark:border-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm text-white shadow-xs shrink-0 ${
-                            isWallace
-                              ? 'bg-blue-600'
-                              : isGuilherme
-                              ? 'bg-purple-600'
-                              : 'bg-slate-700'
-                          }`}
-                        >
-                          {initial}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                              {member.user?.name || 'Membro'}
-                            </h4>
-                            {isCurrentUser && (
-                              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 bg-blue-600 text-white rounded-md">
-                                Você
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            {member.user?.email || 'membro@casafinance.app'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span
-                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            member.role === 'owner'
-                              ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                          }`}
-                        >
-                          {member.role === 'owner' ? 'Admin / Proprietário' : 'Membro'}
-                        </span>
-                        <span className="block text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                          ● Ativo
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-2xl text-xs text-slate-500">
-                  Carregando membros do domicílio...
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <HouseholdCustomization householdId={householdId} currentUser={currentUser} onRefresh={onRefresh} />
 
       {/* ========================================================================= */}
       {/* SEÇÃO 2: ENTRADAS & SAÍDAS (MEIOS DE PAGAMENTO & CONTAS)                  */}
