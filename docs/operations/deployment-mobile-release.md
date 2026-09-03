@@ -24,6 +24,17 @@ Reservar domínios diferentes, por exemplo `staging.finance.<domínio>` e `finan
 
 Cadastrar diretamente no secret manager do host: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GEMINI_API_KEY`, `APP_URL` e `CORS_ORIGINS`. Definir também `APP_ENV`, `COMMIT_SHA`, `PORT` e `ENFORCE_HTTPS=true`. No GitHub Environment, manter somente `DEPLOY_HOOK_URL`. Rotacionar imediatamente qualquer valor que apareça em log, issue ou chat.
 
+O frontend Vite precisa receber `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` **durante a construção da imagem**, pois esses valores públicos são incorporados ao bundle pelo `npm run build`. Exporte os valores no ambiente do processo de build e repasse-os como argumentos, sem gravá-los no Dockerfile ou no repositório:
+
+```sh
+docker build \
+  --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+  -t casa-finance:"$COMMIT_SHA" .
+```
+
+Essas duas variáveis são configuração **pública** do cliente, não segredos. Nunca passe `service_role`, secret key, `DATABASE_URL` ou senha PostgreSQL como `--build-arg`: mantenha credenciais privilegiadas somente no secret manager e injete-as no container em tempo de execução. Gere uma imagem distinta por ambiente quando os projetos Supabase forem diferentes.
+
 ## Checklist de publicação
 
 ### Staging privado
