@@ -8,6 +8,7 @@ const resources: FinancialResource[] = [
   { id: 'wallet-w', kind: 'wallet', ownerMemberId: 'wallace' },
   { id: 'va-g', kind: 'benefit', ownerMemberId: 'guilherme' },
   { id: 'card-w', kind: 'credit_card', ownerMemberId: 'wallace' },
+  { id: 'card-g', kind: 'credit_card', ownerMemberId: 'guilherme' },
   { id: 'investment', kind: 'investment', ownerMemberId: 'wallace' },
   { id: 'loan', kind: 'loan' }
 ];
@@ -61,6 +62,48 @@ describe('motor único de movimentações', () => {
     assert.equal(result.realizedResult, 0);
     assert.equal(result.effectiveFunderByEvent.payment, 'guilherme');
     assert.equal(result.realizedSettlement[1].balance, 120);
+  });
+
+  it('mantém comprador, titular do cartão, financiador e responsável como papéis independentes', () => {
+    const purchase: LedgerEvent = {
+      ...base,
+      id: 'wallace-purchase-on-g-card',
+      type: 'expense',
+      amount: 240,
+      sourceResourceId: 'card-g',
+      responsibilities: [{ memberId: 'wallace', amount: 240 }]
+    };
+    const beforePayment = processLedger(resources, [purchase], ['wallace', 'guilherme']);
+    assert.equal(beforePayment.realizedBalances['bank-w'] ?? 0, 0);
+    assert.equal(beforePayment.realizedBalances['bank-g'] ?? 0, 0);
+    assert.equal(beforePayment.realizedExpenses, 240);
+    assert.deepEqual(beforePayment.effectiveFunderByEvent, {});
+
+    const paidByGuilherme = processLedger(resources, [purchase, {
+      ...base,
+      id: 'invoice-paid-by-g',
+      type: 'credit_card_payment',
+      amount: 240,
+      sourceResourceId: 'bank-g',
+      cardResourceId: 'card-g',
+      responsibilities: [{ memberId: 'wallace', amount: 240 }]
+    }], ['wallace', 'guilherme']);
+    assert.equal(paidByGuilherme.realizedBalances['bank-g'], -240);
+    assert.equal(paidByGuilherme.effectiveFunderByEvent['invoice-paid-by-g'], 'guilherme');
+    assert.deepEqual(paidByGuilherme.realizedSettlement.map(({ balance }) => balance), [-240, 240]);
+
+    const paidByWallace = processLedger(resources, [purchase, {
+      ...base,
+      id: 'invoice-paid-by-w',
+      type: 'credit_card_payment',
+      amount: 240,
+      sourceResourceId: 'bank-w',
+      cardResourceId: 'card-g',
+      responsibilities: [{ memberId: 'wallace', amount: 240 }]
+    }], ['wallace', 'guilherme']);
+    assert.equal(paidByWallace.realizedBalances['bank-w'], -240);
+    assert.equal(paidByWallace.effectiveFunderByEvent['invoice-paid-by-w'], 'wallace');
+    assert.deepEqual(paidByWallace.realizedSettlement.map(({ balance }) => balance), [0, 0]);
   });
 
   it('aporte e resgate apenas movem patrimônio entre caixa e investimento', () => {

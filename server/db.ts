@@ -989,6 +989,8 @@ class DatabaseStore {
       payer_user_id: string;
       beneficiary_type: BeneficiaryType;
       transaction_date?: string;
+      competence_month?: string;
+      status?: 'pending' | 'completed';
       merchant?: string;
       notes?: string;
       installments_count?: number;
@@ -1008,6 +1010,24 @@ class DatabaseStore {
 
     if (!data.description || data.description.trim() === '') {
       throw new Error('A descrição da movimentação é obrigatória');
+    }
+
+    const isExpense = (data.transaction_type || 'expense') === 'expense';
+    const category = data.category_id ? this.categories.get(data.category_id) : undefined;
+    if (isExpense && (!category || category.household_id !== householdId || category.type !== 'expense')) {
+      throw new Error('A despesa exige uma categoria ativa exclusivamente de despesa');
+    }
+    const selectedAccount = data.account_id ? this.accounts.get(data.account_id) : undefined;
+    const selectedCard = data.card_id ? this.cards.get(data.card_id) : undefined;
+    if (data.competence_month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(data.competence_month)) {
+      throw new Error('Competência deve usar o formato AAAA-MM');
+    }
+    if (isExpense && data.payment_method_id === 'pm-credit') {
+      if (!selectedCard || selectedCard.household_id !== householdId || data.account_id) {
+        throw new Error('Compra no cartão exige um cartão da Casa e não pode debitar uma conta');
+      }
+    } else if (isExpense && (!selectedAccount || selectedAccount.household_id !== householdId || data.card_id)) {
+      throw new Error('Despesa direta exige uma conta, carteira ou benefício de origem da Casa');
     }
 
     const id = uuidv4();
@@ -1058,8 +1078,11 @@ class DatabaseStore {
       household_id: householdId,
       created_by_user_id: userId,
       buyer_user_id: data.buyer_user_id || userId,
-      payer_user_id: data.payer_user_id || userId,
+      // Campo legado representa o titular do meio, nunca a responsabilidade econômica.
+      payer_user_id: selectedCard?.owner_user_id ?? selectedAccount?.owner_user_id ?? data.payer_user_id ?? userId,
       transaction_date: date,
+      competence_month: data.competence_month || date.slice(0, 7),
+      effective_date: data.status === 'pending' || data.payment_method_id === 'pm-credit' ? null : date,
       description: initialDesc,
       merchant: data.merchant || '',
       total_amount: initialAmount,
@@ -1069,7 +1092,11 @@ class DatabaseStore {
       card_id: data.card_id || null,
       category_id: data.category_id || null,
       beneficiary_type: data.beneficiary_type || 'both',
-      status: 'completed',
+      status: data.status || 'completed',
+      effective_funder_user_id:
+        data.status === 'pending' || data.payment_method_id === 'pm-credit'
+          ? null
+          : selectedAccount?.owner_user_id ?? null,
       notes: data.notes || '',
       is_installment: isInstallment,
       is_protected_fund: isProtected,
@@ -1120,7 +1147,7 @@ class DatabaseStore {
     }
 
     // Debit immediate account balance if paid via debit, pix, VA or cash (only first installment or single tx)
-    if (data.account_id && this.accounts.has(data.account_id)) {
+    if (newTx.status === 'completed' && data.account_id && this.accounts.has(data.account_id)) {
       const acc = this.accounts.get(data.account_id)!;
       if (newTx.transaction_type === 'expense') {
         acc.current_balance = Number((acc.current_balance - initialAmount).toFixed(2));
@@ -1195,6 +1222,8 @@ class DatabaseStore {
           buyer_user_id: data.buyer_user_id || userId,
           payer_user_id: data.payer_user_id || userId,
           transaction_date: instDateStr,
+          competence_month: instDateStr.slice(0, 7),
+          effective_date: null,
           description: `${data.description.trim()} (${i}/${installmentCount})`,
           merchant: data.merchant || '',
           total_amount: baseAmount,
@@ -1205,6 +1234,7 @@ class DatabaseStore {
           category_id: data.category_id || null,
           beneficiary_type: data.beneficiary_type || 'both',
           status: 'pending', // Previsto nos meses subsequentes
+          effective_funder_user_id: null,
           notes: `Parcela ${i}/${installmentCount} referente a ${data.description.trim()}`,
           is_installment: true,
           is_protected_fund: false,
@@ -1373,6 +1403,11 @@ class DatabaseStore {
     if (data.status !== undefined) {
       tx.status = data.status;
     }
+    tx.competence_month = tx.competence_month || updatedDate.slice(0, 7);
+    tx.effective_date = tx.status === 'completed' && tx.account_id ? updatedDate : null;
+    tx.effective_funder_user_id = tx.status === 'completed' && tx.account_id
+      ? this.accounts.get(tx.account_id)?.owner_user_id ?? null
+      : null;
     tx.updated_at = now;
 
     // 3. Apply new account balance impact (if updatedAccountId is set and transaction is completed)

@@ -61,20 +61,17 @@ export const formatMonthDisplay = (monthStr: string): string => {
   return `${monthName} de ${year}`;
 };
 
+const CURRENT_MONTH = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit'
+}).format(new Date());
+const [currentYear] = CURRENT_MONTH.split('-').map(Number);
 const GENERATED_MONTH_OPTIONS: Array<{ value: string; label: string }> = [];
-[2025, 2026, 2027].forEach((yr) => {
-  for (let m = 1; m <= 12; m++) {
-    const val = `${yr}-${String(m).padStart(2, '0')}`;
-    const name = MONTH_NAMES[m - 1];
-    let extra = '';
-    if (val === '2026-05') extra = ' • Atual';
-    else if (val === '2026-04') extra = ' • Anterior';
-    GENERATED_MONTH_OPTIONS.push({
-      value: val,
-      label: `${name} de ${yr}${extra}`
-    });
+for (let yr = currentYear - 1; yr <= currentYear + 1; yr += 1) {
+  for (let m = 1; m <= 12; m += 1) {
+    const value = `${yr}-${String(m).padStart(2, '0')}`;
+    GENERATED_MONTH_OPTIONS.push({ value, label: `${MONTH_NAMES[m - 1]} de ${yr}${value === CURRENT_MONTH ? ' • Atual' : ''}` });
   }
-});
+}
 
 const PAYMENT_METHOD_OPTIONS = [
   { id: 'all', label: 'Todos', icon: Layers },
@@ -186,7 +183,7 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
               {formatMonthDisplay(selectedMonth)}
             </span>
             <span className="text-[10px] text-blue-400 font-bold block -mt-0.5">
-              {selectedMonth === '2026-05' ? 'Competência Vigente' : 'Competência Selecionada'}
+              {selectedMonth === CURRENT_MONTH ? 'Competência Vigente' : 'Competência Selecionada'}
             </span>
           </div>
 

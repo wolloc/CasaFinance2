@@ -304,6 +304,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           projection_months: projectionMonths
         });
       } else {
+        const today = new Date().toISOString().split('T')[0];
         await ApiService.createTransaction(householdId, currentUser.id, {
           description: finalDesc,
           merchant: merchant.trim() || undefined,
@@ -316,7 +317,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           buyer_user_id: buyerUserId,
           payer_user_id: payerUserId,
           beneficiary_type: beneficiaryType,
-          transaction_date: new Date().toISOString().split('T')[0],
+          transaction_date: today,
+          competence_month: today.slice(0, 7),
+          status: 'completed',
           installments_count: installmentsCount,
           splits: getSplits()
         });
