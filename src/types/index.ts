@@ -47,6 +47,8 @@ export interface Account {
   name: string;
   account_type: AccountType;
   institution?: string;
+  /** Identificação cadastral (agência/conta, apelido ou final do benefício). */
+  identification?: string;
   initial_balance: number;
   current_balance: number;
   is_active: boolean;

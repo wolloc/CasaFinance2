@@ -33,12 +33,13 @@ interface Props {
   householdId: string;
   currentUser: User;
   onRefresh: () => void;
+  categoryType?: 'expense' | 'income';
 }
 
-export const CategoriesManager: React.FC<Props> = ({ categories, householdId, currentUser, onRefresh }) => {
+export const CategoriesManager: React.FC<Props> = ({ categories, householdId, currentUser, onRefresh, categoryType }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'expense' | 'income'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'expense' | 'income'>(categoryType ?? 'all');
 
   // Form State
   const [name, setName] = useState('');
@@ -50,7 +51,7 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
   const openCreateModal = () => {
     setEditingCategory(null);
     setName('');
-    setType('expense');
+    setType(categoryType ?? 'expense');
     setColor('#2563eb');
     setIcon('tag');
     setShowModal(true);
@@ -75,14 +76,14 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
       if (editingCategory) {
         await ApiService.updateCategory(householdId, currentUser.id, editingCategory.id, {
           name,
-          type,
+          type: categoryType ?? type,
           color,
           icon
         });
       } else {
         await ApiService.createCategory(householdId, currentUser.id, {
           name,
-          type,
+          type: categoryType ?? type,
           color,
           icon
         });
@@ -190,17 +191,20 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
     '#64748b'  // Slate
   ];
 
-  const filteredCategories = categories.filter((c) => {
-    if (filterType === 'all') return true;
-    return c.type === filterType;
-  });
+  const filteredCategories = categories.filter((c) => c.type === (categoryType ?? filterType) || (!categoryType && filterType === 'all'));
+
+  const toggleActive = async (category: Category) => {
+    await ApiService.updateCategory(householdId, currentUser.id, category.id, { is_active: !category.is_active });
+    triggerHaptic('success');
+    onRefresh();
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-            <span>Categorias de Gastos e Receitas</span>
+            <span>{categoryType === 'income' ? 'Categorias de Receitas' : categoryType === 'expense' ? 'Categorias de Despesas' : 'Categorias'}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold">
               {categories.length}
             </span>
@@ -212,7 +216,7 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
 
         <div className="flex items-center gap-2">
           {/* Segmented Filter */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs font-semibold">
+          {!categoryType && <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs font-semibold">
             <button
               type="button"
               onClick={() => {
@@ -255,7 +259,7 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
             >
               Receitas
             </button>
-          </div>
+          </div>}
 
           <button
             type="button"
@@ -286,20 +290,18 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   {cat.name}
                 </h4>
-                <span className="text-[10px] text-slate-400 font-medium block">
-                  {cat.type === 'income' ? 'Receita' : 'Despesa'}
-                </span>
+                <span className="text-[10px] text-slate-400 font-medium block">{cat.is_active ? 'Ativa' : 'Inativa'}</span>
               </div>
             </div>
 
-            <button
+            <div className="flex gap-1"><button type="button" onClick={() => toggleActive(cat)} className="w-6 h-6 rounded-lg text-[10px] text-slate-400" title={cat.is_active ? 'Desativar' : 'Ativar'}>{cat.is_active ? '●' : '○'}</button><button
               type="button"
               onClick={() => openEditModal(cat)}
               className="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center transition-all opacity-80 hover:opacity-100 shrink-0"
               title="Editar Categoria"
             >
               <Edit2 className="w-2.5 h-2.5" />
-            </button>
+            </button></div>
           </div>
         ))}
       </div>
@@ -349,7 +351,7 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
                 />
               </div>
 
-              <div>
+              {!categoryType && <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Tipo Financeiro
                 </label>
@@ -377,7 +379,7 @@ export const CategoriesManager: React.FC<Props> = ({ categories, householdId, cu
                     Receita
                   </button>
                 </div>
-              </div>
+              </div>}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">

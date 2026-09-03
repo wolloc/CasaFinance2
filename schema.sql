@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     name VARCHAR(100) NOT NULL,
     account_type account_type_enum NOT NULL DEFAULT 'checking',
     institution VARCHAR(100),
+    identification VARCHAR(120),
     initial_balance NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
     current_balance NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -703,6 +704,5 @@ CREATE POLICY rls_merchant_category_rules_isolation ON public.merchant_category_
 
 CREATE INDEX IF NOT EXISTS idx_document_imports_household ON public.document_imports(household_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_merchant_rules_pattern ON public.merchant_category_rules(household_id, merchant_pattern);
-
 
 
