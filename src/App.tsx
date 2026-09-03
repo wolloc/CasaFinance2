@@ -35,7 +35,9 @@ const AppContent: React.FC = () => {
   const [dataLoading, setDataLoading] = useState<boolean>(false);
 
   // Global shared filters across Dashboard & Extrato (Lançamentos)
-  const [globalMonth, setGlobalMonth] = useState<string>('2026-05');
+  const [globalMonth, setGlobalMonth] = useState<string>(() => new Intl.DateTimeFormat('en-CA', {
+    timeZone: activeHousehold?.timezone || 'America/Sao_Paulo', year: 'numeric', month: '2-digit'
+  }).format(new Date()));
   const [globalResponsible, setGlobalResponsible] = useState<'all' | 'wallace' | 'guilherme'>('all');
   const [globalCategory, setGlobalCategory] = useState<string>('all');
 

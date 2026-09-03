@@ -263,7 +263,7 @@ export class ApiService {
   public static async createTransaction(
     householdId: string,
     userId: string,
-    data: any
+    data: import('../types/index.js').CreateExpenseInput
   ): Promise<{ transaction: Transaction }> {
     return this.safeFetchJson(`/api/households/${householdId}/transactions`, {
       method: 'POST',

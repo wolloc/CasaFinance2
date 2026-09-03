@@ -42,7 +42,7 @@ export interface UnifiedTimelineItem {
   merchant?: string;
   amount: number;
   type: 'expense' | 'income';
-  status: 'completed' | 'pending' | 'cancelled';
+  status: 'completed' | 'pending' | 'cancelled' | 'refunded';
   isRecurring: boolean;
   categoryName: string;
   categoryColor: string;
@@ -56,6 +56,7 @@ export interface UnifiedTimelineItem {
   buyerId: string;
   payerName: string;
   payerId: string;
+  effectiveFunderName?: string;
   beneficiaryType: BeneficiaryType;
   wallacePercentage?: number;
   splits: Array<{
@@ -65,7 +66,37 @@ export interface UnifiedTimelineItem {
     amount: number;
   }>;
   rawTransaction?: Transaction;
-  rawOccurrence?: any;
+  rawOccurrence?: BillOccurrenceTimelineRecord;
+}
+
+interface BillOccurrenceTimelineRecord {
+  id: string;
+  due_date: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  description?: string;
+  title?: string;
+  paid_transaction_id?: string | null;
+  category_id?: string | null;
+  payment_method_id?: string;
+  card_id?: string | null;
+  account_id?: string | null;
+  payer_user_id?: string;
+  buyer_user_id?: string;
+  beneficiary_type?: BeneficiaryType;
+  wallace_percentage?: number;
+  recurring_bill?: {
+    description?: string;
+    merchant?: string;
+    category_id?: string | null;
+    payment_method_id?: string;
+    card_id?: string | null;
+    account_id?: string | null;
+    payer_user_id?: string;
+    buyer_user_id?: string;
+    beneficiary_type?: BeneficiaryType;
+    wallace_percentage?: number;
+  };
 }
 
 interface Props {
@@ -104,7 +135,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
   onCategoryChange: propOnCategoryChange
 }) => {
   // Local state fallbacks if not supplied by global context
-  const [localMonth, setLocalMonth] = useState<string>('2026-05');
+  const [localMonth, setLocalMonth] = useState<string>(() => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit'
+  }).format(new Date()));
   const [localResponsible, setLocalResponsible] = useState<'all' | 'wallace' | 'guilherme'>('all');
   const [localCategory, setLocalCategory] = useState<string>('all');
 
@@ -128,7 +161,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [occurrences, setOccurrences] = useState<any[]>([]);
+  const [occurrences, setOccurrences] = useState<BillOccurrenceTimelineRecord[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
   const [isRecurringOnly, setIsRecurringOnly] = useState<boolean>(false);
 
@@ -190,12 +223,17 @@ export const TransactionsTimeline: React.FC<Props> = ({
         categoryColor: cat?.color || '#64748b',
         categoryId: tx.category_id,
         paymentMethodId: tx.payment_method_id,
+        cardId: tx.card_id || undefined,
+        accountId: tx.account_id || undefined,
         paymentMethodName: pm?.name || (card ? 'Cartão' : acc ? 'Conta' : 'Outro'),
         cardOrAccountName: card?.name || acc?.name || 'Carteira',
         buyerName: tx.buyer_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
         buyerId: tx.buyer_user_id,
         payerName: tx.payer_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme',
         payerId: tx.payer_user_id,
+        effectiveFunderName: tx.effective_funder_user_id
+          ? tx.effective_funder_user_id === 'usr-wallace-001' ? 'Wallace' : 'Guilherme'
+          : undefined,
         beneficiaryType: tx.beneficiary_type || 'both',
         splits,
         rawTransaction: tx
@@ -362,9 +400,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
       triggerHaptic('success');
       setIsDetailOpen(false);
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       triggerHaptic('error');
-      alert(err.message || 'Erro ao excluir lançamento');
+      alert(err instanceof Error ? err.message : 'Erro ao excluir lançamento');
     } finally {
       setDeletingId(null);
     }
@@ -385,9 +423,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
       setIsDetailOpen(false);
       setRefundReason('');
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       triggerHaptic('error');
-      alert(err.message || 'Erro ao estornar transação');
+      alert(err instanceof Error ? err.message : 'Erro ao estornar transação');
     } finally {
       setIsRefunding(false);
     }
@@ -402,9 +440,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
       setIsDetailOpen(false);
       await loadOccurrences(currentMonth);
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       triggerHaptic('error');
-      alert(err.message || 'Erro ao registrar pagamento da conta');
+      alert(err instanceof Error ? err.message : 'Erro ao registrar pagamento da conta');
     } finally {
       setIsPayingOccurrence(false);
     }
@@ -418,9 +456,9 @@ export const TransactionsTimeline: React.FC<Props> = ({
       triggerHaptic('success');
       setIsDetailOpen(false);
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       triggerHaptic('error');
-      alert(err.message || 'Erro ao registrar pagamento do lançamento');
+      alert(err instanceof Error ? err.message : 'Erro ao registrar pagamento do lançamento');
     } finally {
       setIsPayingOccurrence(false);
     }
@@ -529,7 +567,7 @@ export const TransactionsTimeline: React.FC<Props> = ({
         ) : (
           filteredItems.map((item) => {
             const isIncome = item.type === 'income';
-            const isCancelled = item.status === 'cancelled';
+            const isCancelled = item.status === 'cancelled' || item.status === 'refunded';
             const isPendingOccurrence = item.source === 'recurring_bill_occurrence' && item.status === 'pending';
 
             // Responsabilidade simplificada para as badges
@@ -626,6 +664,20 @@ export const TransactionsTimeline: React.FC<Props> = ({
                       Comprador: {item.buyerName}
                     </span>
 
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                      {getMethodIcon(item.paymentMethodId)}
+                      Meio: {item.cardOrAccountName} · titular {item.payerName}
+                    </span>
+
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                      <Building2 className="w-2.5 h-2.5" />
+                      {item.effectiveFunderName
+                        ? `Financiador: ${item.effectiveFunderName}`
+                        : item.cardId
+                          ? 'Financiador: após pagar fatura'
+                          : 'Financiador: ainda não realizado'}
+                    </span>
+
                     {/* Badge de status de pagamento */}
                     {isCancelled ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
@@ -720,6 +772,19 @@ export const TransactionsTimeline: React.FC<Props> = ({
                 <User className="w-3.5 h-3.5 text-blue-400" />
                 {selectedItem.buyerName}
               </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Meio / origem</span>
+                <span className="text-xs font-bold text-sky-300">{selectedItem.cardOrAccountName} · {selectedItem.payerName}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Financiador efetivo</span>
+                <span className="text-xs font-bold text-white">
+                  {selectedItem.effectiveFunderName || (selectedItem.cardId ? 'Somente após pagar a fatura' : 'Aguardando efetivação')}
+                </span>
+              </div>
             </div>
 
             {/* Divisão / Responsabilidades */}

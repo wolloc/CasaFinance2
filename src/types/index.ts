@@ -43,6 +43,7 @@ export interface CreateMoneyMovementInput extends Omit<MoneyMovement, 'id' | 'ho
   loan?: { lender: string; installment_count: number; first_due_date: string } | null;
 }
 export type BeneficiaryType = 'wallace' | 'guilherme' | 'both' | 'custom';
+export type ExpenseStatus = 'pending' | 'completed' | 'cancelled' | 'refunded';
 export type InvoiceStatus = 'open' | 'closed' | 'paid' | 'overdue';
 export type InstallmentStatus = 'scheduled' | 'billed' | 'paid' | 'cancelled';
 export type SettlementStatus = 'draft' | 'completed';
@@ -141,6 +142,10 @@ export interface Transaction {
   buyer_user_id: string;
   payer_user_id: string;
   transaction_date: string;
+  /** Competência contábil, independente da data em que o caixa foi liquidado. */
+  competence_month?: string;
+  /** Data da saída real de caixa; ausente enquanto a despesa estiver prevista ou no cartão. */
+  effective_date?: string | null;
   description: string;
   merchant?: string;
   total_amount: number;
@@ -150,7 +155,9 @@ export interface Transaction {
   card_id?: string | null;
   category_id?: string | null;
   beneficiary_type: BeneficiaryType;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: ExpenseStatus;
+  /** Derivado do titular da origem somente depois de existir saída real de caixa. */
+  effective_funder_user_id?: string | null;
   notes?: string;
   is_installment: boolean;
   is_protected_fund?: boolean;
@@ -159,6 +166,25 @@ export interface Transaction {
   created_at: string;
   updated_at: string;
   splits?: TransactionSplit[];
+}
+
+export interface CreateExpenseInput {
+  description: string;
+  merchant?: string;
+  total_amount: number;
+  transaction_type: 'expense';
+  payment_method_id: string;
+  account_id: string | null;
+  card_id: string | null;
+  category_id: string;
+  buyer_user_id: string;
+  payer_user_id: string;
+  beneficiary_type: BeneficiaryType;
+  transaction_date: string;
+  competence_month: string;
+  status: 'pending' | 'completed';
+  installments_count: number;
+  splits: Array<{ responsible_user_id: string; percentage: number; amount: number }>;
 }
 
 export interface ProtectedFund {

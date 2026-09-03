@@ -45,11 +45,11 @@ export const NewTransactionModal: React.FC<Props> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
-  const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
   const [amountStr, setAmountStr] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [merchant, setMerchant] = useState<string>('');
   const [transactionDate, setTransactionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [status, setStatus] = useState<'pending' | 'completed'>('completed');
   const [categoryId, setCategoryId] = useState<string>('');
   const [paymentMethodId, setPaymentMethodId] = useState<string>('pm-credit');
   const [cardId, setCardId] = useState<string>('');
@@ -78,6 +78,7 @@ export const NewTransactionModal: React.FC<Props> = ({
       setDescription('');
       setMerchant('');
       setTransactionDate(new Date().toISOString().split('T')[0]);
+      setStatus('completed');
       setBuyerUserId(currentUser.id);
       setPayerUserId(currentUser.id);
       setBeneficiaryType('both');
@@ -276,7 +277,7 @@ export const NewTransactionModal: React.FC<Props> = ({
           description: description.trim() || 'Nova Movimentação',
           merchant: merchant.trim() || undefined,
           total_amount: numericAmount,
-          transaction_type: transactionType,
+          transaction_type: 'expense',
           payment_method_id: paymentMethodId,
           account_id: paymentMethodId !== 'pm-credit' ? accountId : null,
           card_id: paymentMethodId === 'pm-credit' ? cardId : null,
@@ -285,6 +286,8 @@ export const NewTransactionModal: React.FC<Props> = ({
           payer_user_id: payerUserId,
           beneficiary_type: beneficiaryType,
           transaction_date: transactionDate,
+          competence_month: transactionDate.slice(0, 7),
+          status,
           installments_count: installmentsCount,
           splits: getSplits()
         });
@@ -293,9 +296,9 @@ export const NewTransactionModal: React.FC<Props> = ({
       triggerHaptic('success');
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       triggerHaptic('error');
-      setFormError(err.message || 'Erro ao registrar lançamento');
+      setFormError(err instanceof Error ? err.message : 'Erro ao registrar lançamento');
     } finally {
       setIsSubmitting(false);
     }
@@ -311,8 +314,8 @@ export const NewTransactionModal: React.FC<Props> = ({
     <IOSBottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title={isRecurring ? 'Nova Conta Fixa' : 'Novo Lançamento'}
-      subtitle={isRecurring ? 'Adiciona uma regra recorrente com projeção futura' : 'Lançamento completo com auditoria contábil'}
+      title={isRecurring ? 'Nova Conta Fixa' : 'Nova despesa'}
+      subtitle={isRecurring ? 'Adiciona uma regra recorrente com projeção futura' : 'Comprador, origem e responsabilidade são independentes'}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (
@@ -497,7 +500,7 @@ export const NewTransactionModal: React.FC<Props> = ({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <input
                 type="date"
                 value={transactionDate}
@@ -505,6 +508,15 @@ export const NewTransactionModal: React.FC<Props> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-blue-500 min-h-touch"
                 required
               />
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as 'pending' | 'completed')}
+                aria-label="Status da despesa"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-blue-500 min-h-touch"
+              >
+                <option value="completed">Pago / efetivado</option>
+                <option value="pending">Previsto</option>
+              </select>
               <input
                 type="text"
                 placeholder="Estabelecimento / Local"
