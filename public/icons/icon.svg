@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Casa Finance</title>
+  <desc id="description">Uma casa branca com uma porta verde sobre fundo azul.</desc>
+  <rect width="512" height="512" rx="96" fill="#2563eb"/>
+  <rect x="82" y="82" width="348" height="348" rx="74" fill="#0f172a"/>
+  <path fill="#fff" d="M128 246 256 132l128 114-30 34-18-16v116H176V264l-18 16-30-34Zm94 38v96h68v-96h-68Z"/>
+  <path fill="#34d399" d="M240 318h32v62h-32z"/>
+</svg>

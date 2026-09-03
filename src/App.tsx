@@ -12,6 +12,7 @@ import { SettingsAndHouseholdManager } from './components/sprint2/SettingsAndHou
 import { HomeDashboard } from './components/dashboard/HomeDashboard.js';
 import { DraggableFloatingActions } from './components/common/DraggableFloatingActions.js';
 import { triggerHaptic } from './utils/haptics.js';
+import { PwaUpdateNotice } from './components/common/PwaUpdateNotice.js';
 import {
   LayoutDashboard,
   Receipt,
@@ -91,10 +92,10 @@ const AppContent: React.FC = () => {
       {/* iOS Mobile-First Frame / Native App Shell */}
       <main
         ref={mainContainerRef}
-        className="w-full max-w-md sm:max-w-xl md:max-w-2xl bg-slate-950 rounded-[44px] shadow-2xl overflow-hidden border-[6px] border-slate-800 flex flex-col min-h-[920px] relative transition-all"
+        className="w-full max-w-md sm:max-w-xl md:max-w-2xl bg-slate-950 sm:rounded-[44px] sm:shadow-2xl overflow-hidden sm:border-[6px] sm:border-slate-800 flex flex-col min-h-[100dvh] sm:min-h-[920px] relative transition-all"
       >
         {/* Dynamic Island / Notch */}
-        <div className="w-full flex justify-center pt-2.5 pb-1 bg-slate-900 z-20">
+        <div aria-hidden="true" className="hidden sm:flex w-full justify-center pt-2.5 pb-1 bg-slate-900 z-20">
           <div className="w-32 h-5 bg-black rounded-full shadow-inner flex items-center justify-between px-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
             <span className="w-2 h-2 rounded-full bg-blue-500/80 animate-pulse"></span>
@@ -108,7 +109,7 @@ const AppContent: React.FC = () => {
         <div className="flex-1 p-3 sm:p-5 space-y-4 overflow-y-auto bg-slate-950 pb-36 no-scrollbar">
           {error && (
             <div className="p-3.5 bg-rose-950/60 border border-rose-800 text-rose-300 rounded-2xl text-xs flex items-center gap-2">
-              <Shield className="w-4 h-4 text-rose-400 shrink-0" />
+              <Shield className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
@@ -226,7 +227,7 @@ const AppContent: React.FC = () => {
                     />
                   )}
                 </div>
-                <span className="text-[10px] tracking-tight">Dashboard</span>
+                <span className="text-[10px] tracking-tight">Casa</span>
               </button>
 
               {/* 2. 📝 Despesas */}
@@ -268,7 +269,7 @@ const AppContent: React.FC = () => {
                     />
                   )}
                 </div>
-                <span className="text-[10px] tracking-tight">Entradas</span>
+                <span className="text-[10px] tracking-tight">Receitas</span>
               </button>
 
               {/* 4. ⚙️ Ajustes */}
@@ -330,6 +331,7 @@ const AppContent: React.FC = () => {
           />
         )}
       </main>
+      <PwaUpdateNotice />
     </div>
   );
 };

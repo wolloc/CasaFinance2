@@ -1,4 +1,4 @@
-import React, { useEffect, ReactNode } from 'react';
+import React, { useEffect, ReactNode, useId, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'motion/react';
 import { X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics.js';
@@ -22,11 +22,14 @@ export const IOSBottomSheet: React.FC<IOSBottomSheetProps> = ({
   showCloseButton = true,
   maxHeight = 'max-h-[92vh]'
 }) => {
+  const titleId = useId();
+  const sheetRef = useRef<HTMLDivElement>(null);
   // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       triggerHaptic('impact-light');
+      window.setTimeout(() => sheetRef.current?.focus(), 0);
     } else {
       document.body.style.overflow = '';
     }
@@ -34,6 +37,13 @@ export const IOSBottomSheet: React.FC<IOSBottomSheetProps> = ({
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // If dragged down more than 100px or with high velocity, close modal
@@ -62,6 +72,11 @@ export const IOSBottomSheet: React.FC<IOSBottomSheetProps> = ({
 
           {/* Modal Card / Bottom Sheet */}
           <motion.div
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            tabIndex={-1}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -81,7 +96,7 @@ export const IOSBottomSheet: React.FC<IOSBottomSheetProps> = ({
             {(title || showCloseButton) && (
               <div className="px-5 py-3 border-b border-slate-800/80 flex items-center justify-between">
                 <div>
-                  {title && <h2 className="text-base font-bold text-white tracking-tight">{title}</h2>}
+                  {title && <h2 id={titleId} className="text-base font-bold text-white tracking-tight">{title}</h2>}
                   {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
                 </div>
                 {showCloseButton && (

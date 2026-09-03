@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+/* Casa Finance design tokens. Member colors can be customized at runtime by
+   setting --color-member-one/--color-member-two on the app shell. */
+:root {
+  color-scheme: dark;
+  --color-action: #3b82f6;
+  --color-action-hover: #2563eb;
+  --color-income: #34d399;
+  --color-expense: #fb7185;
+  --color-forecast: #60a5fa;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #fb7185;
+  --color-member-one: #a78bfa;
+  --color-member-two: #22d3ee;
+  --surface-canvas: #020617;
+  --surface-card: #0f172a;
+  --radius-card: 1.5rem;
+  --radius-control: 0.875rem;
+  --shadow-card: 0 12px 32px rgb(0 0 0 / 0.24);
+  --space-safe-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+
+html { background: var(--surface-canvas); }
+
 @layer utilities {
   /* iOS Safe Area Inset Variables & Helpers */
   .pt-safe {
@@ -28,9 +52,22 @@
 }
 
 body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--surface-canvas);
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-action) 72%, white);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* Hide scrollbars for smooth horizontal iOS carousels */
