@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
+import { processLedger, type FinancialResource, type LedgerEvent } from '../src/domain/ledger.js';
 import type {
   User,
   Household,
@@ -1891,6 +1892,25 @@ class DatabaseStore {
       wallace_share: number;
       guilherme_share: number;
     }> = [];
+    const settlementResources: FinancialResource[] = [
+      ...Array.from(this.accounts.values())
+        .filter((account) => account.household_id === householdId)
+        .map((account) => ({
+          id: account.id,
+          kind: account.account_type === 'meal_benefit'
+            ? 'benefit' as const
+            : account.account_type === 'cash'
+              ? 'wallet' as const
+              : account.account_type === 'investment'
+                ? 'investment' as const
+                : 'account' as const,
+          ownerMemberId: account.owner_user_id ?? undefined
+        })),
+      ...Array.from(this.cards.values())
+        .filter((card) => card.household_id === householdId)
+        .map((card) => ({ id: card.id, kind: 'credit_card' as const, ownerMemberId: card.owner_user_id }))
+    ];
+    const settlementEvents: LedgerEvent[] = [];
 
     // 1. Iterate completed expense transactions (STRICTLY excluding 'transfer' and 'invoice_payment')
     for (const t of this.transactions.values()) {
@@ -1904,13 +1924,6 @@ class DatabaseStore {
           continue;
         }
 
-        // Sum paid amounts
-        if (t.payer_user_id === wallaceUser.id) {
-          wallaceBalance.total_paid += t.total_amount;
-        } else if (t.payer_user_id === guilhermeUser.id) {
-          guilhermeBalance.total_paid += t.total_amount;
-        }
-
         // Get splits for this transaction
         const splits = Array.from(this.transactionSplits.values()).filter(
           (s) => s.transaction_id === t.id
@@ -1921,12 +1934,24 @@ class DatabaseStore {
 
         for (const s of splits) {
           if (s.responsible_user_id === wallaceUser.id) {
-            wallaceBalance.total_responsibility += s.amount;
             wShare += s.amount;
           } else if (s.responsible_user_id === guilhermeUser.id) {
-            guilhermeBalance.total_responsibility += s.amount;
             gShare += s.amount;
           }
+        }
+
+        const responsibilities = splits.map((split) => ({ memberId: split.responsible_user_id, amount: split.amount }));
+        const sourceResourceId = t.card_id ?? t.account_id;
+        if (sourceResourceId) {
+          settlementEvents.push({
+            id: t.id,
+            type: 'expense',
+            amount: t.total_amount,
+            status: 'realized',
+            competenceMonth: t.transaction_date.slice(0, 7),
+            sourceResourceId,
+            responsibilities
+          });
         }
 
         // Add to contributing transactions list for auditability
@@ -1951,6 +1976,44 @@ class DatabaseStore {
         });
       }
     }
+
+    for (const payment of this.transactions.values()) {
+      if (
+        payment.household_id !== householdId ||
+        payment.status !== 'completed' ||
+        payment.transaction_type !== 'invoice_payment' ||
+        !payment.account_id ||
+        !payment.card_id ||
+        (competenceMonth && !payment.transaction_date.startsWith(competenceMonth))
+      ) continue;
+      const responsibilities = Array.from(this.transactionSplits.values())
+        .filter((split) => split.transaction_id === payment.id)
+        .map((split) => ({ memberId: split.responsible_user_id, amount: split.amount }));
+      settlementEvents.push({
+        id: payment.id,
+        type: 'credit_card_payment',
+        amount: payment.total_amount,
+        status: 'realized',
+        competenceMonth: payment.transaction_date.slice(0, 7),
+        sourceResourceId: payment.account_id,
+        cardResourceId: payment.card_id,
+        responsibilities
+      });
+    }
+
+    // O ledger deriva o financiador da origem liquidada. Compras no cartão ficam
+    // somente no acerto projetado até existir um pagamento de fatura vinculado.
+    const ledgerSettlement = processLedger(
+      settlementResources,
+      settlementEvents,
+      [wallaceUser.id, guilhermeUser.id]
+    ).realizedSettlement;
+    const wallaceLedger = ledgerSettlement.find((member) => member.memberId === wallaceUser.id);
+    const guilhermeLedger = ledgerSettlement.find((member) => member.memberId === guilhermeUser.id);
+    wallaceBalance.total_paid = wallaceLedger?.funded ?? 0;
+    wallaceBalance.total_responsibility = wallaceLedger?.responsibility ?? 0;
+    guilhermeBalance.total_paid = guilhermeLedger?.funded ?? 0;
+    guilhermeBalance.total_responsibility = guilhermeLedger?.responsibility ?? 0;
 
     // 2. Apply completed settlements (Liquidações do período ou acumuladas)
     const settlementHistory: any[] = [];

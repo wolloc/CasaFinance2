@@ -46,16 +46,26 @@ Este documento é o contrato contábil de referência. Valores monetários são 
 - `calculateSettlement(memberIds, expenses, mode)` compara financiamento e responsabilidade no modo realizado ou projetado sem usar comprador/titular como atalhos.
 - `calculateProjection(realBalance, month, commitments)` deduplica ocorrências pelo ID, inclui apenas previsões da competência e retorna o saldo projetado.
 
-## Matriz de lançamentos
+## Ledger e matriz de lançamentos
 
-| Evento efetivo | Conta bancária | Fatura | Resultado | Acerto realizado |
-| --- | ---: | ---: | ---: | --- |
-| Receita | aumenta | — | aumenta | não se aplica |
-| Despesa direta | diminui | — | diminui | origem identifica financiador |
-| Compra no cartão | não muda | aumenta | diminui | aguarda liquidação |
-| Pagamento de fatura | diminui | diminui | não muda | origem identifica financiador |
-| Transferência própria | origem diminui/destino aumenta | — | não muda | não se aplica |
+`src/domain/ledger.ts` é a fonte única das regras de movimentação. Cada evento imutável gera postings vinculados pelo `eventId`; `realizedBalances` contém somente fatos realizados e `projectedBalances` adiciona previsões sem alterar a visão realizada. A origem informa **qual conta, carteira ou benefício forneceu o recurso** e o seu titular no cadastro, no momento da liquidação, é o financiador efetivo. Titular do cartão, comprador e responsáveis não são usados como atalhos.
+
+| Evento | Resultado mensal | Saldo de caixa | Patrimônio líquido | Fatura | Acerto do casal e origem |
+| --- | --- | --- | --- | --- | --- |
+| `income` | receita | destino aumenta quando realizado | aumenta | não | não entra; destino identifica a entrada |
+| `expense` direta | despesa | conta/carteira/VA de origem diminui | diminui | não | entra; titular da origem é o financiador e os `responsibilities` definem o encargo econômico |
+| `expense` no cartão | despesa na competência | não muda | diminui pela obrigação | aumenta | antes do pagamento registra somente responsabilidade/obrigação projetada; titular do cartão não vira financiador |
+| `transfer` | neutro | duas pernas: origem diminui e destino aumenta | neutro | não | não entra; ambos os recursos ficam vinculados ao mesmo evento |
+| `credit_card_payment` | neutro, sem repetir compras | origem diminui | neutro: caixa e obrigação caem juntos | diminui | entra quando liquidado; titular da conta pagadora é o financiador, independentemente do titular do cartão |
+| `investment_deposit` | neutro, não é despesa | origem diminui | neutro: investimento aumenta | não | não entra; origem financia a troca entre ativos |
+| `investment_withdrawal` | neutro, não é receita | destino aumenta | neutro: investimento diminui | não | não entra; investimento fornece o recurso |
+| `loan_disbursement` | neutro, não é receita | destino aumenta | neutro: passivo aumenta igualmente | não | não entra; credor/contrato fornece o recurso |
+| `loan_payment` | somente encargos são despesa | origem diminui por principal + encargos | diminui somente pelos encargos | não | não entra; origem paga, principal reduz obrigação e encargos ficam separados |
+| `adjustment` | efeito deve ser declarado (`income`, `expense` ou `none`) | depende do recurso e direção | depende do efeito declarado | se o recurso for cartão | não entra automaticamente; exige justificativa externa/auditoria |
+| `refund` | inverte o resultado do original | inverte seus postings | inverte o efeito original | inverte quando aplicável | inverte o fato vinculado; mantém `reversesEventId` e não apaga o original |
+
+Todo evento possui `status: realized | projected`, competência e valor. Responsabilidades econômicas precisam fechar exatamente o valor em centavos. Um pagamento de empréstimo também exige que principal mais encargos fechem o total. Estornos só podem apontar para um evento anterior, existente e que não seja outro estorno.
 
 ## Proteções automatizadas
 
-`src/domain/finance.test.ts` cobre as dez regressões obrigatórias e também separa acerto de cartão realizado e projetado. Novas integrações no banco ou na API devem delegar a este módulo em vez de recriar fórmulas em componentes.
+`src/domain/finance.test.ts` preserva os contratos legados e agora delega saldos e resultado ao ledger. `src/domain/ledger.test.ts` cobre os dez tipos de evento, suas pernas, realizado versus projetado, financiador, responsabilidades, empréstimos e estorno rastreável. Novas integrações no banco ou na API devem delegar a esse motor em vez de recriar fórmulas em componentes.

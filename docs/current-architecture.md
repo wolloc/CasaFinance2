@@ -24,7 +24,7 @@ OCR: `server/geminiOcr.ts` → Gemini, com fallback demonstrativo
 - **Cliente HTTP:** `src/services/api.ts` concentra chamadas e cabeçalhos de usuário/casa, mas também contém respostas fallback fixas.
 - **API:** `server/index.ts` agrega middleware, handlers, validação parcial, suíte de segurança e integração OCR.
 - **Negócio e persistência:** `server/db.ts` concentra seeds, Maps, mutações, auditoria e cálculos; não persiste reinícios.
-- **Domínio puro:** `src/domain/finance.ts` passa a ser o contrato independente de React/Express para invariantes contábeis críticas.
+- **Domínio puro:** `src/domain/ledger.ts` é o motor canônico de eventos/postings; `src/domain/finance.ts` mantém a API legada e delega saldos e resultado ao ledger.
 - **Banco alvo:** `schema.sql` descreve enums, tabelas, RLS, funções e views de Supabase, porém não é utilizado pelo servidor em execução.
 
 ## Rotas e responsabilidades
@@ -71,7 +71,7 @@ O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, 
 | Patrimônio líquido | saldo das contas menos faturas abertas | Não inclui ainda passivos de empréstimos nem integração real com investimentos. |
 | Projeção mensal | `getFutureCommitmentsProjection`: ocorrências fixas pendentes + parcelas agendadas | Risco de duplicar regra, ocorrência e transação; deduplicação por ID/competência agora tem contrato puro. |
 | Saldo projetado | saldo real menos faturas/contas previstas | UI possui fallbacks que recalculam campos; servidor deve ser a única fonte no futuro. |
-| Acerto do casal | `getDetailedCoupleSettlement`: `payer_user_id - splits` | Hoje trata toda despesa concluída como financiada, inclusive cartão antes da liquidação; conflita com o princípio permanente. |
+| Acerto do casal | postings e responsabilidades do ledger | Despesa direta deriva o financiador do titular da origem; compra no cartão permanece obrigação projetada até a liquidação, sem inferir financiamento do titular do cartão. |
 
 ## Valores fixos e dados de demonstração
 
@@ -87,7 +87,7 @@ O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, 
 
 ### P0 — integridade financeira e segurança
 
-1. **Acerto de cartão prematuro:** `getDetailedCoupleSettlement` credita `payer_user_id` em toda despesa concluída; deve separar obrigação projetada de financiamento após pagamento da fatura.
+1. **Vínculo de faturas legadas:** o ledger já separa obrigação projetada de financiamento realizado, mas os registros antigos ainda precisam de vínculo persistido entre pagamento de fatura e responsabilidades das compras liquidadas.
 2. **Persistência não durável:** produção usa Maps e seeds; conectar repositórios PostgreSQL/Supabase, transações ACID e migrations antes de dados reais.
 3. **Autenticação permissiva:** headers ausentes assumem Wallace; validar token/sessão e derivar Casa autorizada no servidor, sem confiar em headers do cliente.
 4. **Duas fontes de verdade:** snapshots de saldo e histórico são mutados juntos sem ledger/reconciliação transacional.
