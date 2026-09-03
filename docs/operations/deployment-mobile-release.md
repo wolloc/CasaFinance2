@@ -2,6 +2,8 @@
 
 > **Estado em 3 de setembro de 2026: preparado, mas não publicado.** Nenhuma URL foi criada porque não há autorização explícita nem credenciais de infraestrutura nesta execução. O gate `NÃO PUBLICAR` de homologação continua válido. Não inserir dados financeiros reais em staging.
 
+> **Canal iOS:** a avaliação PWA × Capacitor e os gates para câmera, Keychain, biometria, deep links e TestFlight estão registrados no [ADR-001](../architecture/adr-001-capacitor-ios.md). Até os gates serem cumpridos, a PWA é o canal de homologação; não há binário autorizado para TestFlight ou App Store.
+
 ## Ambientes e URLs
 
 | Ambiente | URL estável | Acesso | Dados |
