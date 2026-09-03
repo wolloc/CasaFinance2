@@ -30,7 +30,7 @@ as $$
 declare
   caller_id uuid := auth.uid();
   owner_household_id uuid;
-  generated_token text := encode(gen_random_bytes(32), 'hex');
+  plain_token text := encode(gen_random_bytes(32), 'hex');
   invitation_expiry timestamptz := now() + interval '7 days';
 begin
   if caller_id is null then
@@ -60,12 +60,12 @@ begin
   insert into public.household_invitations (household_id, token_hash, invited_email, created_by, expires_at)
   values (
     owner_household_id,
-    digest(convert_to(generated_token, 'UTF8'), 'sha256'),
+    digest(convert_to(plain_token, 'UTF8'), 'sha256'),
     nullif(lower(trim(invited_email)), ''),
     caller_id,
     invitation_expiry
   )
-  returning id, household_id, generated_token, expires_at;
+  returning invitation.id, invitation.household_id, plain_token, invitation.expires_at;
 end;
 $$;
 
@@ -91,9 +91,9 @@ begin
   -- Impede duas aceitacoes simultaneas pelo mesmo usuario em Casas diferentes.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(caller_id::text, 0));
 
-  select * into invitation
-  from public.household_invitations
-  where token_hash = digest(convert_to(invitation_token, 'UTF8'), 'sha256')
+  select stored_invitation.* into invitation
+  from public.household_invitations as stored_invitation
+  where stored_invitation.token_hash = digest(convert_to(invitation_token, 'UTF8'), 'sha256')
   for update;
 
   if invitation.id is null then
@@ -110,12 +110,16 @@ begin
     raise exception 'invitation has expired' using errcode = '22023';
   end if;
 
-  select lower(email) into caller_email from auth.users where id = caller_id;
+  select lower(auth_user.email) into caller_email
+  from auth.users as auth_user
+  where auth_user.id = caller_id;
   if invitation.invited_email is not null and lower(trim(coalesce(caller_email, ''))) <> invitation.invited_email then
     raise exception 'invitation email does not match the authenticated account' using errcode = '42501';
   end if;
 
-  perform 1 from public.households where id = invitation.household_id for update;
+  perform 1 from public.households as household
+  where household.id = invitation.household_id
+  for update;
   select member.household_id into existing_household_id
   from public.household_members member
   where member.profile_id = caller_id and member.deactivated_at is null
@@ -124,9 +128,9 @@ begin
 
   if existing_household_id is not null then
     if existing_household_id = invitation.household_id then
-      update public.household_invitations
+      update public.household_invitations as stored_invitation
       set accepted_at = now(), accepted_by = caller_id
-      where id = invitation.id;
+      where stored_invitation.id = invitation.id;
       return query select 'already_member'::text, invitation.household_id;
       return;
     end if;
@@ -144,9 +148,9 @@ begin
   insert into public.household_members (household_id, profile_id, role)
   values (invitation.household_id, caller_id, 'member');
 
-  update public.household_invitations
+  update public.household_invitations as stored_invitation
   set accepted_at = now(), accepted_by = caller_id
-  where id = invitation.id;
+  where stored_invitation.id = invitation.id;
 
   return query select 'accepted'::text, invitation.household_id;
 end;

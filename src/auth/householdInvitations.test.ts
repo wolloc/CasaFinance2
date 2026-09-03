@@ -47,12 +47,16 @@ test('traduz erros de convite para mensagens de usuario', () => {
 test('migration protege token, authorization, expiração e concorrencia no banco', async () => {
   const sql = await readFile(new URL('../../supabase/migrations/202609030008_household_invitations.sql', import.meta.url), 'utf8');
   assert.match(sql, /token_hash bytea/i);
-  assert.match(sql, /digest\(convert_to\(generated_token, 'UTF8'\), 'sha256'\)/i);
+  assert.match(sql, /digest\(convert_to\(plain_token, 'UTF8'\), 'sha256'\)/i);
   assert.match(sql, /gen_random_bytes\(32\)/i);
+  assert.match(sql, /returning invitation\.id, invitation\.household_id, plain_token, invitation\.expires_at;/i);
+  assert.doesNotMatch(sql, /returning\s+id,\s*household_id,\s*generated_token,\s*expires_at/i);
   assert.match(sql, /expires_at timestamptz/i);
   assert.match(sql, /auth\.uid\(\)/i);
   assert.match(sql, /pg_advisory_xact_lock/i);
   assert.match(sql, /for update/i);
+  assert.match(sql, /stored_invitation\.token_hash/i);
+  assert.match(sql, /stored_invitation\.id = invitation\.id/i);
   assert.match(sql, /household member limit reached/i);
   assert.match(sql, /revoke all on table public\.household_invitations/i);
   assert.doesNotMatch(sql, /service_role/i);
