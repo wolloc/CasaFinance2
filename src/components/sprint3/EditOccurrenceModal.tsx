@@ -59,6 +59,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
   const [payerUserId, setPayerUserId] = useState<string>('usr-wallace-001');
   const [buyerUserId, setBuyerUserId] = useState<string>('usr-wallace-001');
   const [beneficiaryType, setBeneficiaryType] = useState<BeneficiaryType>('both');
+  const [customWallacePct, setCustomWallacePct] = useState<number>(50);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +81,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
       setPayerUserId(item.payerId || 'usr-wallace-001');
       setBuyerUserId(item.buyerId || 'usr-wallace-001');
       setBeneficiaryType(item.beneficiaryType || 'both');
+      setCustomWallacePct(item.wallacePercentage ?? 50);
       setError(null);
     }
   }, [isOpen, item]);
@@ -159,6 +161,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           payer_user_id: payerUserId,
           buyer_user_id: buyerUserId,
           beneficiary_type: beneficiaryType,
+          wallace_percentage: beneficiaryType === 'custom' ? customWallacePct : undefined,
           category_id: categoryId || undefined
         });
       } else {
@@ -417,7 +420,7 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Divisão de Responsabilidade
           </label>
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
             <button
               type="button"
               onClick={() => {
@@ -457,7 +460,38 @@ export const EditOccurrenceModal: React.FC<EditOccurrenceModalProps> = ({
               <UserIcon className="w-3.5 h-3.5" />
               <span>Guilherme 100%</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('selection');
+                setBeneficiaryType('custom');
+              }}
+              className={`py-2 rounded-xl flex items-center justify-center gap-1 transition-all min-h-touch ${
+                beneficiaryType === 'custom' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Personalizada</span>
+            </button>
           </div>
+
+          {beneficiaryType === 'custom' && (
+            <div className="p-3 rounded-xl bg-slate-950 border border-purple-500/30 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-emerald-400">Wallace {customWallacePct}%</span>
+                <span className="text-indigo-400">Guilherme {100 - customWallacePct}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={customWallacePct}
+                onChange={(event) => setCustomWallacePct(Number(event.target.value))}
+                className="w-full accent-purple-500"
+                aria-label="Percentual de responsabilidade do Wallace"
+              />
+            </div>
+          )}
         </div>
 
         {/* 7. BOTÃO DE CONFIRMAR ALTERAÇÕES */}
