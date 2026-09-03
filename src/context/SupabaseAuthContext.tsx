@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session, User } from '@supabase/supabase-js';
 import { friendlyAuthError } from '../auth/authErrors.js';
 import { supabase, supabaseConfigurationError } from '../lib/supabase.js';
+import { bootstrapHousehold, findExistingHousehold, type BootstrapHouseholdResult } from '../auth/householdBootstrap.js';
 
 type Credentials = { email: string; password: string };
 type AuthResult = { success: boolean; confirmationRequired?: boolean };
@@ -12,6 +13,9 @@ type SupabaseAuthValue = {
   isLoading: boolean;
   isSubmitting: boolean;
   error: string | null;
+  household: { id: string; name: string } | null;
+  householdLoading: boolean;
+  createHousehold: (householdName: string, displayName: string) => Promise<BootstrapHouseholdResult | null>;
   signIn: (credentials: Credentials) => Promise<AuthResult>;
   signUp: (credentials: Credentials) => Promise<AuthResult>;
   signOut: () => Promise<void>;
@@ -24,6 +28,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [household, setHousehold] = useState<{ id: string; name: string } | null>(null);
+  const [householdLoading, setHouseholdLoading] = useState(false);
   const [error, setError] = useState<string | null>(supabaseConfigurationError);
 
   useEffect(() => {
@@ -53,6 +59,21 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!supabase || !session) {
+      setHousehold(null);
+      setHouseholdLoading(false);
+      return;
+    }
+    let mounted = true;
+    setHouseholdLoading(true);
+    findExistingHousehold(supabase, session)
+      .then((existingHousehold) => { if (mounted) setHousehold(existingHousehold); })
+      .catch((householdError) => { if (mounted) setError('Não foi possível verificar sua Casa. Tente novamente.'); })
+      .finally(() => { if (mounted) setHouseholdLoading(false); });
+    return () => { mounted = false; };
+  }, [session]);
+
   const run = async (operation: 'signIn' | 'signUp', credentials: Credentials): Promise<AuthResult> => {
     if (!supabase) return { success: false };
     setIsSubmitting(true);
@@ -77,6 +98,28 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isSubmitting,
     error,
+    household,
+    householdLoading,
+    createHousehold: async (householdName, displayName) => {
+      if (!supabase || !session) {
+        setError('Sessão expirada. Entre novamente para continuar.');
+        return null;
+      }
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const result = await bootstrapHousehold(supabase, session, householdName, displayName);
+        setHousehold(await findExistingHousehold(supabase, session));
+        return result;
+      } catch (householdError) {
+        setError(householdError instanceof Error && householdError.message.includes('Sessão')
+          ? householdError.message
+          : 'Não foi possível criar sua Casa agora. Tente novamente.');
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
     signIn: (credentials) => run('signIn', credentials),
     signUp: (credentials) => run('signUp', credentials),
     signOut: async () => {
@@ -88,7 +131,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setIsSubmitting(false);
     },
     clearError: () => setError(null),
-  }), [session, isLoading, isSubmitting, error]);
+  }), [session, isLoading, isSubmitting, error, household, householdLoading]);
 
   return <SupabaseAuthContext.Provider value={value}>{children}</SupabaseAuthContext.Provider>;
 }
