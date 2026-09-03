@@ -16,7 +16,12 @@ const config = loadConfig();
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-app.use(securityMiddleware({ allowedOrigins: config.corsOrigins, enforceHttps: config.enforceHttps, canonicalUrl: config.appUrl }));
+app.use(securityMiddleware({
+  allowedOrigins: config.corsOrigins,
+  enforceHttps: config.enforceHttps,
+  canonicalUrl: config.appUrl,
+  environment: config.environment
+}));
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
