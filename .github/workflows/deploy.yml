@@ -1,0 +1,51 @@
+name: Deploy approved release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Ambiente a promover
+        required: true
+        type: choice
+        options: [staging, production]
+      release_authorized:
+        description: Wallace e Guilherme autorizaram esta publicação
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run check:secrets
+      - run: npm run build
+
+  deploy:
+    needs: validate
+    if: inputs.release_authorized
+    environment: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acionar deploy protegido
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$DEPLOY_HOOK_URL"
+          curl --fail-with-body --silent --show-error --request POST "$DEPLOY_HOOK_URL"

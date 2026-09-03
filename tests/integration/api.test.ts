@@ -39,4 +39,13 @@ describe('API e isolamento equivalente a RLS', () => {
     assert.equal(response.status, 404);
     assert.match(response.headers.get('content-type') ?? '', /application\/json/);
   });
+
+  it('envia headers defensivos e bloqueia origem desconhecida', async () => {
+    const regular = await fetch(`${baseUrl}/api/health`);
+    assert.equal(regular.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(regular.headers.get('x-frame-options'), 'DENY');
+
+    const crossOrigin = await fetch(`${baseUrl}/api/health`, { headers: { origin: 'https://evil.invalid' } });
+    assert.equal(crossOrigin.status, 403);
+  });
 });
