@@ -3,7 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { friendlyAuthError } from '../auth/authErrors.js';
 import { supabase, supabaseConfigurationError } from '../lib/supabase.js';
 import { bootstrapHousehold, findExistingHousehold, type BootstrapHouseholdResult } from '../auth/householdBootstrap.js';
-import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitationError, type AcceptInvitationResult, type HouseholdInvitation } from '../auth/householdInvitations.js';
+import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitationError, previewHouseholdInvitation, type AcceptInvitationResult, type HouseholdInvitation, type HouseholdInvitationPreview } from '../auth/householdInvitations.js';
 
 type Credentials = { email: string; password: string };
 type AuthResult = { success: boolean; confirmationRequired?: boolean };
@@ -20,6 +20,7 @@ type SupabaseAuthValue = {
   createHousehold: (householdName: string, displayName: string) => Promise<BootstrapHouseholdResult | null>;
   createInvitation: (invitedEmail?: string) => Promise<HouseholdInvitation | null>;
   acceptInvitation: (token: string) => Promise<AcceptInvitationResult | null>;
+  previewInvitation: (token: string) => Promise<HouseholdInvitationPreview | null>;
   signIn: (credentials: Credentials) => Promise<AuthResult>;
   signUp: (credentials: Credentials) => Promise<AuthResult>;
   signOut: () => Promise<void>;
@@ -184,6 +185,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         return null;
       } finally {
         setIsSubmitting(false);
+      }
+    },
+    previewInvitation: async (token) => {
+      if (!supabase || !session) return null;
+      setError(null);
+      try {
+        return await previewHouseholdInvitation(supabase, session, token);
+      } catch (invitationError) {
+        setError(friendlyInvitationError(invitationError));
+        return null;
       }
     },
     signIn: (credentials) => run('signIn', credentials),
