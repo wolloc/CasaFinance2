@@ -1,6 +1,7 @@
 import React from 'react';
 import { Scale, CheckCircle2, Info, ArrowRight, User } from 'lucide-react';
 import type { DashboardSettlementData } from '../../types/index.js';
+import { AccountingTooltip } from './AccountingTooltip.js';
 
 interface CoupleSettlementCardProps {
   settlement: DashboardSettlementData;
@@ -75,6 +76,14 @@ export const CoupleSettlementCard: React.FC<CoupleSettlementCardProps> = ({
         >
           {isSettled ? 'Contas Equilibradas' : 'Desequilíbrio Temporário'}
         </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2" aria-label="Glossário do acerto">
+        {(['Origem do pagamento', 'Financiado por', 'Responsabilidade econômica'] as const).map((term) => (
+          <span key={term} className="inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-slate-400">
+            {term}<AccountingTooltip term={term} />
+          </span>
+        ))}
       </div>
 
       {/* 2. Resumo da Posição de Compensação */}

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { processLedger, type FinancialResource, type LedgerEvent } from '../src/domain/ledger.js';
+import { projectDashboardFromLedger } from '../src/domain/dashboard.js';
 import type {
   User,
   Household,
@@ -3247,7 +3248,46 @@ class DatabaseStore {
       .filter((d) => d.household_id === householdId)
       .sort((a, b) => b.drainage_date.localeCompare(a.drainage_date));
 
+    // Adaptador de persistência -> ledger. A partir daqui o Dashboard recebe um
+    // read model pronto: nenhuma fórmula financeira é executada no React.
+    const dashboardResources: FinancialResource[] = [
+      ...householdAccounts.map((account) => ({
+        id: account.id,
+        kind: account.account_type === 'meal_benefit' ? 'benefit' as const : account.account_type === 'cash' ? 'wallet' as const : 'account' as const,
+        ownerMemberId: account.owner_user_id ?? undefined
+      })),
+      ...householdCards.map((card) => ({ id: card.id, kind: 'credit_card' as const, ownerMemberId: card.owner_user_id })),
+      ...protectedFundsList.map((fund) => ({ id: `fund:${fund.id}`, kind: 'investment' as const }))
+    ];
+    const dashboardEvents: LedgerEvent[] = [];
+    for (const transaction of this.transactions.values()) {
+      const month = transaction.competence_month ?? transaction.transaction_date.slice(0, 7);
+      if (transaction.household_id !== householdId || month !== competenceMonth || transaction.status === 'cancelled' || transaction.status === 'refunded') continue;
+      const status = transaction.status === 'completed' ? 'realized' as const : 'projected' as const;
+      const splits = Array.from(this.transactionSplits.values()).filter((split) => split.transaction_id === transaction.id);
+      const perspectiveAmount = targetUserId
+        ? splits.filter((split) => split.responsible_user_id === targetUserId).reduce((sum, split) => sum + split.amount, 0)
+        : transaction.total_amount;
+      if (transaction.transaction_type === 'expense' && perspectiveAmount > 0 && (transaction.account_id || transaction.card_id)) {
+        dashboardEvents.push({ id: transaction.id, type: 'expense', amount: perspectiveAmount, status, competenceMonth: month, sourceResourceId: transaction.card_id ?? transaction.account_id! });
+      } else if (transaction.transaction_type === 'income' && transaction.account_id && (!targetUserId || transaction.payer_user_id === targetUserId || transaction.buyer_user_id === targetUserId)) {
+        dashboardEvents.push({ id: transaction.id, type: 'income', amount: transaction.total_amount, status, competenceMonth: month, destinationResourceId: transaction.account_id });
+      } else if (transaction.transaction_type === 'transfer' && transaction.account_id && transaction.card_id) {
+        dashboardEvents.push({ id: transaction.id, type: 'transfer', amount: transaction.total_amount, status, competenceMonth: month, sourceResourceId: transaction.account_id, destinationResourceId: transaction.card_id });
+      } else if (transaction.transaction_type === 'invoice_payment' && transaction.account_id && transaction.card_id) {
+        dashboardEvents.push({ id: transaction.id, type: 'credit_card_payment', amount: transaction.total_amount, status, competenceMonth: month, sourceResourceId: transaction.account_id, cardResourceId: transaction.card_id });
+      }
+    }
+    const dashboardLedger = processLedger(dashboardResources, dashboardEvents);
+    const visibleResourceIds = new Set([...filteredAccounts.map(({ id }) => id), ...filteredCards.map(({ id }) => id)]);
+    const perspectiveResources = dashboardResources.filter((resource) => visibleResourceIds.has(resource.id) || resource.kind === 'investment');
+    const openingBalances: Record<string, number> = {};
+    for (const account of filteredAccounts) openingBalances[account.id] = account.current_balance - (dashboardLedger.realizedBalances[account.id] ?? 0);
+    for (const fund of protectedFundsList) openingBalances[`fund:${fund.id}`] = fund.current_balance;
+    const accounting = projectDashboardFromLedger(dashboardLedger, perspectiveResources, { openingBalances });
+
     return {
+      accounting,
       summary: {
         // Indicadores cruciais de Saldo Real vs Saldo Projetado
         saldoRealConsolidado,

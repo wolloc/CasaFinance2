@@ -80,9 +80,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
         activeMonth
       );
       setData(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro no Dashboard View:', err);
-      setError(err.message || 'Erro inesperado ao consultar os dados do dashboard.');
+      setError(err instanceof Error ? err.message : 'Erro inesperado ao consultar os dados do dashboard.');
     } finally {
       setIsLoading(false);
     }
@@ -153,11 +153,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             className="space-y-4 sm:space-y-5"
           >
             {/* 1. CARDS DE RESUMO FINANCEIRO CONSOLIDADO (TOPO) */}
-            <MainMetricsCard
-              summary={data.summary}
-              cards={data.cards}
-              patrimonio={data.patrimonioAcumulado}
-            />
+            <MainMetricsCard accounting={data.accounting} perspective={activePerspective} />
 
             {/* 2. HISTÓRICO DE PROTEÇÃO DE CAPITAL E DRENAGENS */}
             <ProtectedFundsCard

@@ -518,6 +518,7 @@ export interface DashboardCategoryBreakdown {
 }
 
 export interface DashboardFullResponse {
+  accounting: import('../domain/dashboard.js').DashboardAccountingSnapshot;
   summary: DashboardSummaryData;
   cards: DashboardCardItem[];
   accounts: DashboardAccountItem[];
