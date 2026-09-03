@@ -110,7 +110,7 @@ app.get('/api/households/:householdId', requireHouseholdAccess, (req, res) => {
   }
 
   const members = Array.from(db.householdMembers.values())
-    .filter((m) => m.household_id === householdId && m.is_active)
+    .filter((m) => m.household_id === householdId)
     .map((m) => ({
       ...m,
       user: db.users.get(m.user_id)
@@ -120,6 +120,16 @@ app.get('/api/households/:householdId', requireHouseholdAccess, (req, res) => {
     household: hh,
     members
   });
+});
+
+app.patch('/api/households/:householdId', requireHouseholdAccess, (req, res) => {
+  try {
+    const { householdId } = req.params;
+    const { userId } = getSecurityContext(req);
+    res.json({ household: db.updateHousehold(householdId, userId, req.body) });
+  } catch (err: unknown) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Erro ao atualizar casa' });
+  }
 });
 
 // Accounts
@@ -246,6 +256,16 @@ app.post('/api/households/:householdId/members', requireHouseholdAccess, (req, r
     res.status(201).json({ member });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Erro ao adicionar membro' });
+  }
+});
+
+app.patch('/api/households/:householdId/members/:memberId', requireHouseholdAccess, (req, res) => {
+  try {
+    const { householdId, memberId } = req.params;
+    const { userId } = getSecurityContext(req);
+    res.json({ member: db.updateHouseholdMember(householdId, userId, memberId, req.body) });
+  } catch (err: unknown) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Erro ao atualizar membro' });
   }
 });
 

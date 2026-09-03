@@ -35,6 +35,8 @@ export interface HouseholdMember {
   role: 'owner' | 'member' | 'viewer';
   joined_at: string;
   is_active: boolean;
+  color: string;
+  avatar?: string;
   user?: User;
 }
 

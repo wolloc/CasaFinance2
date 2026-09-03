@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics.js';
 import type { Category } from '../../types/index.js';
+import { useAuth } from '../../context/AuthContext.js';
 
 export interface SimplifiedFilterBarProps {
   selectedMonth: string;
@@ -100,6 +101,8 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
   isLoading = false,
   showCategoryFilter = true
 }) => {
+  const { householdMembers } = useAuth();
+  const members = householdMembers.filter((member) => member.is_active).slice(0, 2);
   // Navegação de mês anterior (<)
   const handlePrevMonth = () => {
     triggerHaptic('selection');
@@ -282,7 +285,7 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Wallace</span>
+            <span>{members[0]?.user?.name || 'Membro 1'}</span>
           </button>
 
           <button
@@ -296,7 +299,7 @@ export const SimplifiedFilterBar: React.FC<SimplifiedFilterBarProps> = ({
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Guilherme</span>
+            <span>{members[1]?.user?.name || 'Membro 2'}</span>
           </button>
         </div>
 

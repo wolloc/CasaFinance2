@@ -8,7 +8,7 @@ export interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
-  const { currentUser, activeHousehold, allUsers, switchUser, isLoading } = useAuth();
+  const { currentUser, activeHousehold, householdMembers, switchUser, isLoading } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +37,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
     };
   }, [isDropdownOpen]);
 
-  // Family members list (exclude testing IDs like external hacker)
-  const familyUsers = allUsers.filter((u) => u.id !== 'usr-external-999');
+  const activeMembers = householdMembers.filter((member) => member.is_active && member.user);
+  const currentMember = activeMembers.find((member) => member.user_id === currentUser?.id);
 
   const handleSelectUser = async (userId: string) => {
     if (userId === currentUser?.id) {
@@ -61,11 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
       <div className="flex items-center justify-between">
         {/* User Identity & Household */}
         <div className="flex items-center gap-3">
-          <img
-            src={currentUser?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-            alt={currentUser?.name || 'Foto do Usuário'}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-700/70 shadow-sm"
-          />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full font-bold text-white ring-2 ring-slate-700/70" style={{ backgroundColor: currentMember?.color || '#475569' }}>{currentMember?.avatar || currentUser?.avatar_url ? <img src={currentMember?.avatar || currentUser?.avatar_url} alt="" className="h-full w-full object-cover"/> : currentUser?.name?.slice(0, 1)}</div>
 
           <div>
             <h1 className="font-semibold text-base text-slate-100 leading-tight">
@@ -73,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
             </h1>
             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
               <Home className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span>{activeHousehold?.name || 'Casa Wallace & Gui'}</span>
+              <span>{activeHousehold?.name || 'Minha casa'}</span>
             </p>
           </div>
         </div>
@@ -131,11 +127,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
                       Membros da Família
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      {familyUsers.length} cadastrados
+                      {activeMembers.length} ativos
                     </span>
                   </div>
 
-                  {familyUsers.map((user) => {
+                  {activeMembers.map((member) => {
+                    const user = member.user!;
                     const isSelected = currentUser?.id === user.id;
 
                     return (
@@ -151,11 +148,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <img
-                            src={user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                            alt={user.name}
-                            className="w-7 h-7 rounded-full object-cover shrink-0"
-                          />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold text-white" style={{backgroundColor: member.color}}>{member.avatar || user.avatar_url ? <img src={member.avatar || user.avatar_url} alt="" className="h-full w-full object-cover"/> : user.name.slice(0, 1)}</span>
                           <span className="text-xs font-medium truncate">
                             {user.name}
                           </span>

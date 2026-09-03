@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Card, User } from '../../types/index.js';
 import { ApiService } from '../../services/api.js';
 import { triggerHaptic } from '../../utils/haptics.js';
+import { useAuth } from '../../context/AuthContext.js';
 import { CreditCard, Plus, Calendar, Edit2, Trash2, Check, X, Shield, Sparkles, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export const CardsManager: React.FC<Props> = ({ cards, householdId, currentUser, onRefresh }) => {
+  const { householdMembers } = useAuth();
+  const activeMembers = householdMembers.filter((member) => member.is_active);
   const [showModal, setShowModal] = useState(false);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
@@ -150,7 +153,7 @@ export const CardsManager: React.FC<Props> = ({ cards, householdId, currentUser,
       {/* Visual Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {cards.map((card) => {
-          const ownerName = card.owner_user_id === 'usr-wallace-001' ? 'Wallace' : card.owner_user_id === 'usr-guilherme-002' ? 'Guilherme' : 'Titular';
+          const ownerName = householdMembers.find((member) => member.user_id === card.owner_user_id)?.user?.name || 'Titular';
           return (
             <div
               key={card.id}
@@ -317,8 +320,7 @@ export const CardsManager: React.FC<Props> = ({ cards, householdId, currentUser,
                     onChange={(e) => setOwnerUserId(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="usr-wallace-001">Wallace</option>
-                    <option value="usr-guilherme-002">Guilherme</option>
+                    {activeMembers.map((member) => <option key={member.id} value={member.user_id}>{member.user?.name}</option>)}
                   </select>
                 </div>
               </div>

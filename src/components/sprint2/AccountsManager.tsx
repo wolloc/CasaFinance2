@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Account, User } from '../../types/index.js';
 import { ApiService } from '../../services/api.js';
 import { triggerHaptic } from '../../utils/haptics.js';
+import { useAuth } from '../../context/AuthContext.js';
 import {
   Wallet,
   Plus,
@@ -30,6 +31,9 @@ interface Props {
 type AccountFilter = 'all' | 'checking' | 'meal_benefit' | 'cash';
 
 export const AccountsManager: React.FC<Props> = ({ accounts, householdId, currentUser, onRefresh }) => {
+  const { householdMembers } = useAuth();
+  const activeMembers = householdMembers.filter((member) => member.is_active);
+  const memberName = (userId?: string | null) => householdMembers.find((member) => member.user_id === userId)?.user?.name || 'Conjunta';
   const [activeFilter, setActiveFilter] = useState<AccountFilter>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -355,12 +359,7 @@ export const AccountsManager: React.FC<Props> = ({ accounts, householdId, curren
       {/* Accounts List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filteredAccounts.map((acc) => {
-          const ownerLabel =
-            acc.owner_user_id === 'usr-wallace-001'
-              ? 'Wallace'
-              : acc.owner_user_id === 'usr-guilherme-002'
-              ? 'Guilherme'
-              : 'Conjunta';
+          const ownerLabel = memberName(acc.owner_user_id);
 
           const isMealBenefit = acc.account_type === 'meal_benefit';
 
@@ -662,8 +661,7 @@ export const AccountsManager: React.FC<Props> = ({ accounts, householdId, curren
                     className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="joint">Conjunta (Casa)</option>
-                    <option value="usr-wallace-001">Wallace</option>
-                    <option value="usr-guilherme-002">Guilherme</option>
+                    {activeMembers.map((member) => <option key={member.id} value={member.user_id}>{member.user?.name}</option>)}
                   </select>
                 </div>
               </div>

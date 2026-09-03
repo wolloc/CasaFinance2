@@ -132,7 +132,9 @@ class DatabaseStore {
       user_id: wallace.id,
       role: 'owner',
       joined_at: now,
-      is_active: true
+      is_active: true,
+      color: '#2563eb',
+      avatar: wallace.avatar_url
     };
 
     const memberG: HouseholdMember = {
@@ -141,7 +143,9 @@ class DatabaseStore {
       user_id: guilherme.id,
       role: 'owner',
       joined_at: now,
-      is_active: true
+      is_active: true,
+      color: '#7c3aed',
+      avatar: guilherme.avatar_url
     };
 
     const memberExt: HouseholdMember = {
@@ -150,7 +154,9 @@ class DatabaseStore {
       user_id: externalUser.id,
       role: 'member',
       joined_at: now,
-      is_active: true
+      is_active: true,
+      color: '#64748b',
+      avatar: externalUser.avatar_url
     };
 
     this.householdMembers.set(memberW.id, memberW);
@@ -1717,14 +1723,27 @@ class DatabaseStore {
   }
 
   // Household Member Invitation
-  public addHouseholdMember(householdId: string, userId: string, data: { name: string; email: string; role?: 'owner' | 'member' }): HouseholdMember {
+  public updateHousehold(householdId: string, userId: string, data: { name: string }): Household {
+    const household = this.households.get(householdId);
+    if (!household) throw new Error('Casa não encontrada.');
+    const name = data.name?.trim();
+    if (!name) throw new Error('Informe o nome da casa.');
+    const updated = { ...household, name, updated_at: new Date().toISOString() };
+    this.households.set(householdId, updated);
+    this.addAuditLog(householdId, userId, 'UPDATE', 'households', householdId, household as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>);
+    return updated;
+  }
+
+  public addHouseholdMember(householdId: string, userId: string, data: { name: string; email: string; role?: 'owner' | 'member'; color?: string; avatar?: string }): HouseholdMember {
+    const activeMembers = [...this.householdMembers.values()].filter((member) => member.household_id === householdId && member.is_active);
+    if (activeMembers.length >= 2) throw new Error('A experiência principal aceita no máximo dois membros ativos.');
     const now = new Date().toISOString();
     const newUserId = uuidv4();
     const newUser: User = {
       id: newUserId,
       name: data.name,
       email: data.email,
-      avatar_url: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      avatar_url: data.avatar || '',
       is_active: true,
       created_at: now,
       updated_at: now,
@@ -1740,11 +1759,30 @@ class DatabaseStore {
       role: data.role || 'member',
       joined_at: now,
       is_active: true,
+      color: data.color || '#0f766e',
+      avatar: data.avatar || '',
       user: newUser
     };
     this.householdMembers.set(memberId, newMember);
     this.addAuditLog(householdId, userId, 'INSERT', 'household_members', memberId, null, newMember as unknown as Record<string, unknown>);
     return newMember;
+  }
+
+  public updateHouseholdMember(householdId: string, userId: string, memberId: string, data: { name?: string; role?: 'owner' | 'member'; color?: string; avatar?: string; is_active?: boolean }): HouseholdMember {
+    const member = this.householdMembers.get(memberId);
+    if (!member || member.household_id !== householdId) throw new Error('Membro não encontrado.');
+    if (data.is_active === true && !member.is_active) {
+      const activeCount = [...this.householdMembers.values()].filter((item) => item.household_id === householdId && item.is_active).length;
+      if (activeCount >= 2) throw new Error('Desative um membro antes de ativar outro.');
+    }
+    const user = this.users.get(member.user_id);
+    if (!user) throw new Error('Usuário do membro não encontrado.');
+    const updatedUser = { ...user, name: data.name?.trim() || user.name, avatar_url: data.avatar ?? user.avatar_url, is_active: data.is_active ?? user.is_active, updated_at: new Date().toISOString() };
+    const updated = { ...member, role: data.role ?? member.role, color: data.color ?? member.color, avatar: data.avatar ?? member.avatar, is_active: data.is_active ?? member.is_active, user: updatedUser };
+    this.users.set(user.id, updatedUser);
+    this.householdMembers.set(memberId, updated);
+    this.addAuditLog(householdId, userId, 'UPDATE', 'household_members', memberId, member as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>);
+    return updated;
   }
 
   public calculateInvoiceMonth(purchaseDate: string, closingDay: number): string {
