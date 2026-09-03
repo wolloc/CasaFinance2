@@ -62,3 +62,25 @@ test('migration protege token, authorization, expiração e concorrencia no banc
   assert.doesNotMatch(sql, /service_role/i);
   assert.doesNotMatch(sql, /using \(true\)/i);
 });
+
+test('migration corretiva qualifica pgcrypto e preserva o contrato das RPCs', async () => {
+  const sql = await readFile(new URL('../../supabase/migrations/202609030009_fix_invitation_token_generation.sql', import.meta.url), 'utf8');
+  const originalSql = await readFile(new URL('../../supabase/migrations/202609030008_household_invitations.sql', import.meta.url), 'utf8');
+  assert.match(sql, /create or replace function public\.create_household_invitation\(invited_email text default null\)/i);
+  assert.match(sql, /returns table \(invitation_id uuid, household_id uuid, token text, expires_at timestamptz\)/i);
+  assert.match(sql, /extensions\.gen_random_bytes\(32\)/i);
+  assert.match(sql, /extensions\.digest\(convert_to\(plain_token, 'UTF8'\), 'sha256'\)/i);
+  assert.match(sql, /extensions\.digest\(convert_to\(invitation_token, 'UTF8'\), 'sha256'\)/i);
+  assert.match(sql, /insert into public\.household_invitations as invitation/i);
+  assert.match(sql, /returning invitation\.id, invitation\.household_id, plain_token, invitation\.expires_at;/i);
+  assert.doesNotMatch(sql, /(?:^|[^.])gen_random_bytes\(32\)/im);
+  assert.doesNotMatch(sql, /(?:^|[^.])digest\(convert_to\(/im);
+  assert.match(sql, /security definer/i);
+  assert.match(sql, /set search_path = public, pg_temp/i);
+  assert.match(sql, /auth\.uid\(\)/i);
+  assert.match(originalSql, /alter table public\.household_invitations enable row level security/i);
+  assert.doesNotMatch(sql, /service_role/i);
+  const insertStatement = sql.match(/insert into public\.household_invitations[\s\S]*?returning invitation\.id/i)?.[0] ?? '';
+  assert.match(insertStatement, /token_hash/i);
+  assert.doesNotMatch(insertStatement, /\btoken\b(?!_hash)/i);
+});
