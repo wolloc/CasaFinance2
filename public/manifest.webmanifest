@@ -1,0 +1,15 @@
+{
+  "name": "Casa Finance",
+  "short_name": "Casa",
+  "description": "Finanças da Casa, com clareza para cada membro.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#2563eb",
+  "lang": "pt-BR",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
