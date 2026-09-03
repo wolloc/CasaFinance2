@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
-import type { StandardizedOcrResponse, InvoiceParsedItem, PaymentMethodDetected, DocumentType } from '../src/types';
+import type { StandardizedOcrResponse, InvoiceParsedItem, PaymentMethodDetected } from '../src/types';
+import { validateOcrResult, type RawOcrResult } from '../src/domain/ocrReconciliation.js';
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -145,38 +146,40 @@ export function resolveCategory(
  */
 export function enrichAndReconcileOcrResult(
   householdId: string,
-  rawResult: any,
+  rawResult: RawOcrResult,
   defaultCardId?: string
 ): StandardizedOcrResponse {
-  const mapped = mapPaymentMethodToEntities(householdId, rawResult.payment_method_detected || 'UNKNOWN');
+  const validated = validateOcrResult(rawResult);
+  const mapped = mapPaymentMethodToEntities(householdId, validated.payment_method_detected);
   const effectiveCardId = defaultCardId || mapped.card_id;
 
-  const issuerName = rawResult.issuer_name || 'Comprovante';
-  const categoryResolution = resolveCategory(householdId, issuerName, rawResult.suggested_category || 'Outros');
+  const issuerName = validated.issuer_name;
+  const categoryResolution = resolveCategory(householdId, issuerName, validated.suggested_category);
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const txDate = rawResult.transaction_date && /^\d{4}-\d{2}-\d{2}$/.test(rawResult.transaction_date)
-    ? rawResult.transaction_date
-    : todayStr;
+  const txDate = validated.transaction_date || todayStr;
 
-  const rawItems: any[] = Array.isArray(rawResult.items) && rawResult.items.length > 0
-    ? rawResult.items
+  const rawItems = validated.items.length > 0
+    ? validated.items
     : [
         {
           description: issuerName,
-          amount: Number(rawResult.total_amount) || 0,
+          amount: validated.total_amount,
+          transaction_date: txDate,
+          suggested_category: validated.suggested_category,
+          review_reasons: [],
           installment_info: { current_installment: 1, total_installments: 1 }
         }
       ];
 
-  const processedItems: InvoiceParsedItem[] = rawItems.map((item: any) => {
+  const processedItems: InvoiceParsedItem[] = rawItems.map((item, index) => {
     const itemDesc = item.description || issuerName;
     const itemAmt = Number(item.amount) || 0;
     const itemDate = item.transaction_date && /^\d{4}-\d{2}-\d{2}$/.test(item.transaction_date)
       ? item.transaction_date
       : txDate;
 
-    const itemCat = resolveCategory(householdId, itemDesc, item.suggested_category || rawResult.suggested_category || 'Outros');
+    const itemCat = resolveCategory(householdId, itemDesc, item.suggested_category || validated.suggested_category);
 
     // Run duplicate check
     const dupCheck = db.checkDuplicateTransaction(
@@ -197,6 +200,7 @@ export function enrichAndReconcileOcrResult(
     }
 
     return {
+      id: `ocr-item-${index + 1}`,
       description: itemDesc,
       amount: itemAmt,
       transaction_date: itemDate,
@@ -206,25 +210,32 @@ export function enrichAndReconcileOcrResult(
       reconciliation_status: recStatus,
       matched_transaction_id: dupCheck.matchedTransaction?.id,
       match_confidence: dupCheck.confidence,
-      match_reason: dupCheck.reason
+      match_reason: dupCheck.reason,
+      needs_review: item.review_reasons.length > 0 || dupCheck.isDuplicate || validated.confidence_score < 0.8,
+      review_reasons: [...item.review_reasons, ...(dupCheck.isDuplicate && dupCheck.reason ? [dupCheck.reason] : [])],
+      selected: !dupCheck.isDuplicate && itemAmt > 0
     };
   });
 
   const totalAmountCalculated = processedItems.reduce((sum, it) => sum + (it.amount || 0), 0);
 
   return {
-    document_type: (rawResult.document_type as DocumentType) || 'RECEIPT',
+    document_type: validated.document_type,
     issuer_name: issuerName,
     transaction_date: txDate,
-    total_amount: Number((rawResult.total_amount || totalAmountCalculated).toFixed(2)),
+    total_amount: Number((validated.total_amount || totalAmountCalculated).toFixed(2)),
     suggested_category: categoryResolution.category_name,
     suggested_category_id: categoryResolution.category_id,
-    payment_method_detected: rawResult.payment_method_detected || 'UNKNOWN',
+    payment_method_detected: validated.payment_method_detected,
     suggested_card_id: effectiveCardId,
     suggested_account_id: mapped.account_id,
-    confidence_score: rawResult.confidence_score || 0.95,
+    confidence_score: validated.confidence_score,
     items: processedItems,
-    raw_text: rawResult.raw_text
+    invoice_competence: validated.invoice_competence,
+    invoice_due_date: validated.invoice_due_date,
+    document_fingerprint: '',
+    document_duplicate: false,
+    requires_user_review: true
   };
 }
 
@@ -320,12 +331,12 @@ Regras:
     });
 
     const jsonText = response.text?.trim() || '{}';
-    const parsed = JSON.parse(jsonText);
-    return enrichAndReconcileOcrResult(householdId, parsed);
-  } catch (error: any) {
-    console.error('Gemini OCR image processing error:', error);
-    // Graceful fallback for offline / mock testing or when API key is rate limited
-    return createFallbackReceiptResponse(householdId, cleanBase64);
+    const parsed: unknown = JSON.parse(jsonText);
+    if (!parsed || typeof parsed !== 'object') throw new Error('Resposta OCR inválida');
+    return enrichAndReconcileOcrResult(householdId, parsed as RawOcrResult);
+  } catch (error: unknown) {
+    console.error('Gemini OCR image processing failed', { error: error instanceof Error ? error.name : 'UnknownError' });
+    throw new Error('Não foi possível extrair o documento com segurança.');
   }
 }
 
@@ -358,7 +369,8 @@ Instruções críticas:
 2. Ignore linhas de pagamentos de fatura anterior, créditos de anuidade, encargos ou saldo financiado se não forem compras reais.
 3. Se o lançamento for parcelado (ex: "LOJA ABC 02/05", "3/10", "PARC 01/12"), extraia current_installment e total_installments corretamente.
 4. Sugira a categoria mais adequada para cada item.
-5. Calcule o total_amount como a soma exata de todos os itens de compra da fatura.`;
+5. Calcule o total_amount como a soma exata de todos os itens de compra da fatura.
+6. Extraia invoice_competence em YYYY-MM e invoice_due_date em YYYY-MM-DD. Nunca trate o total da fatura como um item de compra.`;
 
   try {
     const ai = getAiClient();
@@ -390,6 +402,8 @@ Instruções críticas:
               issuer_name: { type: Type.STRING },
               transaction_date: { type: Type.STRING },
               total_amount: { type: Type.NUMBER },
+              invoice_competence: { type: Type.STRING },
+              invoice_due_date: { type: Type.STRING },
               suggested_category: { type: Type.STRING },
               payment_method_detected: {
                 type: Type.STRING,
@@ -434,6 +448,8 @@ Instruções críticas:
               issuer_name: { type: Type.STRING },
               transaction_date: { type: Type.STRING },
               total_amount: { type: Type.NUMBER },
+              invoice_competence: { type: Type.STRING },
+              invoice_due_date: { type: Type.STRING },
               suggested_category: { type: Type.STRING },
               payment_method_detected: {
                 type: Type.STRING,
@@ -467,11 +483,12 @@ Instruções críticas:
     }
 
     const jsonText = response.text?.trim() || '{}';
-    const parsed = JSON.parse(jsonText);
-    return enrichAndReconcileOcrResult(householdId, parsed, cardId);
-  } catch (error: any) {
-    console.error('Gemini Invoice PDF parsing error:', error);
-    return createFallbackInvoiceResponse(householdId, cardId);
+    const parsed: unknown = JSON.parse(jsonText);
+    if (!parsed || typeof parsed !== 'object') throw new Error('Resposta OCR inválida');
+    return enrichAndReconcileOcrResult(householdId, parsed as RawOcrResult, cardId);
+  } catch (error: unknown) {
+    console.error('Gemini invoice processing failed', { error: error instanceof Error ? error.name : 'UnknownError' });
+    throw new Error('Não foi possível extrair a fatura com segurança.');
   }
 }
 

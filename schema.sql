@@ -670,10 +670,22 @@ CREATE TABLE IF NOT EXISTS public.document_imports (
     uploaded_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     file_url TEXT,
     document_type VARCHAR(20) NOT NULL CHECK (document_type IN ('RECEIPT', 'INVOICE')),
-    status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING' CHECK (status IN ('PROCESSING', 'SUCCESS', 'FAILED')),
+    status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING' CHECK (status IN ('PROCESSING', 'AWAITING_REVIEW', 'CONFIRMED', 'FAILED')),
+    document_fingerprint VARCHAR(64) NOT NULL,
     raw_ocr_response JSONB,
+    confirmed_at TIMESTAMPTZ,
+    confirmed_by UUID REFERENCES public.users(id),
+    created_transaction_ids UUID[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migração idempotente para instalações anteriores ao fluxo de revisão.
+ALTER TABLE public.document_imports ADD COLUMN IF NOT EXISTS document_fingerprint VARCHAR(64);
+ALTER TABLE public.document_imports ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+ALTER TABLE public.document_imports ADD COLUMN IF NOT EXISTS confirmed_by UUID REFERENCES public.users(id);
+ALTER TABLE public.document_imports ADD COLUMN IF NOT EXISTS created_transaction_ids UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.document_imports DROP CONSTRAINT IF EXISTS document_imports_status_check;
+ALTER TABLE public.document_imports ADD CONSTRAINT document_imports_status_check CHECK (status IN ('PROCESSING', 'AWAITING_REVIEW', 'CONFIRMED', 'FAILED'));
 
 -- 2. Tabela de Regras de Categorias Aprendidas por Estabelecimento
 CREATE TABLE IF NOT EXISTS public.merchant_category_rules (
@@ -703,6 +715,5 @@ CREATE POLICY rls_merchant_category_rules_isolation ON public.merchant_category_
     WITH CHECK (public.is_household_member(household_id));
 
 CREATE INDEX IF NOT EXISTS idx_document_imports_household ON public.document_imports(household_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_document_import_fingerprint ON public.document_imports(household_id, document_fingerprint) WHERE status <> 'FAILED';
 CREATE INDEX IF NOT EXISTS idx_merchant_rules_pattern ON public.merchant_category_rules(household_id, merchant_pattern);
-
-

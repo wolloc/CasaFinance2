@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, Account, Card, Category, PaymentMethod } from '../../types/index.js';
+import type { User, Account, Card, Category, PaymentMethod, StandardizedOcrResponse } from '../../types/index.js';
 import { ApiService } from '../../services/api.js';
 import {
   CalendarClock,
@@ -64,7 +64,9 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
   // OCR state
   const [ocrType, setOcrType] = useState<'receipt' | 'invoice'>('receipt');
   const [ocrLoading, setOcrLoading] = useState<boolean>(false);
-  const [ocrResult, setOcrResult] = useState<any | null>(null);
+  const [ocrResult, setOcrResult] = useState<StandardizedOcrResponse | null>(null);
+  const [ocrImportId, setOcrImportId] = useState<string | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [selectedCardForOcr, setSelectedCardForOcr] = useState<string>(cards[0]?.id || '');
@@ -209,10 +211,16 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
 
   // OCR Upload handler
   const handleFileUpload = async (file: File) => {
+    const allowed = ocrType === 'receipt' ? ['image/jpeg', 'image/png', 'image/webp'] : ['application/pdf'];
+    if (!allowed.includes(file.type) || file.size > 10 * 1024 * 1024) {
+      setOcrError(`Selecione ${ocrType === 'receipt' ? 'JPG, PNG ou WEBP' : 'PDF'} de até 10 MB.`); return;
+    }
     setSelectedFileName(file.name);
     setOcrLoading(true);
     setOcrError(null);
     setOcrResult(null);
+    setOcrImportId(null);
+    setReviewConfirmed(false);
 
     try {
       const reader = new FileReader();
@@ -236,6 +244,7 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Falha ao processar recibo');
             setOcrResult(data.data);
+            setOcrImportId(data.import_id);
             setSuccessMessage('Comprovante lido com sucesso pela Gemini AI!');
           } else {
             const res = await fetch(`/api/households/${householdId}/ocr/invoice-pdf`, {
@@ -253,6 +262,7 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Falha ao processar fatura');
             setOcrResult(data.data);
+            setOcrImportId(data.import_id);
             setSuccessMessage('Fatura PDF processada com sucesso pela Gemini AI!');
           }
         } catch (err: any) {
@@ -265,6 +275,28 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
       setOcrError(err.message || 'Erro ao ler arquivo local');
       setOcrLoading(false);
     }
+  };
+
+  const updateOcrItem = (id: string, field: 'description' | 'amount' | 'transaction_date' | 'selected' | 'suggested_category_id' | 'suggested_category', value: string | number | boolean) => {
+    setOcrResult((current) => current ? { ...current, items: current.items.map((item) => item.id === id ? { ...item, [field]: value } : item) } : null);
+    setReviewConfirmed(false);
+  };
+
+  const confirmOcrImport = async () => {
+    if (!ocrResult || !ocrImportId || !reviewConfirmed) return;
+    try {
+      setOcrLoading(true); setOcrError(null);
+      const response = await fetch(`/api/households/${householdId}/ocr/imports/${ocrImportId}/confirm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id },
+        body: JSON.stringify({ confirmed: true, items: ocrResult.items })
+      });
+      const data: { error?: string; transaction_ids?: string[] } = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Falha ao confirmar a importação');
+      setSuccessMessage(`${data.transaction_ids?.length || 0} lançamento(s) criado(s) após sua revisão.`);
+      setOcrResult(null); setOcrImportId(null); setReviewConfirmed(false);
+    } catch (error: unknown) {
+      setOcrError(error instanceof Error ? error.message : 'Falha ao confirmar a importação');
+    } finally { setOcrLoading(false); }
   };
 
   return (
@@ -726,15 +758,15 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
-                  Dados Extraídos com Sucesso
+                  Pré-visualização — revise antes de salvar
                 </span>
-                <span className="text-[10px] text-slate-400">Confiança Alta</span>
+                <span className="text-[10px] text-slate-400">Nenhum dado foi gravado</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block">Estabelecimento</span>
-                  <span className="font-bold text-white">{ocrResult.merchant || ocrResult.title || 'N/D'}</span>
+                  <span className="font-bold text-white">{ocrResult.issuer_name || 'N/D'}</span>
                 </div>
                 <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block">Valor Total</span>
@@ -750,6 +782,34 @@ export const PlanningAndOcrManager: React.FC<Props> = ({
                   <span className="font-bold text-indigo-300">{ocrResult.suggested_category}</span>
                 </div>
               )}
+              <div className="space-y-2">
+                {ocrResult.items.map((item) => (
+                  <div key={item.id} className={`rounded-2xl border p-3 space-y-2 ${item.needs_review ? 'border-amber-700/70 bg-amber-950/20' : 'border-slate-800 bg-slate-950'}`}>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white">
+                      <input type="checkbox" checked={item.selected} disabled={item.reconciliation_status === 'ALREADY_REGISTERED'} onChange={(event) => updateOcrItem(item.id, 'selected', event.target.checked)} /> Importar item
+                    </label>
+                    <input aria-label="Descrição revisada" value={item.description} onChange={(event) => updateOcrItem(item.id, 'description', event.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input aria-label="Valor revisado" type="number" min="0.01" step="0.01" value={item.amount} onChange={(event) => updateOcrItem(item.id, 'amount', Number(event.target.value))} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" />
+                      <input aria-label="Data revisada" type="date" value={item.transaction_date} onChange={(event) => updateOcrItem(item.id, 'transaction_date', event.target.value)} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" />
+                    </div>
+                    <select aria-label="Categoria revisada" value={item.suggested_category_id || ''} onChange={(event) => {
+                      updateOcrItem(item.id, 'suggested_category_id', event.target.value);
+                      updateOcrItem(item.id, 'suggested_category', categories.find((category) => category.id === event.target.value)?.name || 'Outros');
+                    }} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+                      {categories.filter((category) => category.type === 'expense' && category.is_active).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </select>
+                    {item.review_reasons.length > 0 && <p className="text-[10px] text-amber-300">Revisar: {item.review_reasons.join(' · ')}</p>}
+                  </div>
+                ))}
+              </div>
+              <label className="flex items-start gap-2 rounded-2xl border border-indigo-700/60 bg-indigo-950/30 p-3 text-xs text-indigo-100">
+                <input className="mt-0.5" type="checkbox" checked={reviewConfirmed} onChange={(event) => setReviewConfirmed(event.target.checked)} />
+                Revisei descrição, valor, data, categoria, meio e duplicidades. Confirmo a criação somente dos itens selecionados.
+              </label>
+              <button type="button" disabled={!reviewConfirmed || ocrLoading || !ocrResult.items.some((item) => item.selected)} onClick={confirmOcrImport} className="min-h-12 w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+                Confirmar e criar lançamentos
+              </button>
             </div>
           )}
         </div>
