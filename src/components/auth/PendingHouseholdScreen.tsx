@@ -1,3 +1,4 @@
+import { HouseholdFinancialCoreSetup } from './HouseholdFinancialCoreSetup.js';
 import { Check, Copy, Home, Link, LoaderCircle, LogOut, Plus, ShieldCheck, Users, WalletCards } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
@@ -19,7 +20,7 @@ export function PendingHouseholdScreen() {
   const [showManualInvitation, setShowManualInvitation] = useState(false);
   const [acceptedHouseholdName, setAcceptedHouseholdName] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [activeArea, setActiveArea] = useState<'household' | 'financial' | 'categories' | 'transactions'>('household');
+  const [activeArea, setActiveArea] = useState<'household' | 'financial' | 'categories' | 'transactions' | 'core'>('household');
   const submissionLock = useRef(false);
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export function PendingHouseholdScreen() {
   };
 
   if (householdLoading) return <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-slate-300">Verificando sua Casa…</main>;
+  if (household && activeArea === 'core') return <HouseholdFinancialCoreSetup onBack={() => setActiveArea('household')} />;
   if (household && activeArea === 'transactions') return <HouseholdTransactionsSetup onBack={() => setActiveArea('household')} />;
   if (household && activeArea === 'categories') return <HouseholdCategoriesSetup onBack={() => setActiveArea('household')} />;
   if (household && activeArea === 'financial') return <div><button type="button" onClick={() => setActiveArea('household')} className="fixed left-4 top-4 z-20 min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200">Casa e membros</button><HouseholdFinancialSetup /></div>;
@@ -90,6 +92,7 @@ export function PendingHouseholdScreen() {
         <button type="button" onClick={() => setActiveArea('financial')} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-semibold hover:bg-blue-500"><WalletCards className="h-5 w-5" />Contas e cartões</button>
         <button type="button" onClick={() => setActiveArea('categories')} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold hover:bg-slate-800"><WalletCards className="h-5 w-5" />Categorias</button>
         <button type="button" onClick={() => setActiveArea('transactions')} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold hover:bg-slate-800"><WalletCards className="h-5 w-5" />Transações</button>
+        <button type="button" onClick={() => setActiveArea('core')} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-emerald-800 font-semibold text-emerald-300 hover:bg-emerald-950/40"><WalletCards className="h-5 w-5" />Núcleo financeiro</button>
         {acceptedHouseholdName && <p role="status" className="mt-3 text-center text-sm font-semibold text-emerald-300">Você agora faz parte da {acceptedHouseholdName}.</p>}
         <p className="mt-2 text-center text-sm text-slate-300">Seu papel: <strong>{householdMembers.find((member) => member.profile_id === user?.id)?.role === 'owner' ? 'Proprietário' : 'Membro'}</strong>.</p>
         <div className="mt-6 border-t border-slate-800 pt-5"><h2 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4" /> Membros</h2><ul className="mt-3 space-y-2">{householdMembers.map((member) => <li key={member.id} className="flex items-center justify-between rounded-xl bg-slate-950 px-3 py-3 text-sm"><span>{member.display_name}</span><span className="text-xs text-slate-500">{member.role === 'owner' ? 'Proprietário' : 'Membro'}</span></li>)}</ul></div>
