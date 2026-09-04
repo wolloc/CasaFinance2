@@ -32,6 +32,8 @@ export type TransactionInput = {
   instrumentKind?: InstrumentKind;
   accountId?: string;
   cardId?: string;
+  splits?: Array<{ memberId: string; amount: string; percentage: string }>;
+  installmentCount?: number;
 };
 
 const transactionColumns = 'id, household_id, created_by_member_id, buyer_member_id, category_id, type, status, description, amount, transaction_date, competence_date, notes, deleted_at, category:categories(name, type), buyer:household_members!transactions_buyer_member_id_fkey(profiles(display_name)), payment_instrument:transaction_payment_instruments(kind, account_id, card_id)';
@@ -48,7 +50,7 @@ export async function listHouseholdTransactions(client: SupabaseClient, househol
 }
 
 export async function createHouseholdTransaction(client: SupabaseClient, householdId: string, type: TransactionKind, input: TransactionInput) {
-  const response = await client.rpc('create_basic_transaction', {
+  const response = await client.rpc('create_financial_transaction', {
     p_household_id: householdId,
     p_type: type,
     p_description: input.description.trim(),
@@ -60,6 +62,8 @@ export async function createHouseholdTransaction(client: SupabaseClient, househo
     p_instrument_kind: type === 'expense' ? input.instrumentKind : null,
     p_account_id: type === 'expense' && input.instrumentKind === 'account' ? input.accountId : null,
     p_card_id: type === 'expense' && input.instrumentKind === 'card' ? input.cardId : null,
+    p_splits: type === 'expense' ? (input.splits ?? []).map((split) => ({ member_id: split.memberId, amount: split.amount, percentage: split.percentage })) : [],
+    p_installment_count: type === 'expense' ? input.installmentCount ?? 1 : 1,
   });
   if (response.error) throw response.error;
   return response.data as string;
