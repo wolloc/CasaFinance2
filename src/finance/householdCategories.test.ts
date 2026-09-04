@@ -18,7 +18,9 @@ test('categories RLS isolates active household members', () => {
   assert.match(migrationSource, /categories_select[\s\S]*is_active_household_member\(household_id\)/);
   assert.match(migrationSource, /categories_insert[\s\S]*with check \(public\.is_active_household_member\(household_id\)\)/);
   assert.match(migrationSource, /categories_update[\s\S]*using \(public\.is_active_household_member\(household_id\)/);
-  assert.match(migrationSource, /categories_delete[\s\S]*using \(public\.is_active_household_member\(household_id\)/);
+  assert.match(migrationSource, /drop policy if exists member_delete on public\.categories;/);
+  assert.match(migrationSource, /drop policy if exists categories_delete on public\.categories;/);
+  assert.doesNotMatch(migrationSource, /create policy[^\n]*for delete[^\n]*public\.categories/i);
 });
 
 test('category deactivation is a soft delete and never classifies financial roles', () => {

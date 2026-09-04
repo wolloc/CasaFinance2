@@ -7,6 +7,7 @@ drop policy if exists member_select on public.categories;
 drop policy if exists member_insert on public.categories;
 drop policy if exists member_update on public.categories;
 drop policy if exists member_delete on public.categories;
+drop policy if exists categories_delete on public.categories;
 
 create policy categories_select on public.categories for select to authenticated
 using (public.is_active_household_member(household_id));
@@ -15,7 +16,5 @@ with check (public.is_active_household_member(household_id));
 create policy categories_update on public.categories for update to authenticated
 using (public.is_active_household_member(household_id))
 with check (public.is_active_household_member(household_id));
-create policy categories_delete on public.categories for delete to authenticated
-using (public.is_active_household_member(household_id));
 
 revoke all on table public.categories from anon;
