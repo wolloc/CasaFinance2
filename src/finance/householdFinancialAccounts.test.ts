@@ -37,3 +37,11 @@ test('legacy DatabaseStore remains outside the Supabase financial path', () => {
   assert.doesNotMatch(serviceSource, /DatabaseStore|ApiService|fetch\(['"]\/api/);
   assert.doesNotMatch(screenSource, /DatabaseStore|ApiService/);
 });
+
+test('household experience remains available and card default owner follows the session user', async () => {
+  const householdScreen = await readFile(new URL('../components/auth/PendingHouseholdScreen.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(householdScreen, /if \(false\)/);
+  assert.match(householdScreen, /Contas e cartões/);
+  assert.match(screenSource, /member\.profile_id === user\?\.id/);
+  assert.doesNotMatch(screenSource, /householdMembers\[0\]/);
+});
