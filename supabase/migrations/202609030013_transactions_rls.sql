@@ -145,8 +145,8 @@ $$;
 
 create or replace function public.update_basic_transaction(
   p_household_id uuid, p_transaction_id uuid, p_description text, p_amount numeric, p_transaction_date date,
-  p_buyer_member_id uuid default null,
-  p_category_id uuid, p_notes text default null, p_instrument_kind public.payment_instrument_kind default null,
+  p_category_id uuid, p_buyer_member_id uuid default null, p_notes text default null,
+  p_instrument_kind public.payment_instrument_kind default null,
   p_account_id uuid default null, p_card_id uuid default null
 ) returns void language plpgsql security definer set search_path = public, pg_temp
 as $$

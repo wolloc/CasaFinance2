@@ -56,6 +56,8 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /transaction type cannot be changed/);
   assert.match(migrationSource, /p_household_id uuid/);
   assert.doesNotMatch(migrationSource, /order by m\.joined_at/);
+  assert.match(migrationSource, /create or replace function public\.create_basic_transaction\(\s*p_household_id uuid, p_type public\.transaction_kind, p_description text, p_amount numeric, p_transaction_date date,/s);
+  assert.match(migrationSource, /create or replace function public\.update_basic_transaction\(\s*p_household_id uuid, p_transaction_id uuid, p_description text, p_amount numeric, p_transaction_date date,\s*p_category_id uuid, p_buyer_member_id uuid default null/s);
   assert.match(migrationSource, /a\.household_id = new\.household_id/);
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
