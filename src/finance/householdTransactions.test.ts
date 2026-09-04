@@ -16,7 +16,7 @@ test('active transaction listing is scoped to the household and excludes deleted
 test('creator comes from the authenticated member and buyer is explicit', () => {
   assert.match(screenSource, /member\.profile_id === user\.id/);
   assert.match(screenSource, /const creator = householdMembers\.find/);
-  assert.match(serviceSource, /rpc\('create_basic_transaction'/);
+  assert.match(serviceSource, /rpc\('create_financial_transaction'/);
   assert.doesNotMatch(serviceSource, /created_by_member_id: createdByMemberId/);
   assert.match(serviceSource, /p_buyer_member_id: type === 'expense' \? input\.buyerMemberId : null/);
   assert.match(serviceSource, /p_household_id: householdId/);
@@ -62,12 +62,14 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
 
-test('cancellation is soft delete and this stage excludes later financial modules', () => {
+test('cancellation remains soft delete after financial core consolidation', () => {
   assert.match(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/);
   assert.match(serviceSource, /\.is\('deleted_at', null\)/);
   assert.match(screenSource, /O comprador é escolhido separadamente/);
-  assert.doesNotMatch(serviceSource, /funding|split|invoice|installment|recurr|DatabaseStore|service_role/i);
-  assert.doesNotMatch(screenSource, /funding|rateio|fatura|parcelamento|DatabaseStore|service_role/i);
+  assert.match(serviceSource, /p_splits/);
+  assert.match(serviceSource, /p_installment_count/);
+  assert.doesNotMatch(serviceSource, /DatabaseStore|service_role/i);
+  assert.doesNotMatch(screenSource, /DatabaseStore|service_role/i);
   assert.match(householdSource, /Transações/);
   assert.match(serviceSource, /rpc\('update_basic_transaction'/);
   assert.doesNotMatch(migrationSource, /p_type.*update_basic_transaction/i);
