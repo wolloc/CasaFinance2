@@ -47,52 +47,36 @@ export async function listHouseholdTransactions(client: SupabaseClient, househol
   }) as unknown as HouseholdTransaction);
 }
 
-export async function createHouseholdTransaction(client: SupabaseClient, householdId: string, createdByMemberId: string, type: TransactionKind, input: TransactionInput) {
-  const response = await client.from('transactions').insert({
-    household_id: householdId,
-    created_by_member_id: createdByMemberId,
-    buyer_member_id: type === 'expense' ? input.buyerMemberId : null,
-    category_id: input.categoryId,
-    type,
-    status: 'pending',
-    description: input.description.trim(),
-    amount: input.amount,
-    transaction_date: input.transactionDate,
-    competence_date: input.transactionDate,
-    notes: input.notes?.trim() || null,
-  }).select('id').single();
+export async function createHouseholdTransaction(client: SupabaseClient, _householdId: string, type: TransactionKind, input: TransactionInput) {
+  const response = await client.rpc('create_basic_transaction', {
+    p_type: type,
+    p_description: input.description.trim(),
+    p_amount: input.amount,
+    p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId,
+    p_buyer_member_id: type === 'expense' ? input.buyerMemberId : null,
+    p_notes: input.notes?.trim() || null,
+    p_instrument_kind: type === 'expense' ? input.instrumentKind : null,
+    p_account_id: type === 'expense' && input.instrumentKind === 'account' ? input.accountId : null,
+    p_card_id: type === 'expense' && input.instrumentKind === 'card' ? input.cardId : null,
+  });
   if (response.error) throw response.error;
-  if (type === 'expense' && input.instrumentKind) {
-    const instrument = await client.from('transaction_payment_instruments').insert({
-      household_id: householdId,
-      transaction_id: response.data.id,
-      kind: input.instrumentKind,
-      account_id: input.instrumentKind === 'account' ? input.accountId : null,
-      card_id: input.instrumentKind === 'card' ? input.cardId : null,
-    });
-    if (instrument.error) throw instrument.error;
-  }
-  return response.data.id as string;
+  return response.data as string;
 }
 
-export async function updateHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string, type: TransactionKind, input: TransactionInput) {
-  const response = await client.from('transactions').update({
-    buyer_member_id: type === 'expense' ? input.buyerMemberId : null,
-    category_id: input.categoryId,
-    description: input.description.trim(),
-    amount: input.amount,
-    transaction_date: input.transactionDate,
-    competence_date: input.transactionDate,
-    notes: input.notes?.trim() || null,
-    updated_at: new Date().toISOString(),
-  }).eq('id', transactionId).eq('household_id', householdId).is('deleted_at', null);
+export async function updateHouseholdTransaction(client: SupabaseClient, _householdId: string, transactionId: string, input: TransactionInput) {
+  const response = await client.rpc('update_basic_transaction', {
+    p_transaction_id: transactionId,
+    p_description: input.description.trim(),
+    p_amount: input.amount,
+    p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId,
+    p_notes: input.notes?.trim() || null,
+    p_instrument_kind: input.instrumentKind,
+    p_account_id: input.instrumentKind === 'account' ? input.accountId : null,
+    p_card_id: input.instrumentKind === 'card' ? input.cardId : null,
+  });
   if (response.error) throw response.error;
-  const instrument = await client.from('transaction_payment_instruments').update({
-    kind: input.instrumentKind,
-    account_id: input.instrumentKind === 'account' ? input.accountId : null,
-    card_id: input.instrumentKind === 'card' ? input.cardId : null,
-  }).eq('transaction_id', transactionId).eq('household_id', householdId);
-  if (instrument.error && type === 'expense') throw instrument.error;
 }
 
 export async function cancelHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string) {

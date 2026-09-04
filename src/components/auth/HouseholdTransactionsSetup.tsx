@@ -44,6 +44,10 @@ export function HouseholdTransactionsSetup({ onBack }: { onBack: () => void }) {
     } catch { setError('Não foi possível carregar os lançamentos da Casa.'); } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); }, [household?.id]);
+  useEffect(() => {
+    const typeSelect = document.querySelector<HTMLSelectElement>('form select');
+    if (typeSelect) typeSelect.disabled = Boolean(editing);
+  }, [editing, formOpen]);
 
   const resetForm = (transaction?: HouseholdTransaction) => {
     const transactionKind = transaction?.type ?? 'expense';
@@ -61,8 +65,8 @@ export function HouseholdTransactionsSetup({ onBack }: { onBack: () => void }) {
     setSaving(true); setError(null); setSuccess(null);
     try {
       const input = { description, amount, transactionDate: date, categoryId, buyerMemberId: kind === 'expense' ? buyerMemberId : null, notes, instrumentKind: kind === 'expense' ? instrumentKind : undefined, accountId: kind === 'expense' && instrumentKind === 'account' ? accountId : undefined, cardId: kind === 'expense' && instrumentKind === 'card' ? cardId : undefined };
-      if (editing) await updateHouseholdTransaction(supabase, household.id, editing.id, kind, input);
-      else await createHouseholdTransaction(supabase, household.id, creator.id, kind, input);
+      if (editing) await updateHouseholdTransaction(supabase, household.id, editing.id, input);
+      else await createHouseholdTransaction(supabase, household.id, kind, input);
       setFormOpen(false); setSuccess(editing ? 'Lançamento atualizado.' : 'Lançamento criado.'); await refresh();
     } catch { setError('Não foi possível salvar o lançamento. Verifique os campos e tente novamente.'); } finally { setSaving(false); }
   };

@@ -15,9 +15,10 @@ test('active transaction listing is scoped to the household and excludes deleted
 
 test('creator comes from the authenticated member and buyer is explicit', () => {
   assert.match(screenSource, /member\.profile_id === user\.id/);
-  assert.match(screenSource, /creator\.id/);
-  assert.match(serviceSource, /created_by_member_id: createdByMemberId/);
-  assert.match(serviceSource, /buyer_member_id: type === 'expense' \? input\.buyerMemberId : null/);
+  assert.match(screenSource, /const creator = householdMembers\.find/);
+  assert.match(serviceSource, /rpc\('create_basic_transaction'/);
+  assert.doesNotMatch(serviceSource, /created_by_member_id: createdByMemberId/);
+  assert.match(serviceSource, /p_buyer_member_id: type === 'expense' \? input\.buyerMemberId : null/);
   assert.doesNotMatch(serviceSource, /owner_member_id|owner_user_id/);
 });
 
@@ -34,6 +35,8 @@ test('transaction RLS is scoped to active members without physical delete policy
   assert.match(migrationSource, /transactions_update[\s\S]*using \(public\.is_active_household_member\(household_id\)/);
   assert.match(migrationSource, /transaction_instruments_select[\s\S]*is_active_household_member\(household_id\)/);
   assert.doesNotMatch(migrationSource, /create policy[^\n]*for delete/i);
+  assert.match(migrationSource, /create policy transactions_update/);
+  assert.match(migrationSource, /create policy transaction_instruments_update/);
 });
 
 test('database validates all transaction references within the same household', () => {
@@ -44,6 +47,12 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /card_id/);
   assert.match(migrationSource, /m\.household_id = new\.household_id/);
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
+  assert.match(migrationSource, /auth\.uid\(\)/);
+  assert.match(migrationSource, /expense transaction requires a buyer/);
+  assert.match(migrationSource, /income transaction cannot have a buyer/);
+  assert.match(migrationSource, /exactly one payment instrument/);
+  assert.match(migrationSource, /transaction creator cannot be changed/);
+  assert.match(migrationSource, /transaction type cannot be changed/);
   assert.match(migrationSource, /a\.household_id = new\.household_id/);
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
@@ -55,4 +64,9 @@ test('cancellation is soft delete and this stage excludes later financial module
   assert.doesNotMatch(serviceSource, /funding|split|invoice|installment|recurr|DatabaseStore|service_role/i);
   assert.doesNotMatch(screenSource, /funding|rateio|fatura|parcelamento|DatabaseStore|service_role/i);
   assert.match(householdSource, /Transações/);
+  assert.match(serviceSource, /rpc\('update_basic_transaction'/);
+  assert.doesNotMatch(migrationSource, /p_type.*update_basic_transaction/i);
+  assert.match(migrationSource, /create_basic_transaction/);
+  assert.match(migrationSource, /update_basic_transaction/);
+  assert.match(screenSource, /typeSelect\.disabled = Boolean\(editing\)/);
 });
