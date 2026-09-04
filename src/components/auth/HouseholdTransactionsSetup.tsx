@@ -46,7 +46,19 @@ export function HouseholdTransactionsSetup({ onBack }: { onBack: () => void }) {
   useEffect(() => { refresh(); }, [household?.id]);
   useEffect(() => {
     const typeSelect = document.querySelector<HTMLSelectElement>('form select');
-    if (typeSelect) typeSelect.disabled = Boolean(editing);
+    if (!typeSelect) return;
+    typeSelect.disabled = Boolean(editing);
+    const existingNotice = document.getElementById('transaction-type-immutable');
+    if (editing && !existingNotice) {
+      const notice = document.createElement('span');
+      notice.id = 'transaction-type-immutable';
+      notice.className = 'mt-1 block text-xs text-slate-500';
+      notice.textContent = 'O tipo não pode ser alterado depois da criação.';
+      typeSelect.parentElement?.append(notice);
+    } else if (!editing) {
+      existingNotice?.remove();
+    }
+    return () => { document.getElementById('transaction-type-immutable')?.remove(); };
   }, [editing, formOpen]);
 
   const resetForm = (transaction?: HouseholdTransaction) => {

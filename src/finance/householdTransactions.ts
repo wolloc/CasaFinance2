@@ -47,8 +47,9 @@ export async function listHouseholdTransactions(client: SupabaseClient, househol
   }) as unknown as HouseholdTransaction);
 }
 
-export async function createHouseholdTransaction(client: SupabaseClient, _householdId: string, type: TransactionKind, input: TransactionInput) {
+export async function createHouseholdTransaction(client: SupabaseClient, householdId: string, type: TransactionKind, input: TransactionInput) {
   const response = await client.rpc('create_basic_transaction', {
+    p_household_id: householdId,
     p_type: type,
     p_description: input.description.trim(),
     p_amount: input.amount,
@@ -64,13 +65,15 @@ export async function createHouseholdTransaction(client: SupabaseClient, _househ
   return response.data as string;
 }
 
-export async function updateHouseholdTransaction(client: SupabaseClient, _householdId: string, transactionId: string, input: TransactionInput) {
+export async function updateHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string, input: TransactionInput) {
   const response = await client.rpc('update_basic_transaction', {
+    p_household_id: householdId,
     p_transaction_id: transactionId,
     p_description: input.description.trim(),
     p_amount: input.amount,
     p_transaction_date: input.transactionDate,
     p_category_id: input.categoryId,
+    p_buyer_member_id: input.buyerMemberId,
     p_notes: input.notes?.trim() || null,
     p_instrument_kind: input.instrumentKind,
     p_account_id: input.instrumentKind === 'account' ? input.accountId : null,

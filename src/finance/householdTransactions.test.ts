@@ -19,6 +19,7 @@ test('creator comes from the authenticated member and buyer is explicit', () => 
   assert.match(serviceSource, /rpc\('create_basic_transaction'/);
   assert.doesNotMatch(serviceSource, /created_by_member_id: createdByMemberId/);
   assert.match(serviceSource, /p_buyer_member_id: type === 'expense' \? input\.buyerMemberId : null/);
+  assert.match(serviceSource, /p_household_id: householdId/);
   assert.doesNotMatch(serviceSource, /owner_member_id|owner_user_id/);
 });
 
@@ -53,6 +54,8 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /exactly one payment instrument/);
   assert.match(migrationSource, /transaction creator cannot be changed/);
   assert.match(migrationSource, /transaction type cannot be changed/);
+  assert.match(migrationSource, /p_household_id uuid/);
+  assert.doesNotMatch(migrationSource, /order by m\.joined_at/);
   assert.match(migrationSource, /a\.household_id = new\.household_id/);
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
@@ -68,5 +71,9 @@ test('cancellation is soft delete and this stage excludes later financial module
   assert.doesNotMatch(migrationSource, /p_type.*update_basic_transaction/i);
   assert.match(migrationSource, /create_basic_transaction/);
   assert.match(migrationSource, /update_basic_transaction/);
+  assert.match(serviceSource, /p_buyer_member_id: input\.buyerMemberId/);
+  assert.match(migrationSource, /p_household_id uuid, p_transaction_id uuid/);
+  assert.match(migrationSource, /p_buyer_member_id uuid default null/);
   assert.match(screenSource, /typeSelect\.disabled = Boolean\(editing\)/);
+  assert.match(screenSource, /O tipo não pode ser alterado/);
 });
