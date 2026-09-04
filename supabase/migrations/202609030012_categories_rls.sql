@@ -7,6 +7,10 @@ drop policy if exists member_select on public.categories;
 drop policy if exists member_insert on public.categories;
 drop policy if exists member_update on public.categories;
 drop policy if exists member_delete on public.categories;
+
+drop policy if exists categories_select on public.categories;
+drop policy if exists categories_insert on public.categories;
+drop policy if exists categories_update on public.categories;
 drop policy if exists categories_delete on public.categories;
 
 create policy categories_select on public.categories for select to authenticated
