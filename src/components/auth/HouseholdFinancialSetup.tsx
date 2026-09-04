@@ -1,0 +1,55 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { CreditCard, Landmark, LoaderCircle, LogOut, Plus } from 'lucide-react';
+import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { supabase } from '../../lib/supabase.js';
+import { ACCOUNT_TYPES, createHouseholdAccount, createHouseholdCard, listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdAccountType, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
+
+const accountLabels: Record<HouseholdAccountType, string> = { cash: 'Dinheiro', checking: 'Conta corrente', savings: 'Poupança', investment: 'Investimento', meal_benefit: 'Vale/benefício', digital_wallet: 'Carteira digital' };
+
+export function HouseholdFinancialSetup() {
+  const { user, household, householdMembers, signOut, isSubmitting } = useSupabaseAuth();
+  const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
+  const [cards, setCards] = useState<HouseholdCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [form, setForm] = useState<'account' | 'card' | null>(null);
+  const [account, setAccount] = useState({ name: '', type: 'checking' as HouseholdAccountType, institution: '', owner: '', balance: '0', openedAt: '' });
+  const [card, setCard] = useState({ name: '', institution: '', owner: '', lastFour: '', limit: '', closing: '10', due: '17', account: '' });
+
+  const refresh = async () => {
+    if (!supabase || !household) return;
+    setLoading(true);
+    try { const data = await listHouseholdFinancialAccounts(supabase, household.id); setAccounts(data.accounts); setCards(data.cards); } catch { setError('Não foi possível carregar os cadastros da Casa.'); } finally { setLoading(false); }
+  };
+  useEffect(() => { refresh(); }, [household?.id]);
+  const openCardForm = () => {
+    const currentMember = householdMembers.find((member) => member.profile_id === user?.id);
+    setCard((current) => ({ ...current, owner: currentMember?.id ?? '' }));
+    setForm('card');
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!supabase || !household || !user) return;
+    setSaving(true); setError(null); setSuccess(null);
+    try {
+      if (form === 'account') await createHouseholdAccount(supabase, household.id, { name: account.name, type: account.type, institution: account.institution, ownerMemberId: account.owner, openingBalance: account.balance, openedAt: account.openedAt });
+      if (form === 'card') await createHouseholdCard(supabase, household.id, { name: card.name, institution: card.institution, ownerMemberId: card.owner, lastFour: card.lastFour, creditLimit: card.limit || '0', closingDay: Number(card.closing), dueDay: Number(card.due), defaultPaymentAccountId: card.account });
+      setForm(null); setSuccess(form === 'account' ? 'Conta cadastrada com sucesso.' : 'Cartão cadastrado com sucesso.'); await refresh();
+    } catch { setError('Não foi possível salvar. Confira os dados e tente novamente.'); } finally { setSaving(false); }
+  };
+  const memberName = (id: string | null) => householdMembers.find((member) => member.id === id)?.display_name ?? 'Casa';
+
+  if (!household) return null;
+  return <main className="min-h-[100dvh] bg-slate-950 px-4 py-6 text-slate-100 sm:flex sm:justify-center"><div className="w-full max-w-2xl space-y-6"><header className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">{household.name}</p><h1 className="mt-1 text-2xl font-black">Contas e cartões</h1><p className="mt-1 text-sm text-slate-400">Cadastros reais da Casa, protegidos pela sua sessão.</p></div><button type="button" onClick={signOut} disabled={isSubmitting} aria-label="Sair" className="min-h-11 min-w-11 rounded-xl border border-slate-700 p-2 text-slate-300"><LogOut className="mx-auto h-5 w-5" /></button></header>
+    {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}{success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
+    <section><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-bold">Contas</h2><button type="button" onClick={() => setForm('account')} className="flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-3 text-sm font-semibold"><Plus className="h-4 w-4" />Adicionar conta</button></div>{loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-blue-400" /> : accounts.length ? <div className="grid gap-3 sm:grid-cols-2">{accounts.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><Landmark className="mb-3 h-5 w-5 text-blue-400" /><h3 className="font-bold">{item.name}</h3><p className="text-sm text-slate-400">{accountLabels[item.type]}{item.institution ? ` · ${item.institution}` : ''}</p><p className="mt-2 text-xs text-slate-500">Titular: {memberName(item.owner_member_id)}</p></article>)}</div> : <p className="rounded-2xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-400">Nenhuma conta ativa cadastrada.</p>}</section>
+    <section><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-bold">Cartões</h2><button type="button" onClick={openCardForm} className="flex min-h-11 items-center gap-2 rounded-xl bg-emerald-600 px-3 text-sm font-semibold"><Plus className="h-4 w-4" />Adicionar cartão</button></div>{loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-emerald-400" /> : cards.length ? <div className="grid gap-3 sm:grid-cols-2">{cards.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><CreditCard className="mb-3 h-5 w-5 text-emerald-400" /><h3 className="font-bold">{item.name}</h3><p className="text-sm text-slate-400">{item.institution || 'Sem instituição'}{item.last_four ? ` · final ${item.last_four}` : ''}</p><p className="mt-2 text-xs text-slate-300">Titular: {memberName(item.owner_member_id)}</p><p className="text-xs text-slate-500">Fecha dia {item.closing_day} · vence dia {item.due_day}</p></article>)}</div> : <p className="rounded-2xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-400">Nenhum cartão ativo cadastrado.</p>}</section>
+    {form && <div className="fixed inset-0 z-10 flex items-end justify-center bg-black/70 p-4 sm:items-center"><form onSubmit={submit} className="max-h-[92dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5"><h2 className="text-lg font-bold">{form === 'account' ? 'Adicionar conta' : 'Adicionar cartão'}</h2>{form === 'account' ? <><Field label="Nome" value={account.name} onChange={(value) => setAccount({ ...account, name: value })} required /><Field label="Instituição (opcional)" value={account.institution} onChange={(value) => setAccount({ ...account, institution: value })} /><label className="block text-sm text-slate-300">Tipo<select value={account.type} onChange={(event) => setAccount({ ...account, type: event.target.value as HouseholdAccountType })} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3">{ACCOUNT_TYPES.map((type) => <option key={type} value={type}>{accountLabels[type]}</option>)}</select></label><Field label="Saldo inicial" value={account.balance} onChange={(value) => setAccount({ ...account, balance: value })} type="number" step="0.01" required /><MemberSelect value={account.owner} members={householdMembers} onChange={(value) => setAccount({ ...account, owner: value })} optional /><Field label="Data de abertura (opcional)" value={account.openedAt} onChange={(value) => setAccount({ ...account, openedAt: value })} type="date" /></> : <><Field label="Nome do cartão" value={card.name} onChange={(value) => setCard({ ...card, name: value })} required /><Field label="Instituição (opcional)" value={card.institution} onChange={(value) => setCard({ ...card, institution: value })} /><MemberSelect value={card.owner} members={householdMembers} onChange={(value) => setCard({ ...card, owner: value })} /><Field label="Últimos 4 dígitos (opcional)" value={card.lastFour} onChange={(value) => setCard({ ...card, lastFour: value })} maxLength={4} pattern="[0-9]{4}" /><Field label="Limite de crédito" value={card.limit} onChange={(value) => setCard({ ...card, limit: value })} type="number" min="0" step="0.01" required /><div className="grid grid-cols-2 gap-3"><Field label="Fechamento" value={card.closing} onChange={(value) => setCard({ ...card, closing: value })} type="number" min="1" max="31" required /><Field label="Vencimento" value={card.due} onChange={(value) => setCard({ ...card, due: value })} type="number" min="1" max="31" required /></div><label className="block text-sm text-slate-300">Conta padrão de pagamento<select value={card.account} onChange={(event) => setCard({ ...card, account: event.target.value })} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"><option value="">Nenhuma</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><p className="rounded-xl bg-slate-950 p-3 text-xs text-slate-400">O titular identifica o proprietário do cartão. Ele não define comprador, responsável econômico ou pagador de futuras transações.</p></>}<div className="flex gap-3 pt-2"><button type="button" onClick={() => setForm(null)} className="min-h-11 flex-1 rounded-xl border border-slate-700 font-semibold">Cancelar</button><button type="submit" disabled={saving} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 font-semibold disabled:opacity-60">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Salvar</button></div></form></div>}
+  </div></main>;
+}
+
+function Field({ label, value, onChange, ...props }: { label: string; value: string; onChange: (value: string) => void; [key: string]: unknown }) { return <label className="block text-sm text-slate-300">{label}<input {...props} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label>; }
+function MemberSelect({ value, members, onChange, optional }: { value: string; members: Array<{ id: string; display_name: string }>; onChange: (value: string) => void; optional?: boolean }) { return <label className="block text-sm text-slate-300">Titular<select required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3">{optional && <option value="">Casa</option>}{members.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>; }
