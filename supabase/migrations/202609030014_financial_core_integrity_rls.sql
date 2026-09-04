@@ -3,6 +3,15 @@
 
 alter table public.card_invoices add column if not exists deleted_at timestamptz;
 alter table public.recurring_occurrences add column if not exists idempotency_key text;
+-- Funding de cartao precisa identificar a obrigacao liquidada. A transacao da
+-- compra, sozinha, nao distingue parcelas que caem em faturas diferentes.
+alter table public.funding_events add column if not exists invoice_id uuid references public.card_invoices(id) on delete restrict;
+alter table public.funding_events add column if not exists installment_id uuid references public.installments(id) on delete restrict;
+alter table public.funding_events drop constraint if exists funding_events_financed_transaction_id_funding_transaction_id_funder_key;
+create unique index if not exists funding_events_allocation_unique
+  on public.funding_events(financed_transaction_id, funding_transaction_id, funder_member_id, invoice_id, installment_id) nulls not distinct;
+create index if not exists funding_events_invoice_allocation
+  on public.funding_events(invoice_id, financed_transaction_id, installment_id);
 create unique index if not exists recurring_occurrences_idempotency
   on public.recurring_occurrences(recurring_rule_id, idempotency_key)
   where idempotency_key is not null;
@@ -37,7 +46,19 @@ begin
   elsif tg_table_name = 'card_invoice_payments' then
     if not exists(select 1 from public.card_invoices i where i.id=new.invoice_id and i.household_id=h and i.deleted_at is null) or not exists(select 1 from public.accounts a where a.id=new.source_account_id and a.household_id=h and a.deactivated_at is null) then raise exception 'invoice payment has cross-household reference' using errcode='23514'; end if;
   elsif tg_table_name = 'funding_events' then
-    if not exists(select 1 from public.household_members m where m.id=new.funder_member_id and m.household_id=h and m.deactivated_at is null) or not exists(select 1 from public.accounts a where a.id=new.source_account_id and a.household_id=h and a.deactivated_at is null) or not exists(select 1 from public.transactions t where t.id=new.financed_transaction_id and t.household_id=h) or not exists(select 1 from public.transactions t where t.id=new.funding_transaction_id and t.household_id=h) then raise exception 'funding has cross-household reference' using errcode='23514'; end if;
+    if not exists(select 1 from public.household_members m where m.id=new.funder_member_id and m.household_id=h and m.deactivated_at is null) or not exists(select 1 from public.accounts a where a.id=new.source_account_id and a.household_id=h and a.deactivated_at is null) or not exists(select 1 from public.transactions t where t.id=new.financed_transaction_id and t.household_id=h and t.deleted_at is null) or not exists(select 1 from public.transactions t where t.id=new.funding_transaction_id and t.household_id=h and t.deleted_at is null) then raise exception 'funding has cross-household reference' using errcode='23514'; end if;
+    if new.installment_id is not null and new.invoice_id is null then raise exception 'installment funding requires an invoice' using errcode='23514'; end if;
+    if new.invoice_id is not null and not exists(select 1 from public.card_invoices i where i.id=new.invoice_id and i.household_id=h and i.deleted_at is null) then raise exception 'funding invoice belongs to another household' using errcode='23514'; end if;
+    if new.invoice_id is not null and not exists(
+      select 1 from public.card_invoice_payments p where p.invoice_id=new.invoice_id and p.payment_transaction_id=new.funding_transaction_id and p.source_account_id=new.source_account_id and p.household_id=h
+    ) then raise exception 'funding must match its invoice payment' using errcode='23514'; end if;
+    if new.installment_id is not null and not exists(
+      select 1 from public.installments i join public.installment_plans p on p.id=i.installment_plan_id
+       where i.id=new.installment_id and i.household_id=h and i.invoice_id=new.invoice_id and p.household_id=h and p.purchase_transaction_id=new.financed_transaction_id
+    ) then raise exception 'funding installment does not match invoice and purchase' using errcode='23514'; end if;
+    if new.invoice_id is not null and new.installment_id is null and not exists(
+      select 1 from public.transactions t where t.id=new.financed_transaction_id and t.household_id=h and t.invoice_id=new.invoice_id and t.deleted_at is null
+    ) then raise exception 'funding invoice does not match purchase' using errcode='23514'; end if;
   elsif tg_table_name = 'transfers' then
     if not exists(select 1 from public.accounts a where a.id=new.source_account_id and a.household_id=h and a.deactivated_at is null) or not exists(select 1 from public.accounts a where a.id=new.destination_account_id and a.household_id=h and a.deactivated_at is null) then raise exception 'transfer accounts must belong to household' using errcode='23514'; end if;
   elsif tg_table_name = 'money_movements' then
