@@ -69,9 +69,22 @@ begin
  insert into public.money_movements(household_id,created_by_member_id,kind,state,amount,description,source_account_id,invoice_id,movement_date,competence_date,realized_at) values(p_household_id,caller.id,'invoice_payment','realized',p_amount,'Pagamento de fatura',p_source_account_id,p_invoice_id,p_paid_at::date,date_trunc('month',p_paid_at)::date,p_paid_at) returning id into movement;
  insert into public.card_invoice_payments(household_id,invoice_id,payment_transaction_id,source_account_id,amount,paid_at) values(p_household_id,p_invoice_id,payment_tx,p_source_account_id,p_amount,p_paid_at);
  remaining:=p_amount;
- for purchase in select t.id,case when t.invoice_id=p_invoice_id then t.amount else sum(ins.amount) end amount from public.transactions t left join public.installment_plans ip on ip.purchase_transaction_id=t.id left join public.installments ins on ins.installment_plan_id=ip.id and ins.invoice_id=p_invoice_id where (t.invoice_id=p_invoice_id or ins.id is not null) and t.deleted_at is null group by t.id,t.invoice_id,t.amount,t.created_at order by t.created_at,t.id loop
-   allocation:=least(remaining,purchase.amount-coalesce((select sum(f.amount) from public.funding_events f where f.financed_transaction_id=purchase.id),0));
-   if allocation>0 then insert into public.funding_events(household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,amount,funded_at) values(p_household_id,purchase.id,payment_tx,p_funder_member_id,p_source_account_id,allocation,p_paid_at); remaining:=remaining-allocation; end if;
+ -- Cada parcela e uma unidade de alocacao independente. Assim, funding de uma
+ -- fatura anterior da mesma compra nunca reduz o saldo financiavel desta fatura.
+ for purchase in
+   select t.id, null::uuid installment_id, t.amount, t.created_at
+     from public.transactions t
+    where t.invoice_id=p_invoice_id and t.household_id=p_household_id and t.deleted_at is null
+   union all
+   select t.id, ins.id, ins.amount, t.created_at
+     from public.installments ins
+     join public.installment_plans ip on ip.id=ins.installment_plan_id and ip.household_id=p_household_id
+     join public.transactions t on t.id=ip.purchase_transaction_id and t.household_id=p_household_id and t.deleted_at is null
+    where ins.invoice_id=p_invoice_id and ins.household_id=p_household_id
+   order by created_at,id,installment_id nulls first
+ loop
+   allocation:=least(remaining,purchase.amount-coalesce((select sum(f.amount) from public.funding_events f where f.invoice_id=p_invoice_id and f.financed_transaction_id=purchase.id and f.installment_id is not distinct from purchase.installment_id),0));
+   if allocation>0 then insert into public.funding_events(household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,invoice_id,installment_id,amount,funded_at) values(p_household_id,purchase.id,payment_tx,p_funder_member_id,p_source_account_id,p_invoice_id,purchase.installment_id,allocation,p_paid_at); remaining:=remaining-allocation; end if;
    exit when remaining=0;
  end loop;
  if remaining<>0 then raise exception 'invoice purchases do not support requested funding' using errcode='23514'; end if;

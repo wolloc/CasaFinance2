@@ -39,6 +39,41 @@ describe('Etapa 9 financial core database contract', () => {
     assert.doesNotMatch(sql, /Pagamento de fatura'[^;]+,'expense'/i);
   });
 
+  it('tracks installment funding per invoice without duplicating the purchase expense', async () => {
+    const integrity = await migration('202609030014_financial_core_integrity_rls.sql');
+    const rpc = await migration('202609030015_financial_core_rpcs.sql');
+
+    // A 12x purchase remains one expense; installments only describe its schedule.
+    assert.match(rpc, /insert into public\.installment_plans/);
+    assert.match(rpc, /insert into public\.installments/);
+    const installmentLoop = rpc.match(/for i in 1\.\.p_installment_count loop([\s\S]*?)end loop;/i)?.[1];
+    assert.ok(installmentLoop);
+    assert.doesNotMatch(installmentLoop, /insert into public\.transactions/i);
+
+    // First and second invoices have distinct allocation keys for the same purchase.
+    assert.match(integrity, /funding_events add column if not exists invoice_id/);
+    assert.match(integrity, /funding_events add column if not exists installment_id/);
+    assert.match(integrity, /funding_events_allocation_unique/);
+    assert.match(integrity, /nulls not distinct/);
+    assert.match(rpc, /f\.invoice_id=p_invoice_id/);
+    assert.match(rpc, /f\.installment_id is not distinct from purchase\.installment_id/);
+    assert.doesNotMatch(rpc, /where f\.financed_transaction_id=purchase\.id\),0/);
+  });
+
+  it('supports partial invoice funding and isolates every allocation by household', async () => {
+    const integrity = await migration('202609030014_financial_core_integrity_rls.sql');
+    const rpc = await migration('202609030015_financial_core_rpcs.sql');
+
+    assert.match(rpc, /allocation:=least\(remaining,purchase\.amount-coalesce/);
+    assert.match(rpc, /remaining:=remaining-allocation/);
+    assert.match(rpc, /inv\.settled_amount\+p_amount>inv\.total_amount/);
+    assert.match(rpc, /ins\.household_id=p_household_id/);
+    assert.match(rpc, /ip\.household_id=p_household_id/);
+    assert.match(integrity, /funding installment does not match invoice and purchase/);
+    assert.match(integrity, /funding invoice belongs to another household/);
+    assert.match(integrity, /funding must match its invoice payment/);
+  });
+
   it('makes recurrence idempotent and transfer two-legged', async () => {
     const integrity = await migration('202609030014_financial_core_integrity_rls.sql');
     const rpc = await migration('202609030015_financial_core_rpcs.sql');
