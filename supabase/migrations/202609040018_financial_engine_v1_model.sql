@@ -70,6 +70,7 @@ alter table public.transactions add column if not exists economic_state public.e
 alter table public.transactions add column if not exists estimated_amount numeric(19,2) check (estimated_amount is null or estimated_amount > 0);
 alter table public.transactions add column if not exists confirmed_amount numeric(19,2) check (confirmed_amount is null or confirmed_amount > 0);
 alter table public.transactions add column if not exists realized_amount numeric(19,2) not null default 0 check (realized_amount >= 0);
+comment on column public.transactions.realized_amount is 'Economically realized amount; never a cash balance. Realized cash comes only from money_movements(state=realized).';
 
 create table public.transaction_links (
   id uuid primary key default gen_random_uuid(),
@@ -99,6 +100,7 @@ create table public.economic_allocations (
   transaction_id uuid not null references public.transactions(id) on delete cascade,
   responsible_member_id uuid references public.household_members(id) on delete restrict,
   responsible_party_id uuid references public.financial_parties(id) on delete restrict,
+  allocation_order integer not null check (allocation_order > 0),
   amount numeric(19,2) not null check (amount > 0),
   percentage numeric(7,4) not null check (percentage > 0 and percentage <= 100),
   created_at timestamptz not null default now(),
@@ -106,6 +108,7 @@ create table public.economic_allocations (
 );
 create unique index economic_allocations_member_unique on public.economic_allocations(transaction_id,responsible_member_id) where responsible_member_id is not null;
 create unique index economic_allocations_party_unique on public.economic_allocations(transaction_id,responsible_party_id) where responsible_party_id is not null;
+create unique index economic_allocations_order_unique on public.economic_allocations(transaction_id,allocation_order);
 comment on table public.transaction_splits is 'LEGACY-compatible member-only allocations. New flows use economic_allocations.';
 
 create table public.financial_obligations (

@@ -34,6 +34,28 @@ begin
   return result;
 end $$;
 
+-- Internal largest-remainder allocator. Percentages remain authoritative and
+-- the last cent is assigned deterministically by fractional remainder + input order.
+create or replace function public.rescale_economic_allocations(p_transaction_id uuid,p_new_amount numeric)
+returns void language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+  if p_new_amount<=0 then raise exception 'positive allocation total required' using errcode='22023'; end if;
+  if not exists(select 1 from public.economic_allocations where transaction_id=p_transaction_id) then return; end if;
+  if (select sum(percentage) from public.economic_allocations where transaction_id=p_transaction_id)<>100 then raise exception 'allocation percentages must total 100' using errcode='23514'; end if;
+  with calculated as (
+    select id,floor(round(p_new_amount*100)*percentage/100)::bigint base_cents,
+           row_number() over(order by (round(p_new_amount*100)*percentage/100)-floor(round(p_new_amount*100)*percentage/100) desc,allocation_order) priority
+    from public.economic_allocations where transaction_id=p_transaction_id
+  ), totals as (
+    select round(p_new_amount*100)::bigint target_cents,sum(base_cents)::bigint base_total from calculated
+  ), final as (
+    select c.id,(c.base_cents+case when c.priority<=t.target_cents-t.base_total then 1 else 0 end)::numeric/100 amount from calculated c cross join totals t
+  ) update public.economic_allocations a set amount=f.amount from final f where a.id=f.id;
+  update public.transaction_splits s set amount=a.amount from public.economic_allocations a
+   where s.transaction_id=p_transaction_id and a.transaction_id=s.transaction_id and a.responsible_member_id=s.responsible_member_id;
+end $$;
+revoke all on function public.rescale_economic_allocations(uuid,numeric) from public,anon,authenticated;
+
 create or replace function public.confirm_financial_transaction(p_household_id uuid,p_transaction_id uuid,p_confirmed_amount numeric)
 returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
 declare caller public.household_members; tx public.transactions;
@@ -41,7 +63,7 @@ begin
   caller:=public.require_active_member(p_household_id);
   select * into tx from public.transactions where id=p_transaction_id and household_id=p_household_id and deleted_at is null for update;
   if tx.id is null or tx.economic_state in ('cancelled','reversed') or p_confirmed_amount<=0 then raise exception 'transaction cannot be confirmed' using errcode='23514'; end if;
-  if exists(select 1 from public.economic_allocations where transaction_id=tx.id) and p_confirmed_amount<>tx.amount then raise exception 'change allocations before changing a split transaction amount' using errcode='23514'; end if;
+  perform public.rescale_economic_allocations(tx.id,p_confirmed_amount);
   update public.transactions set amount=p_confirmed_amount,confirmed_amount=p_confirmed_amount,economic_state='confirmed',updated_at=now() where id=tx.id;
   update public.recurring_occurrences set confirmed_amount=p_confirmed_amount,confirmed_at=now() where transaction_id=tx.id;
   return tx.id;
@@ -63,6 +85,20 @@ begin
   values(p_household_id,caller.id,'expense_payment','realized',p_amount,tx.description,p_source_account_id,tx.id,p_paid_at::date,date_trunc('month',p_paid_at)::date,p_paid_at) returning id into movement_id;
   insert into public.funding_events(household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,amount,funded_at) values(p_household_id,tx.id,payment_tx,p_funder_member_id,p_source_account_id,p_amount,p_paid_at);
   update public.transactions set realized_amount=already+p_amount,economic_state='realized',status=case when already+p_amount=amount then 'paid' else 'pending' end,settled_at=case when already+p_amount=amount then p_paid_at else null end,updated_at=now() where id=tx.id;
+  return movement_id;
+end $$;
+
+create or replace function public.settle_income(p_household_id uuid,p_transaction_id uuid,p_destination_account_id uuid,p_beneficiary_member_id uuid,p_amount numeric,p_received_at timestamptz default now())
+returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
+declare caller public.household_members; tx public.transactions; movement_id uuid;
+begin
+  caller:=public.require_active_member(p_household_id);
+  select * into tx from public.transactions where id=p_transaction_id and household_id=p_household_id and type='income' and deleted_at is null for update;
+  if tx.id is null or tx.economic_state in ('cancelled','reversed') or p_amount<=0 or tx.realized_amount+p_amount>coalesce(tx.confirmed_amount,tx.amount) then raise exception 'invalid income settlement' using errcode='23514'; end if;
+  if not exists(select 1 from public.accounts where id=p_destination_account_id and household_id=p_household_id and deactivated_at is null) or not exists(select 1 from public.household_members where id=p_beneficiary_member_id and household_id=p_household_id and deactivated_at is null) then raise exception 'destination and beneficiary must belong to household' using errcode='23514'; end if;
+  insert into public.money_movements(household_id,created_by_member_id,kind,state,amount,description,beneficiary_member_id,destination_account_id,category_id,related_transaction_id,movement_date,competence_date,realized_at)
+  values(p_household_id,caller.id,'income','realized',p_amount,tx.description,p_beneficiary_member_id,p_destination_account_id,tx.category_id,tx.id,p_received_at::date,date_trunc('month',p_received_at)::date,p_received_at) returning id into movement_id;
+  update public.transactions set realized_amount=realized_amount+p_amount,economic_state=case when realized_amount+p_amount=coalesce(confirmed_amount,amount) then 'realized' else 'confirmed' end,status=case when realized_amount+p_amount=coalesce(confirmed_amount,amount) then 'received' else 'pending' end,settled_at=case when realized_amount+p_amount=coalesce(confirmed_amount,amount) then p_received_at else null end,updated_at=now() where id=tx.id;
   return movement_id;
 end $$;
 
@@ -103,9 +139,9 @@ begin
   return event_id;
 end $$;
 
-create or replace function public.write_off_receivable(p_household_id uuid,p_obligation_id uuid,p_amount numeric,p_loss_date date,p_category_id uuid default null,p_notes text default null)
+create or replace function public.write_off_receivable(p_household_id uuid,p_obligation_id uuid,p_amount numeric,p_loss_date date,p_splits jsonb,p_category_id uuid default null,p_notes text default null)
 returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
-declare caller public.household_members; obligation public.financial_obligations; settled numeric; loss_tx uuid; event_id uuid;
+declare caller public.household_members; obligation public.financial_obligations; settled numeric; loss_tx uuid; event_id uuid; split jsonb; split_sum numeric:=0; pct_sum numeric:=0; allocation_order integer:=0;
 begin
   caller:=public.require_active_member(p_household_id);
   select * into obligation from public.financial_obligations where id=p_obligation_id and household_id=p_household_id and kind='receivable' for update;
@@ -114,6 +150,15 @@ begin
   insert into public.transactions(household_id,created_by_member_id,category_id,type,status,economic_state,description,amount,estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date,settled_at,notes)
   values(p_household_id,caller.id,p_category_id,'expense','paid','realized','Perda: '||obligation.description,p_amount,p_amount,p_amount,p_amount,p_loss_date,date_trunc('month',p_loss_date)::date,p_loss_date::timestamptz,p_notes) returning id into loss_tx;
   insert into public.transaction_components(household_id,transaction_id,kind,amount) values(p_household_id,loss_tx,'loss',p_amount);
+  if jsonb_array_length(coalesce(p_splits,'[]'))=0 then raise exception 'loss requires explicit economic allocations' using errcode='23514'; end if;
+  for split in select * from jsonb_array_elements(p_splits) loop
+    allocation_order:=allocation_order+1;
+    if (split ? 'member_id') = (split ? 'party_id') then raise exception 'each loss split requires exactly one member_id or party_id' using errcode='23514'; end if;
+    split_sum:=split_sum+(split->>'amount')::numeric; pct_sum:=pct_sum+(split->>'percentage')::numeric;
+    insert into public.economic_allocations(household_id,transaction_id,responsible_member_id,responsible_party_id,allocation_order,percentage,amount)
+    values(p_household_id,loss_tx,case when split ? 'member_id' then (split->>'member_id')::uuid end,case when split ? 'party_id' then (split->>'party_id')::uuid end,allocation_order,(split->>'percentage')::numeric,(split->>'amount')::numeric);
+  end loop;
+  if split_sum<>p_amount or pct_sum<>100 then raise exception 'loss allocations must equal loss amount and 100 percent' using errcode='23514'; end if;
   if obligation.source_transaction_id is not null then insert into public.transaction_links(household_id,source_transaction_id,related_transaction_id,kind,amount) values(p_household_id,obligation.source_transaction_id,loss_tx,'loss',p_amount); end if;
   insert into public.obligation_events(household_id,obligation_id,created_by_member_id,kind,amount,economic_transaction_id,occurred_at,notes) values(p_household_id,obligation.id,caller.id,'write_off',p_amount,loss_tx,p_loss_date::timestamptz,p_notes) returning id into event_id;
   update public.financial_obligations set state=case when settled+p_amount=original_amount then 'written_off' else 'partially_settled' end,closed_at=case when settled+p_amount=original_amount then p_loss_date::timestamptz else null end,updated_at=now() where id=obligation.id;
@@ -126,7 +171,7 @@ create or replace function public.create_financial_transaction(
  p_buyer_member_id uuid default null,p_instrument_kind public.payment_instrument_kind default null,p_account_id uuid default null,p_card_id uuid default null,
  p_splits jsonb default '[]',p_installment_count integer default 1,p_notes text default null
 ) returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
-declare caller public.household_members; tx uuid; split jsonb; split_sum numeric:=0; pct_sum numeric:=0; has_external boolean:=false; plan uuid; cents bigint; base bigint; remainder int; i int; part numeric; card public.cards; dates record; invoice uuid; part_date date;
+declare caller public.household_members; tx uuid; split jsonb; split_sum numeric:=0; pct_sum numeric:=0; has_external boolean:=false; allocation_order integer:=0; plan uuid; cents bigint; base bigint; remainder int; i int; part numeric; card public.cards; dates record; invoice uuid; part_date date;
 begin
  caller:=public.require_active_member(p_household_id);
  if p_type not in ('expense','income') or p_amount<=0 then raise exception 'positive expense or income required' using errcode='22023'; end if;
@@ -134,15 +179,16 @@ begin
  if p_type='income' and (p_buyer_member_id is not null or p_instrument_kind is not null or jsonb_array_length(p_splits)>0 or p_installment_count<>1) then raise exception 'income cannot contain expense roles' using errcode='23514'; end if;
  if p_installment_count<1 or (p_installment_count>1 and (p_type<>'expense' or p_instrument_kind<>'card')) then raise exception 'installments require a card expense' using errcode='22023'; end if;
  insert into public.transactions(household_id,created_by_member_id,buyer_member_id,category_id,type,status,economic_state,description,amount,estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date,notes)
- values(p_household_id,caller.id,p_buyer_member_id,p_category_id,p_type,case when p_type='income' then 'pending' else 'pending' end,'realized',trim(p_description),p_amount,p_amount,p_amount,p_amount,p_transaction_date,date_trunc('month',p_transaction_date)::date,p_notes) returning id into tx;
+ values(p_household_id,caller.id,p_buyer_member_id,p_category_id,p_type,'pending',case when p_type='income' then 'confirmed'::public.economic_state else 'realized'::public.economic_state end,trim(p_description),p_amount,p_amount,p_amount,case when p_type='income' then 0 else p_amount end,p_transaction_date,date_trunc('month',p_transaction_date)::date,p_notes) returning id into tx;
  if p_type='expense' then
    insert into public.transaction_payment_instruments(household_id,transaction_id,kind,account_id,card_id) values(p_household_id,tx,p_instrument_kind,case when p_instrument_kind='account' then p_account_id end,case when p_instrument_kind='card' then p_card_id end);
    select exists(select 1 from jsonb_array_elements(p_splits) s where s ? 'party_id') into has_external;
    for split in select * from jsonb_array_elements(p_splits) loop
+     allocation_order:=allocation_order+1;
      split_sum:=split_sum+(split->>'amount')::numeric; pct_sum:=pct_sum+(split->>'percentage')::numeric;
      if (split ? 'member_id') = (split ? 'party_id') then raise exception 'each split requires exactly one member_id or party_id' using errcode='23514'; end if;
-     insert into public.economic_allocations(household_id,transaction_id,responsible_member_id,responsible_party_id,percentage,amount)
-     values(p_household_id,tx,case when split ? 'member_id' then (split->>'member_id')::uuid end,case when split ? 'party_id' then (split->>'party_id')::uuid end,(split->>'percentage')::numeric,(split->>'amount')::numeric);
+     insert into public.economic_allocations(household_id,transaction_id,responsible_member_id,responsible_party_id,allocation_order,percentage,amount)
+     values(p_household_id,tx,case when split ? 'member_id' then (split->>'member_id')::uuid end,case when split ? 'party_id' then (split->>'party_id')::uuid end,allocation_order,(split->>'percentage')::numeric,(split->>'amount')::numeric);
      -- The legacy table requires 100% member-only totals; mixed allocations live
      -- solely in the canonical table rather than corrupting that invariant.
      if not has_external then insert into public.transaction_splits(household_id,transaction_id,responsible_member_id,percentage,amount) values(p_household_id,tx,(split->>'member_id')::uuid,(split->>'percentage')::numeric,(split->>'amount')::numeric); end if;
@@ -169,6 +215,26 @@ begin
  return tx;
 end $$;
 
+-- Direct shared purchase: gross cash outflow is funded once, while every
+-- external allocation becomes its own receivable linked to the gross event.
+create or replace function public.create_and_settle_shared_expense(
+ p_household_id uuid,p_description text,p_gross_amount numeric,p_transaction_date date,p_category_id uuid,p_buyer_member_id uuid,
+ p_source_account_id uuid,p_funder_member_id uuid,p_splits jsonb,p_receivable_due_date date default null,p_notes text default null
+) returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
+declare tx uuid; split jsonb; party_id uuid; party_amount numeric;
+begin
+  perform public.require_active_member(p_household_id);
+  tx:=public.create_financial_transaction(p_household_id,'expense',p_description,p_gross_amount,p_transaction_date,p_category_id,p_buyer_member_id,'account',p_source_account_id,null,p_splits,1,p_notes);
+  perform public.settle_direct_expense(p_household_id,tx,p_source_account_id,p_funder_member_id,p_gross_amount,p_transaction_date::timestamptz);
+  for split in select * from jsonb_array_elements(p_splits) loop
+    if split ? 'party_id' then
+      party_id:=(split->>'party_id')::uuid; party_amount:=(split->>'amount')::numeric;
+      perform public.create_financial_obligation(p_household_id,'receivable','shared_expense',party_id,party_amount,p_transaction_date,p_receivable_due_date,'Rateio de terceiro: '||p_description,tx,null,null,p_notes);
+    end if;
+  end loop;
+  return tx;
+end $$;
+
 -- Preserve recurrence idempotency while making the generated event a forecast.
 create or replace function public.generate_recurring_occurrence(p_household_id uuid,p_rule_id uuid,p_occurrence_date date)
 returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
@@ -180,7 +246,12 @@ begin
  select * into template from public.transactions where id=rule.template_transaction_id and household_id=p_household_id and deleted_at is null; if template.id is null then raise exception 'active recurring template required' using errcode='23514'; end if;
  estimate:=coalesce(rule.estimated_amount,template.estimated_amount,template.amount);
  insert into public.transactions(household_id,created_by_member_id,buyer_member_id,category_id,type,status,economic_state,description,amount,estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date,due_date,notes) values(p_household_id,caller.id,template.buyer_member_id,template.category_id,template.type,'planned','forecast',template.description,estimate,estimate,null,0,p_occurrence_date,date_trunc('month',p_occurrence_date)::date,p_occurrence_date,template.notes) returning id into tx;
- if template.type='expense' then insert into public.transaction_payment_instruments(household_id,transaction_id,kind,account_id,card_id) select p_household_id,tx,kind,account_id,card_id from public.transaction_payment_instruments where transaction_id=template.id; end if;
+ if template.type='expense' then
+   insert into public.transaction_payment_instruments(household_id,transaction_id,kind,account_id,card_id) select p_household_id,tx,kind,account_id,card_id from public.transaction_payment_instruments where transaction_id=template.id;
+   insert into public.economic_allocations(household_id,transaction_id,responsible_member_id,responsible_party_id,allocation_order,percentage,amount) select p_household_id,tx,responsible_member_id,responsible_party_id,allocation_order,percentage,amount from public.economic_allocations where transaction_id=template.id;
+   insert into public.transaction_splits(household_id,transaction_id,responsible_member_id,percentage,amount) select p_household_id,tx,responsible_member_id,percentage,amount from public.transaction_splits where transaction_id=template.id;
+   perform public.rescale_economic_allocations(tx,estimate);
+ end if;
  insert into public.recurring_occurrences(household_id,recurring_rule_id,transaction_id,competence_date,due_date,status,idempotency_key,estimated_amount) values(p_household_id,p_rule_id,tx,p_occurrence_date,p_occurrence_date,'planned',key,estimate); return tx;
 end $$;
 
@@ -191,10 +262,12 @@ do $$ declare signature text; begin
     'public.record_account_opening_position(uuid,uuid,numeric,date,text)',
     'public.confirm_financial_transaction(uuid,uuid,numeric)',
     'public.settle_direct_expense(uuid,uuid,uuid,uuid,numeric,timestamptz)',
+    'public.settle_income(uuid,uuid,uuid,uuid,numeric,timestamptz)',
     'public.create_financial_obligation(uuid,public.obligation_kind,public.obligation_origin_kind,uuid,numeric,date,date,text,uuid,uuid,uuid,text)',
     'public.settle_financial_obligation(uuid,uuid,uuid,numeric,timestamptz,uuid,text)',
-    'public.write_off_receivable(uuid,uuid,numeric,date,uuid,text)',
+    'public.write_off_receivable(uuid,uuid,numeric,date,jsonb,uuid,text)',
     'public.create_financial_transaction(uuid,public.transaction_kind,text,numeric,date,uuid,uuid,public.payment_instrument_kind,uuid,uuid,jsonb,integer,text)',
+    'public.create_and_settle_shared_expense(uuid,text,numeric,date,uuid,uuid,uuid,uuid,jsonb,date,text)',
     'public.generate_recurring_occurrence(uuid,uuid,date)'
   ] loop
     execute 'revoke all on function '||signature||' from public,anon';

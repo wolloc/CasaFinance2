@@ -64,6 +64,8 @@ Cartão, PIX no cartão, conta, vale-alimentação, dinheiro físico e emprésti
 - `write_off_receivable`: baixa saldo a receber e cria uma única despesa econômica de perda relacionada.
 - `confirm_financial_transaction`: preserva estimativa e define valor confirmado.
 - `settle_direct_expense`: liquida despesa em conta, cria saída e funding real de forma atômica.
+- `create_and_settle_shared_expense`: registra o valor bruto, funding e saída uma única vez e cria um receivable por allocation de terceiro.
+- `settle_income`: registra o recebimento efetivo e somente então atualiza `realized_amount` da receita.
 
 ### F. RPCs existentes
 
@@ -74,7 +76,7 @@ Cartão, PIX no cartão, conta, vale-alimentação, dinheiro físico e emprésti
 
 ### G. Estados e valores
 
-Estado econômico (`economic_state`) é independente da liquidação: `forecast`, `confirmed`, `realized`, `cancelled`, `reversed`. `estimated_amount`, `confirmed_amount` e `realized_amount` preservam as três medidas. Obrigações têm `open`, `partially_settled`, `settled`, `cancelled`, `written_off`; atraso é derivado de `due_date < current_date` com saldo aberto. Caixa conserva `projected`/`realized`.
+Estado econômico (`economic_state`) é independente do movimento de caixa: `forecast` é estimativa, `confirmed` é valor conhecido ainda não ocorrido/recebido e `realized` é reconhecimento econômico ocorrido. `realized_amount` é medida **econômica**, nunca saldo de caixa; caixa realizado deriva exclusivamente de `money_movements.state = 'realized'`. Uma compra efetivamente feita pode ser economicamente realizada mesmo no cartão, antes de sair dinheiro da conta. Uma receita criada ainda não recebida nasce `confirmed`, com `realized_amount = 0`, e somente `settle_income` a realiza. Obrigações têm `open`, `partially_settled`, `settled`, `cancelled`, `written_off`; atraso é derivado de `due_date < current_date` com saldo aberto.
 
 ### H. Terceiros
 
@@ -84,7 +86,9 @@ Terceiros vivem em `financial_parties`, são sempre pertencentes a uma Casa, nã
 
 Uma obrigação guarda valor original e contraparte. Seu saldo é `original_amount - eventos que reduzem saldo`; recebimentos/pagamentos parciais mantêm histórico. Principal recebido/pago só cria movimento de caixa. Baixa de receivable cria evento `write_off` e transação de perda separada, relacionada à origem.
 
-Na compra compartilhada, `economic_allocations` registra R$ 300 dos membros e R$ 150 do terceiro; uma obrigação receivable de R$ 150 aponta para a mesma transação. A saída de R$ 450 não duplica a despesa da Casa.
+Na compra compartilhada, `create_and_settle_shared_expense` mantém R$ 450 como valor bruto do evento e saída/funding, registra R$ 300 em allocations dos membros e R$ 150 na allocation de Letícia, e cria um receivable de R$ 150 ligado por `source_transaction_id`. Cada terceiro recebe uma obrigação separada. A despesa econômica da Casa é a soma das allocations de membros, não o bruto: R$ 300.
+
+`financial_transaction_positions` torna a distinção explícita com `gross_event_amount`, `gross_cash_paid`, `household_economic_amount`, `third_party_economic_amount` e `third_party_receivable_outstanding`. Assim, o jantar aparece como R$ 450 pagos, R$ 300 consumidos pela Casa e R$ 150 a receber, sem dupla contabilização.
 
 ### J. PIX/cartão/encargos
 
@@ -98,11 +102,20 @@ Uma conta ativa deve ter uma ou duas linhas em `account_ownerships`, configurada
 
 `account_balance_events(kind = 'opening')` é o novo evento inicial, único por conta e rastreável por autor/data. Os campos antigos não são copiados automaticamente para evitar transformar ou associar dados legados. A aplicação deverá optar explicitamente pelo RPC novo.
 
+### L.1 Recorrência e rateio
+
+Uma ocorrência copia comprador, instrumento previsto e todas as `economic_allocations`, inclusive allocations mistas de membros/terceiros. Ao confirmar valor diferente, `rescale_economic_allocations` preserva percentuais e usa largest remainder determinístico: trabalha em centavos, aplica piso e distribui os centavos restantes pela maior fração e ordem original do rateio. Portanto R$ 287,43 em 50/50 atribui R$ 143,72 ao primeiro split (Wallace no exemplo) e R$ 143,71 ao segundo, fechando exatamente 100% sem impedir a confirmação.
+
+### L.2 Perda
+
+`write_off_receivable` exige `p_splits`; cada split identifica explicitamente `member_id` ou `party_id`, percentual e valor. A perda continua vinculada à obrigação e origem, recebe `transaction_components(kind='loss')` e allocations fechando valor e 100%. Nenhum responsável é inferido de comprador, titular ou financiador.
+
 ### M. Read model
 
 - `financial_account_balances`: posição inicial/ajustes mais entradas menos saídas realizadas.
 - `financial_obligation_balances`: saldo, valor liquidado e atraso por obrigação.
 - `financial_invoice_positions`: total, pago, saldo, atraso e conta prevista.
+- `financial_transaction_positions`: bruto, caixa pago, consumo econômico da Casa, parcela externa e receivable externo remanescente.
 - `financial_member_positions`: responsabilidade econômica e funding real por membro.
 - `financial_household_position`: dinheiro livre/restrito, reservas, investimentos, receivables, payables, obrigações futuras, comprometido, projetado, faturas e patrimônio líquido básico.
 
