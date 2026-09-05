@@ -1,72 +1,134 @@
 # Regras de domínio do Casa Finance
 
-Este documento é o contrato contábil de referência. Valores monetários são calculados em centavos; datas de competência usam `AAAA-MM`. As funções puras que materializam o contrato estão em `src/domain/finance.ts`.
+Este documento registra as **invariantes permanentes do domínio financeiro do Casa**. Valores monetários são calculados em centavos. Regras de apresentação calibráveis pertencem à especificação de produto; não são invariantes contábeis.
 
 ## Glossário
 
-| Conceito | Definição e efeito contábil |
+| Conceito | Definição e efeito financeiro |
 | --- | --- |
-| **Casa** | Unidade de isolamento e colaboração (`household`). Agrupa membros, contas, cartões, categorias e lançamentos. Dados de casas distintas nunca se compensam. |
-| **Membro** | Pessoa vinculada à Casa. Pode comprar, registrar, ser titular de um meio, financiar ou ter responsabilidade econômica; os papéis são independentes. |
-| **Conta** | Recurso financeiro com saldo realizado: conta corrente, poupança ou conta similar. Receita efetiva aumenta o saldo; despesa direta ou pagamento efetivo reduz o saldo. |
-| **Carteira** | Meio com saldo próprio, físico ou digital. Contabilmente segue a mesma mecânica de uma Conta, mantendo identidade separada. |
-| **Investimento** | Ativo financeiro pertencente à Casa ou a um membro. Aporte é transferência patrimonial, não despesa; rendimento é receita quando reconhecido. |
-| **VA** | Vale-alimentação/refeição com saldo restrito. É uma origem financeira com saldo, não cartão de crédito nem receita a cada uso. |
-| **Cartão** | Instrumento de crédito. Uma compra reconhece despesa e obrigação na fatura; não reduz conta bancária antes do pagamento. Titularidade não define responsabilidade econômica. |
-| **Receita** | Ingresso que aumenta o resultado e, quando efetivado, o saldo da conta de destino. |
-| **Despesa** | Consumo que reduz o resultado. É reconhecida na competência da compra/ocorrência, inclusive no cartão. |
-| **Transferência** | Movimento entre ativos próprios. Debita uma origem e credita um destino pelo mesmo valor, preservando patrimônio e resultado. |
-| **Pagamento de Fatura** | Liquidação da obrigação do cartão com uma conta escolhida. Reduz essa conta e a fatura; não cria despesa, pois as compras já a reconheceram. |
-| **Empréstimo** | Origina ativo (valor recebido) e passivo (dívida), sem receita; amortização reduz ambos, e somente juros/tarifas são despesas. O modelo atual ainda não possui entidade própria. |
-| **Comprador/Autor** | Pessoa que originou, realizou ou registrou a ação. Não determina, sozinho, quem pagou ou deve suportar o gasto. |
-| **Origem Financeira** | Instrumento e rota do dinheiro (Conta, Carteira, VA ou Cartão). Seu titular pode diferir do comprador, financiador e responsável. |
-| **Financiador Efetivo** | Membro cujos recursos próprios efetivamente liquidaram o gasto. Em cartão, existe apenas quando a fatura é paga; antes disso pode haver financiador projetado. |
-| **Responsável Econômico** | Quem deve suportar economicamente a despesa, em 50/50, 100% ou divisão personalizada. A soma das responsabilidades deve fechar o total. |
-| **Parcela** | Fração de uma compra atribuída a uma competência/fatura. A soma das parcelas em centavos deve ser exatamente o valor original. |
-| **Conta Fixa** | Regra recorrente que gera uma ocorrência identificável por competência. A regra e a ocorrência não podem ser somadas simultaneamente. |
+| **Casa** | Unidade de isolamento e colaboração (`household`), composta por exatamente dois membros ativos. Dados de Casas distintas nunca se misturam nem se compensam. |
+| **Membro** | Pessoa da Casa que pode registrar, comprar, ser titular, responsável ou funder; esses papéis são independentes. |
+| **Evento econômico** | Fato que reconhece receita, despesa, rendimento, perda ou outro efeito econômico uma única vez, independentemente de como e quando será financiado. |
+| **Conta / dinheiro físico** | Recurso transacional cujo saldo realizado compõe o caixa atual. Dinheiro físico tem localização própria; saque e depósito são transferências. |
+| **Investimento / reserva** | Ativo separado do caixa rotineiramente disponível. Aporte e resgate de principal são transferências patrimoniais; rendimento ou perda são fatos econômicos separados. |
+| **Benefício (VA/VR)** | Recurso de uso restrito. Carga não é salário; uso reconhece a despesa econômica correspondente. |
+| **Cartão** | Exposição de crédito. Compra reconhece um evento econômico e gera compromissos; fatura agrega compromissos e pagamento liquida caixa/funding sem reconhecer nova despesa. |
+| **Receita** | Entrada verdadeira que aumenta o resultado, como salário, aluguel, freelance, bônus, presente ou rendimento. Nem toda entrada de caixa é receita. |
+| **Despesa** | Consumo que reduz o resultado e é reconhecido uma única vez. Parcelamento ou financiamento não multiplica a despesa. |
+| **Transferência** | Movimento entre ativos próprios, com duas pernas atômicas e efeito zero em receita e despesa. |
+| **Empréstimo** | Direito ou dever financeiro. Novos empréstimos são representáveis por `financial_obligations`, movimentos e componentes: principal concedido não é despesa, principal tomado não é renda e somente juros, tarifas e perdas têm efeito econômico próprio. |
+| **Responsabilidade econômica** | Parcela do fato econômico que uma pessoa deve suportar. A soma das allocations deve fechar o valor aplicável. Não existe percentual permanente por membro. |
+| **Funding realizado** | Recurso que efetivamente liquidou o compromisso, atribuído ao membro correspondente. No cartão, surge quando a fatura é paga, não pela titularidade. |
+| **Funding projetado** | Recurso/membro previsto para liquidar um compromisso futuro conhecido. Não altera caixa realizado. |
+| **Acerto** | Conta-corrente contínua entre membros, sem reset mensal, derivada da diferença entre funding e responsabilidade no mesmo estado e nos compromissos correspondentes. Sua liquidação é explícita. |
+| **Recebível** | Direito contra terceiro. Seu recebimento reduz a obrigação e movimenta caixa, mas não cria renda novamente. |
+| **Pagável** | Dever a terceiro. Seu saldo aberto compromete a projeção; pagamento reduz a obrigação e movimenta caixa sem duplicar a despesa de origem. |
+| **Parcela** | Compromisso financeiro de uma compra atribuído a mês financeiro/fatura. As parcelas fecham o principal em centavos, mas não são novas despesas econômicas. |
+| **Mês financeiro** | Mês ao qual um compromisso, entrada ou indicador de planejamento pertence; pode diferir da data econômica e da data de caixa. |
+| **Pendência anterior** | Item previsto/confirmado cujo prazo passou sem resolução. Continua aberto e carregado para a projeção, sem mudar silenciosamente sua data ou estado de origem. |
+| **Recorrência** | Regra que produz ocorrências identificáveis. Regra e ocorrência nunca são somadas simultaneamente; estimativas variáveis futuras são preservadas. |
+| **LIS** | Crédito bancário utilizado/disponível. Uso pode tornar o saldo negativo; limite disponível nunca é somado ao dinheiro. |
 
-## Invariantes contábeis
+## Invariantes permanentes
 
-1. **Resultado:** somente Receitas e Despesas alteram o resultado. Transferências, pagamentos de fatura, aportes e amortização de principal não alteram.
-2. **Patrimônio em transferências:** débito e crédito têm o mesmo valor e são atômicos; a soma dos ativos permanece constante.
-3. **Cartão:** compra efetiva aumenta despesa e fatura. O saldo bancário permanece intacto até a liquidação.
-4. **Liquidação de cartão:** pagamento reduz somente a conta de origem selecionada e reduz a obrigação; a despesa não é reconhecida novamente.
-5. **Real versus previsto:** saldo real incorpora apenas `effective`; projeção parte do real e aplica itens `planned`, sem transformar previsão em realização.
-6. **Parcelamento:** o cálculo usa centavos inteiros. `100,00 / 3` produz `33,34 + 33,33 + 33,33`.
-7. **Responsabilidade:** as parcelas econômicas somam exatamente o total da despesa.
-8. **Acerto:** para cada membro, `saldo do acerto = recursos próprios financiados - responsabilidade econômica`. Saldo positivo é crédito; negativo é dívida. A soma deve ser zero.
-9. **Papéis independentes:** comprador, titular do instrumento, financiador efetivo e responsáveis econômicos não são inferidos uns dos outros.
-10. **Cartão no acerto:** antes do pagamento há obrigação/acerto projetado, não financiamento realizado. Depois do pagamento, a origem escolhida define o financiador realizado.
-11. **Idempotência da projeção:** parcela ou ocorrência fixa é contada uma vez por seu ID estável e competência, mesmo se aparecer por mais de uma consulta.
+1. **Caixa não é resultado.** Somente fatos econômicos de receita/despesa/rendimento/perda alteram resultado. Transferências, acertos, pagamento de fatura, principal de empréstimo e aporte/resgate não o alteram.
+2. **Reconhecimento econômico único.** Uma despesa é reconhecida uma vez na origem. Compra, parcela, fatura, limite usado e pagamento são representações vinculadas, nunca despesas cumulativas.
+3. **Papéis independentes.** Titular, comprador, registrador, responsável econômico, funder realizado e funder projetado não são inferidos automaticamente uns dos outros.
+4. **Três relógios.** Data econômica, mês financeiro e data de caixa são independentes. Relatórios de Gastos usam mês financeiro por padrão, sem reescrever a data econômica.
+5. **Valor efetivo único.** Cada cálculo usa `realized` quando aplicável; senão `confirmed`; senão `estimated`/`forecast`. As versões jamais são somadas.
+6. **Previsto não é realizado.** A passagem do tempo não realiza eventos nem caixa. Um forecast vencido vira pendência anterior até confirmação, realização, correção ou cancelamento rastreável.
+7. **Realização parcial preserva estado.** `confirmed 1.000` com `realized_amount 400` permanece `confirmed`; somente a realização completa passa a `realized`. Não se cria estado `partial` apenas para esse caso.
+8. **Cartão sem duplicidade.** A compra cria o evento econômico e compromissos; a fatura os agrega; o pagamento realiza caixa/funding e não cria nova despesa nem novo acerto.
+9. **Parcelamento não parcela a despesa econômica.** O evento econômico ocorre uma vez; parcelas distribuem compromissos pelos meses financeiros. Em centavos, `100,00 / 3` resulta em `33,34 + 33,33 + 33,33`.
+10. **Acerto contínuo e por estado.** Não há reset mensal nem compensação implícita. Para cada membro: **acerto realizado = funding realizado − responsabilidade correspondente**; **acerto projetado = funding projetado − responsabilidade dos compromissos futuros correspondentes**. Realizado e projetado permanecem distinguíveis.
+11. **Acerto projetado no cartão nasce na compra.** Compromissos futuros conhecidos permitem projetar funding e distribuir o acerto nos mesmos meses financeiros da compra. Titular do cartão não vira funder realizado; o pagamento posterior apenas materializa o funding já relacionado e não gera outro acerto.
+12. **Principal de empréstimo é neutro.** Concessão cria recebível e saída de caixa; tomada cria pagável e entrada de caixa. Amortização reduz principal. Juros, tarifas e perdas são eventos econômicos separados.
+13. **Recebível é conservador.** Recebível de terceiro não aumenta a projeção principal antes do recebimento. Sua liquidação aumenta caixa e reduz o direito, com renda zero.
+14. **Pagável é conservador.** Todo pagável aberto compromete a projeção. Uma posição líquida pode ser exibida, mas nunca quita ou compensa automaticamente obrigações brutas.
+15. **Conta conjunta não altera responsabilidade.** A Casa considera 100% do saldo; perspectivas individuais de liquidez atribuem 50/50. Essa divisão não define responsabilidade econômica nem funding.
+16. **Saldo real é realizado.** Deriva de `account_balance_events` canônicos e `money_movements` realizados. Forecast, benefícios, reservas, investimentos, recebíveis, limite de cartão e LIS disponível não aumentam o saldo atual.
+17. **Vínculo com origem.** Refunds, pagamentos, liquidações, encargos, financiamentos e correções preservam relação auditável com o fato original. Refund não é renda comum.
+18. **Passado é corrigido, não apagado.** Depois de efeitos dependentes, correções preservam histórico e recalculam o futuro. Exclusão financeira não é fluxo normal.
+19. **Atomicidade.** Operações compostas — transferências, pagamentos, correções, refunds e liquidações — gravam todas as pernas ou nenhuma. O frontend não coordena updates financeiros independentes.
+20. **Auditabilidade e idempotência.** Autor, Casa, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
 
-## Contratos das funções puras
+## Matriz resumida
 
-- `splitInstallments(total, count)` valida total e quantidade, reparte em centavos e distribui o resíduo pelas primeiras parcelas.
-- `calculateFinancialPosition(input)` produz saldos realizados de contas, faturas, patrimônio, receitas, despesas e resultado. Entradas previstas são deliberadamente ignoradas.
-- `calculateSettlement(memberIds, expenses, mode)` compara financiamento e responsabilidade no modo realizado ou projetado sem usar comprador/titular como atalhos.
-- `calculateProjection(realBalance, month, commitments)` deduplica ocorrências pelo ID, inclui apenas previsões da competência e retorna o saldo projetado.
-- `projectDashboardFromLedger(ledger, resources, position)` materializa os indicadores do Dashboard sem permitir que componentes React refaçam fórmulas contábeis.
+| Fato | Resultado | Caixa realizado | Obrigação / vínculo |
+| --- | --- | --- | --- |
+| Renda recebida | receita uma vez | aumenta | liquida a entrada esperada, quando houver |
+| Despesa direta | despesa uma vez | diminui | funding realizado e responsabilidades vinculados |
+| Compra no cartão | despesa uma vez | não muda | compromissos, allocations e acerto projetado |
+| Pagamento de fatura | zero | diminui | reduz fatura e realiza funding; sem novo acerto |
+| Transferência / saque / depósito | zero | duas pernas | mesmo evento e patrimônio preservado |
+| Recebimento de recebível | zero | aumenta | reduz recebível |
+| Pagamento de pagável | zero, salvo encargos próprios | diminui | reduz pagável |
+| Principal de empréstimo | zero | entra ou sai | cria/reduz receivable ou payable |
+| Aporte/resgate | zero | move entre classes | principal patrimonial preservado |
+| Refund | reverte total/parcialmente a origem | conforme rota efetiva | mantém vínculo e não é renda comum |
 
-## Ledger e matriz de lançamentos
+## Acerto e cartão
 
-`src/domain/ledger.ts` é a fonte única das regras de movimentação. Cada evento imutável gera postings vinculados pelo `eventId`; `realizedBalances` contém somente fatos realizados e `projectedBalances` adiciona previsões sem alterar a visão realizada. A origem informa **qual conta, carteira ou benefício forneceu o recurso** e o seu titular no cadastro, no momento da liquidação, é o financiador efetivo. Titular do cartão, comprador e responsáveis não são usados como atalhos.
+O fluxo obrigatório é:
 
-| Evento | Resultado mensal | Saldo de caixa | Patrimônio líquido | Fatura | Acerto do casal e origem |
-| --- | --- | --- | --- | --- | --- |
-| `income` | receita | destino aumenta quando realizado | aumenta | não | não entra; destino identifica a entrada |
-| `expense` direta | despesa | conta/carteira/VA de origem diminui | diminui | não | entra; titular da origem é o financiador e os `responsibilities` definem o encargo econômico |
-| `expense` no cartão | despesa na competência | não muda | diminui pela obrigação | aumenta | antes do pagamento registra somente responsabilidade/obrigação projetada; titular do cartão não vira financiador |
-| `transfer` | neutro | duas pernas: origem diminui e destino aumenta | neutro | não | não entra; ambos os recursos ficam vinculados ao mesmo evento |
-| `credit_card_payment` | neutro, sem repetir compras | origem diminui | neutro: caixa e obrigação caem juntos | diminui | entra quando liquidado; titular da conta pagadora é o financiador, independentemente do titular do cartão |
-| `investment_deposit` | neutro, não é despesa | origem diminui | neutro: investimento aumenta | não | não entra; origem financia a troca entre ativos |
-| `investment_withdrawal` | neutro, não é receita | destino aumenta | neutro: investimento diminui | não | não entra; investimento fornece o recurso |
-| `loan_disbursement` | neutro, não é receita | destino aumenta | neutro: passivo aumenta igualmente | não | não entra; credor/contrato fornece o recurso |
-| `loan_payment` | somente encargos são despesa | origem diminui por principal + encargos | diminui somente pelos encargos | não | não entra; origem paga, principal reduz obrigação e encargos ficam separados |
-| `adjustment` | efeito deve ser declarado (`income`, `expense` ou `none`) | depende do recurso e direção | depende do efeito declarado | se o recurso for cartão | não entra automaticamente; exige justificativa externa/auditoria |
-| `refund` | inverte o resultado do original | inverte seus postings | inverte o efeito original | inverte quando aplicável | inverte o fato vinculado; mantém `reversesEventId` e não apaga o original |
+```text
+Compra
+→ evento econômico
+→ compromisso financeiro
+→ responsabilidade
+→ acerto projetado
 
-Todo evento possui `status: realized | projected`, competência e valor. Responsabilidades econômicas precisam fechar exatamente o valor em centavos. Um pagamento de empréstimo também exige que principal mais encargos fechem o total. Estornos só podem apontar para um evento anterior, existente e que não seja outro estorno.
+Fatura
+→ agrega compromissos
+
+Pagamento
+→ realiza caixa/funding
+→ não cria nova despesa
+→ não cria novo acerto
+```
+
+Transferir mais do que a dívida não cria dívida inversa silenciosamente. O excedente requer intenção explícita e classificação própria.
+
+## Contratos puros existentes
+
+- `splitInstallments(total, count)` reparte centavos e fecha exatamente o total.
+- `calculateFinancialPosition(input)` calcula posições realizadas sem transformar previsões em saldo.
+- `calculateSettlement(memberIds, expenses, mode)` separa cálculo realizado do projetado.
+- `calculateProjection(realBalance, month, commitments)` deduplica ocorrências estáveis.
+- `projectDashboardFromLedger(ledger, resources, position)` impede fórmulas contábeis duplicadas em componentes.
+
+`src/domain/ledger.ts` e `src/domain/finance.ts` implementam e testam regras puras. Eles não têm autoridade acima do banco: na aplicação autenticada, o Supabase persistido e seus read models canônicos são as fontes. Frontend, banco e funções puras devem respeitar este mesmo contrato.
+
+## Fontes canônicas
+
+| Conceito | Fonte persistida presente/futura |
+| --- | --- |
+| Evento econômico | `transactions`, `transaction_components`, `transaction_links` |
+| Responsabilidade | `economic_allocations` |
+| Caixa | `account_balance_events` + `money_movements` realizados |
+| Funding | `funding_events` (realizado; o projetado requer evolução explícita) |
+| Titularidade | `account_ownerships` |
+| Terceiros | `financial_parties` |
+| Direitos e deveres | `financial_obligations` + `obligation_events` |
+| Cartão | `cards`, `card_invoices`, `installments`, `card_invoice_payments`, `financing_allocations` |
+| Recorrência | `recurring_rules` + `recurring_occurrences` |
+
+As migrations 001–021 já aplicadas são imutáveis. Evoluções começam em 022+, sem congelar aqui sua quantidade ou seus nomes.
+
+## Não são fontes canônicas
+
+- `DatabaseStore`, dados demo e IDs fake;
+- `ApiService`, `AppContent` e dashboard legados;
+- cálculos ad hoc em React;
+- `accounts.opening_balance` legado como fonte futura;
+- `transaction_splits` para novos fluxos.
+
+Esses artefatos podem permanecer para compatibilidade, mas não devem ser reativados, ligados a usuários Supabase nem usados para reinterpretar fatos autenticados.
+
+## Saúde e confiança
+
+Saúde financeira e confiança da projeção são conceitos diferentes. Faixas green/yellow/red e seus percentuais são regras calibráveis de produto, não invariantes contábeis. A confiança é qualitativa e depende da atualização/confirmação dos dados; não deve ser convertida em percentual artificial.
 
 ## Proteções automatizadas
 
-`src/domain/finance.test.ts` preserva os contratos legados e agora delega saldos e resultado ao ledger. `src/domain/ledger.test.ts` cobre os dez tipos de evento, suas pernas, realizado versus projetado, financiador, responsabilidades, empréstimos e estorno rastreável. Novas integrações no banco ou na API devem delegar a esse motor em vez de recriar fórmulas em componentes.
+Os testes existentes em `src/domain/finance.test.ts` e `src/domain/ledger.test.ts` preservam contratos puros, tipos de evento, realizado versus projetado, funding, responsabilidades, empréstimos e estorno rastreável. Novas integrações devem ampliar essa cobertura e usar comandos persistidos atômicos, sem recriar fórmulas em componentes.
