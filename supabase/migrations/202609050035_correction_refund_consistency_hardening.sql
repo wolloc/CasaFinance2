@@ -164,7 +164,7 @@ begin
     raise exception 'only direct account-paid expenses are supported by this refund command' using errcode='0A000';
   end if;
 
-  select coalesce(sum(f.amount),0),count(distinct f.source_account_id),min(f.source_account_id)
+  select coalesce(sum(f.amount),0),count(distinct f.source_account_id),max(f.source_account_id::text)::uuid
     into member_funded,funding_account_count,source_account
   from public.funding_events f
   where f.household_id=p_household_id
@@ -174,6 +174,13 @@ begin
   if member_funded<>tx.realized_amount
   then raise exception 'refund requires fully realized direct member funding' using errcode='0A000'; end if;
   if funding_account_count<>1 or source_account is null
+     or exists(
+       select 1 from public.funding_events f
+       where f.household_id=p_household_id
+         and f.financed_transaction_id=tx.id
+         and f.invoice_id is null
+         and f.source_account_id is null
+     )
   then raise exception 'direct refund requires exactly one realized funding account' using errcode='0A000'; end if;
 
   insert into public.transactions(
