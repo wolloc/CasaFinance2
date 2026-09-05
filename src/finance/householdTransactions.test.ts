@@ -65,7 +65,8 @@ test('database validates all transaction references within the same household', 
 test('cancellation remains soft delete after financial core consolidation', () => {
   assert.match(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/);
   assert.match(serviceSource, /\.is\('deleted_at', null\)/);
-  assert.match(screenSource, /O comprador é escolhido separadamente/);
+  assert.match(screenSource, /Quem realizou esta compra/);
+  assert.doesNotMatch(screenSource, /O comprador é escolhido separadamente/);
   assert.match(serviceSource, /p_splits/);
   assert.match(serviceSource, /p_installment_count/);
   assert.doesNotMatch(serviceSource, /DatabaseStore|service_role/i);
@@ -78,6 +79,19 @@ test('cancellation remains soft delete after financial core consolidation', () =
   assert.match(serviceSource, /p_buyer_member_id: input\.buyerMemberId/);
   assert.match(migrationSource, /p_household_id uuid, p_transaction_id uuid/);
   assert.match(migrationSource, /p_buyer_member_id uuid default null/);
-  assert.match(screenSource, /typeSelect\.disabled = Boolean\(editing\)/);
-  assert.match(screenSource, /O tipo não pode ser alterado/);
+  assert.match(screenSource, /disabled={Boolean\(editing\)}/);
+  assert.match(screenSource, /Editar lançamento/);
+});
+
+test('shared expense usa RPC canônica com terceiro e financiador independentes', () => {
+  assert.match(serviceSource, /create_and_settle_shared_expense/);
+  assert.match(serviceSource, /party_id/);
+  assert.match(serviceSource, /p_funder_member_id/);
+  assert.match(serviceSource, /p_gross_amount/);
+});
+
+test('parcelamento desnecessário é evitado pelo contrato financeiro', () => {
+  assert.match(serviceSource, /p_installment_count/);
+  assert.match(screenSource, /instrumentKind === 'card' && <label[^>]*>Parcelas/);
+  assert.match(screenSource, /if \(next === 'account'\) setInstallmentCount\(1\)/);
 });

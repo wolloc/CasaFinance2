@@ -1,0 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+export type FinancialParty={id:string;name:string;kind:string;tax_id:string|null;notes:string|null};
+export async function listFinancialParties(client:SupabaseClient,householdId:string){const response=await client.from('financial_parties').select('id,name,kind,tax_id,notes').eq('household_id',householdId).is('deactivated_at',null).order('name');if(response.error)throw response.error;return(response.data??[]) as FinancialParty[]}
+export async function createFinancialParty(client:SupabaseClient,householdId:string,name:string){const response=await client.rpc('create_financial_party',{p_household_id:householdId,p_name:name.trim(),p_kind:'person',p_tax_id:null,p_notes:null});if(response.error)throw response.error;return response.data as string}

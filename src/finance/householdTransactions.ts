@@ -32,7 +32,7 @@ export type TransactionInput = {
   instrumentKind?: InstrumentKind;
   accountId?: string;
   cardId?: string;
-  splits?: Array<{ memberId: string; amount: string; percentage: string }>;
+  splits?: Array<{ memberId?: string; partyId?: string; amount: string; percentage: string }>;
   installmentCount?: number;
 };
 
@@ -62,7 +62,7 @@ export async function createHouseholdTransaction(client: SupabaseClient, househo
     p_instrument_kind: type === 'expense' ? input.instrumentKind : null,
     p_account_id: type === 'expense' && input.instrumentKind === 'account' ? input.accountId : null,
     p_card_id: type === 'expense' && input.instrumentKind === 'card' ? input.cardId : null,
-    p_splits: type === 'expense' ? (input.splits ?? []).map((split) => ({ member_id: split.memberId, amount: split.amount, percentage: split.percentage })) : [],
+    p_splits: type === 'expense' ? (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage })) : [],
     p_installment_count: type === 'expense' ? input.installmentCount ?? 1 : 1,
   });
   if (response.error) throw response.error;
@@ -89,4 +89,23 @@ export async function updateHouseholdTransaction(client: SupabaseClient, househo
 export async function cancelHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string) {
   const response = await client.from('transactions').update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', transactionId).eq('household_id', householdId).is('deleted_at', null);
   if (response.error) throw response.error;
+}
+
+
+export async function createAndSettleSharedExpense(client: SupabaseClient, householdId: string, input: TransactionInput, funderMemberId: string, partyDueDate: string | null) {
+  const response = await client.rpc('create_and_settle_shared_expense', {
+    p_household_id: householdId,
+    p_description: input.description.trim(),
+    p_gross_amount: input.amount,
+    p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId,
+    p_buyer_member_id: input.buyerMemberId,
+    p_source_account_id: input.accountId,
+    p_funder_member_id: funderMemberId,
+    p_splits: (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage })),
+    p_receivable_due_date: partyDueDate,
+    p_notes: input.notes?.trim() || null,
+  });
+  if (response.error) throw response.error;
+  return response.data as string;
 }
