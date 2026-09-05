@@ -42,11 +42,13 @@ describe('Etapa 10H.7 cumulative monthly projections migration', () => {
     assert.doesNotMatch(sql, /current_balance\s*\+\s*[^\n;]*overdraft_limit/i);
   });
 
-  it('classifies only explicit income movements as reliable income', async () => {
+  it('requires structural confirmation instead of treating every projection as reliable', async () => {
     const sql = await migration('202609050025_financial_monthly_projections.sql');
     assert.match(sql, /from public\.money_movements m[\s\S]*m\.kind='income'/);
     assert.match(sql, /filter\(where i\.state='projected'\)/);
-    assert.match(sql, /received\.related_transaction_id=m\.related_transaction_id/);
+    assert.match(sql, /t\.economic_state='confirmed'/);
+    assert.match(sql, /t\.confirmed_amount is not null/);
+    assert.match(sql, /candidate\.related_transaction_id=m\.related_transaction_id/);
     assert.match(sql, /sum\(i\.reliable_remaining_amount\)/);
     assert.doesNotMatch(sql, /financial_obligations[\s\S]*receivable/);
     assert.doesNotMatch(sql, /member_settlement_(?:events|schedules|positions)/);
@@ -63,12 +65,20 @@ describe('Etapa 10H.7 cumulative monthly projections migration', () => {
 
   it('carries prior pending once and chains cumulative month balances', async () => {
     const sql = await migration('202609050025_financial_monthly_projections.sql');
-    assert.match(sql, /c\.financial_month<v_reference_month/);
-    assert.match(sql, /case when m\.month_index=0 then p\.amount else 0::numeric end/);
+    assert.match(sql, /c\.financial_month<v_current_month/);
+    assert.match(sql, /case when m\.chain_month_index=0 then p\.amount else 0::numeric end/);
+    assert.match(sql, /generate_series\(0,v_reference_offset\+p_horizon_months-1\)/);
+    assert.match(sql, /where p\.chain_month_index>=v_reference_offset/);
     assert.match(sql, /rows between unbounded preceding and 1 preceding/);
     assert.match(sql, /rows between unbounded preceding and current row/);
     assert.match(sql, /expected_income-m\.remaining_commitments-m\.recurring_commitments-m\.prior_pending/);
     assert.doesNotMatch(sql, /realized_income-m\.remaining_commitments/);
+  });
+
+  it('rejects retrospective projections without historical cash snapshots', async () => {
+    const sql = await migration('202609050025_financial_monthly_projections.sql');
+    assert.match(sql, /v_reference_month<v_current_month/);
+    assert.match(sql, /reference month cannot precede the current month without a historical cash snapshot/);
   });
 
   it('does not add financial_month to transactions in migration 025', async () => {

@@ -22,14 +22,7 @@ select m.household_id,
        m.state,
        m.amount::numeric(19,2) as amount,
        case when m.state='realized' then 0::numeric
-            when m.related_transaction_id is null then m.amount
-            else greatest(m.amount-coalesce((
-              select sum(received.amount)
-                from public.money_movements received
-               where received.household_id=m.household_id
-                 and received.kind='income' and received.state='realized'
-                 and received.related_transaction_id=m.related_transaction_id
-            ),0),0)
+            else least(m.amount,greatest(t.confirmed_amount-t.realized_amount,0))
         end::numeric(19,2) as reliable_remaining_amount,
        m.movement_date,
        m.competence_date as financial_month,
@@ -39,12 +32,32 @@ select m.household_id,
     on destination.id=m.destination_account_id
    and destination.household_id=m.household_id
    and destination.deactivated_at is null
+  left join public.transactions t
+    on t.id=m.related_transaction_id
+   and t.household_id=m.household_id
+   and t.type='income'
+   and t.deleted_at is null
  where m.kind='income'
    and destination.type in ('cash','checking','savings','digital_wallet')
-   and destination.resource_restriction is null;
+   and destination.resource_restriction is null
+   and (
+     m.state='realized'
+     or (
+       m.state='projected'
+       and t.economic_state='confirmed'
+       and t.confirmed_amount is not null
+       and t.realized_amount<t.confirmed_amount
+       and 1=(
+         select count(*) from public.money_movements candidate
+          where candidate.household_id=m.household_id
+            and candidate.kind='income' and candidate.state='projected'
+            and candidate.related_transaction_id=m.related_transaction_id
+       )
+     )
+   );
 
 comment on view public.financial_true_income_positions is
-  'Explicit income movements into available-cash resources. Transfers, loans, refunds, receivable collections, investment/reserve movements, invoice payments and member settlements are different movement kinds and cannot enter this model.';
+  'True income movements into available cash. A future movement is reliable only when uniquely linked to an explicitly confirmed income transaction; unlinked/projected forecasts and all neutral movement kinds are excluded.';
 
 create or replace function public.financial_monthly_projection(
   p_household_id uuid,
@@ -74,6 +87,8 @@ as $$
 #variable_conflict use_column
 declare
   v_reference_month date:=date_trunc('month',p_reference_month)::date;
+  v_current_month date:=date_trunc('month',current_date)::date;
+  v_reference_offset integer;
 begin
   if p_household_id is null or p_reference_month is null then
     raise exception 'household and reference month are required' using errcode='22004';
@@ -84,6 +99,11 @@ begin
   if p_horizon_months is null or p_horizon_months<1 or p_horizon_months>120 then
     raise exception 'horizon must be between 1 and 120 months' using errcode='22023';
   end if;
+  if v_reference_month<v_current_month then
+    raise exception 'reference month cannot precede the current month without a historical cash snapshot' using errcode='22023';
+  end if;
+  v_reference_offset:=((extract(year from v_reference_month)-extract(year from v_current_month))*12
+    +extract(month from v_reference_month)-extract(month from v_current_month))::integer;
   if not public.is_active_household_member(p_household_id) then
     raise exception 'active household membership required' using errcode='42501';
   end if;
@@ -91,9 +111,9 @@ begin
   return query
   with
   months as (
-    select n::integer as month_index,
-           (v_reference_month+(n||' months')::interval)::date as financial_month
-      from generate_series(0,p_horizon_months-1) n
+    select n::integer as chain_month_index,
+           (v_current_month+(n||' months')::interval)::date as financial_month
+      from generate_series(0,v_reference_offset+p_horizon_months-1) n
   ),
   cash as (
     select coalesce(sum(c.current_balance),0)::numeric(19,2) as amount
@@ -106,7 +126,7 @@ begin
            coalesce(sum(i.reliable_remaining_amount) filter(where i.state='projected'),0)::numeric(19,2) as expected_amount
       from public.financial_true_income_positions i
      where i.household_id=p_household_id
-       and i.financial_month between v_reference_month
+       and i.financial_month between v_current_month
            and (v_reference_month+((p_horizon_months-1)||' months')::interval)::date
      group by i.financial_month
   ),
@@ -116,7 +136,7 @@ begin
            coalesce(sum(c.remaining_amount),0)::numeric(19,2) as remaining_amount
       from public.financial_commitment_positions c
      where c.household_id=p_household_id
-       and c.financial_month between v_reference_month
+       and c.financial_month between v_current_month
            and (v_reference_month+((p_horizon_months-1)||' months')::interval)::date
        and c.commitment_state not in ('cancelled','reversed')
      group by c.financial_month
@@ -125,7 +145,7 @@ begin
     select coalesce(sum(c.remaining_amount),0)::numeric(19,2) as amount
       from public.financial_commitment_positions c
      where c.household_id=p_household_id
-       and c.financial_month<v_reference_month
+       and c.financial_month<v_current_month
        and c.remaining_amount>0
        and c.commitment_state not in ('cancelled','reversed')
   ),
@@ -153,13 +173,13 @@ begin
       ) occurrence_at
      where r.household_id=p_household_id and r.deactivated_at is null
        and r.start_date<(v_reference_month+(p_horizon_months||' months')::interval)::date
-       and (r.end_date is null or r.end_date>=v_reference_month)
+       and (r.end_date is null or r.end_date>=v_current_month)
        and (r.amount_mode<>'estimated' or r.estimated_amount is not null)
   ),
   projected_recurring as (
     select d.financial_month,sum(d.amount)::numeric(19,2) as amount
       from recurring_dates d
-     where d.financial_month>=v_reference_month
+     where d.financial_month>=v_current_month
        and not exists (
          select 1 from public.recurring_occurrences o
           where o.household_id=p_household_id
@@ -175,13 +195,13 @@ begin
      group by d.financial_month
   ),
   monthly as (
-    select m.month_index,m.financial_month,
+    select m.chain_month_index,m.financial_month,
            coalesce(i.realized_amount,0)::numeric(19,2) as realized_income,
            coalesce(i.expected_amount,0)::numeric(19,2) as expected_income,
            coalesce(c.realized_amount,0)::numeric(19,2) as realized_commitments,
            coalesce(c.remaining_amount,0)::numeric(19,2) as remaining_commitments,
            coalesce(r.amount,0)::numeric(19,2) as recurring_commitments,
-           case when m.month_index=0 then p.amount else 0::numeric end::numeric(19,2) as prior_pending
+           case when m.chain_month_index=0 then p.amount else 0::numeric end::numeric(19,2) as prior_pending
       from months m
       cross join prior_pending p
       left join incomes i using(financial_month)
@@ -193,17 +213,24 @@ begin
            (m.expected_income-m.remaining_commitments-m.recurring_commitments-m.prior_pending)::numeric(19,2) as net_change
       from monthly m
   )
-  select p_household_id,v_reference_month,c.financial_month,c.month_index,
-         (base.amount+coalesce(sum(c.net_change) over (
-           order by c.month_index rows between unbounded preceding and 1 preceding
-         ),0))::numeric(19,2) as opening_cash,
-         c.realized_income,c.expected_income,c.realized_commitments,
-         c.remaining_commitments,c.recurring_commitments,c.prior_pending,c.net_change,
-         (base.amount+sum(c.net_change) over (
-           order by c.month_index rows between unbounded preceding and current row
-         ))::numeric(19,2) as projected_ending_cash
-    from calculated c cross join cash base
-   order by c.month_index;
+  , projected as (
+    select c.*,
+           (base.amount+coalesce(sum(c.net_change) over (
+             order by c.chain_month_index rows between unbounded preceding and 1 preceding
+           ),0))::numeric(19,2) as projected_opening_cash,
+           (base.amount+sum(c.net_change) over (
+             order by c.chain_month_index rows between unbounded preceding and current row
+           ))::numeric(19,2) as projected_ending_cash
+      from calculated c cross join cash base
+  )
+  select p_household_id,v_reference_month,p.financial_month,
+         (p.chain_month_index-v_reference_offset)::integer,
+         p.projected_opening_cash,p.realized_income,p.expected_income,
+         p.realized_commitments,p.remaining_commitments,p.recurring_commitments,
+         p.prior_pending,p.net_change,p.projected_ending_cash
+    from projected p
+   where p.chain_month_index>=v_reference_offset
+   order by p.chain_month_index;
 end
 $$;
 
@@ -223,18 +250,15 @@ grant execute on function public.financial_monthly_projection(uuid,date,integer)
 -- * opening_balance is legacy and intentionally absent: financial_account_balances
 --   already derives the one canonical position from non-reversed balance events
 --   plus realized money-movement legs;
--- * a projected money_movement(kind=income) is the existing explicit reliable-
---   income fact. Forecast transactions and receivables are not promoted to
---   reliable income merely because they have a date. When projected and realized
---   movements share their canonical related_transaction_id, realized receipts
---   reduce the expected remainder instead of being counted twice. Unlinked
---   historical projected movements cannot be reconciled safely and must be
---   resolved by their writer rather than matched heuristically;
+-- * projected is not synonymous with reliable. A projected income movement is
+--   admitted only when it is the single projection linked to an explicitly
+--   confirmed income transaction. Its confirmed-versus-realized remainder
+--   prevents a receipt from being counted twice. Unlinked forecasts stay out;
 -- * active recurring expense rules can conservatively extend commitments when
 --   their amount is usable. A materialized occurrence wins on its exact date.
 --   Income rules are not projected because the current schema has no durable
 --   reliability classification for an unmaterialized income rule;
--- * the actual cash base is measured when the function runs. Callers requesting
---   a future reference month intentionally receive a projection beginning from
---   today's cash, with older open commitments carried once; skipped reliable
---   inflows are not guessed.
+-- * the economic chain always starts in the current month. A future reference
+--   month only filters the returned rows, so intermediate months and the single
+--   prior-pending charge remain in its opening cash. Historical references are
+--   rejected because the schema has no canonical historical cash snapshots.
