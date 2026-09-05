@@ -17,7 +17,8 @@ test('035 rescales economic allocations when an unrealized amount is corrected',
 
 test('035 routes a direct refund to the single account that actually funded it', () => {
   assert.match(sql, /count\(distinct f\.source_account_id\)/);
-  assert.match(sql, /min\(f\.source_account_id\)/);
+  assert.match(sql, /max\(f\.source_account_id::text\)::uuid/);
+  assert.match(sql, /f\.source_account_id is null/);
   assert.match(sql, /funding_account_count<>1 or source_account is null/);
   assert.match(sql, /destination_account_id/);
   assert.match(sql, /'refund','realized'/);
