@@ -87,7 +87,13 @@ export async function updateHouseholdTransaction(client: SupabaseClient, househo
 }
 
 export async function cancelHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string) {
-  const response = await client.from('transactions').update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', transactionId).eq('household_id', householdId).is('deleted_at', null);
+  const requestKey = `ui-cancel:${transactionId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  const response = await client.rpc('cancel_unrealized_transaction', {
+    p_household_id: householdId,
+    p_transaction_id: transactionId,
+    p_reason: 'Cancelado pelo usuário',
+    p_request_key: requestKey,
+  });
   if (response.error) throw response.error;
 }
 
