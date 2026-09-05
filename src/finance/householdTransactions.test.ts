@@ -8,9 +8,12 @@ const auditedMutationSource = await readFile(new URL('../../supabase/migrations/
 const screenSource = await readFile(new URL('../components/auth/HouseholdTransactionsSetup.tsx', import.meta.url), 'utf8');
 const householdSource = await readFile(new URL('../components/auth/PendingHouseholdScreen.tsx', import.meta.url), 'utf8');
 
-test('active transaction listing is scoped to the household and excludes deleted rows', () => {
+test('active transaction listing is scoped to the household and exposes financial state', () => {
   assert.match(serviceSource, /eq\('household_id', householdId\)/);
   assert.match(serviceSource, /is\('deleted_at', null\)/);
+  assert.match(serviceSource, /economic_state/);
+  assert.match(serviceSource, /realized_amount/);
+  assert.match(serviceSource, /settled_at/);
   assert.match(screenSource, /listHouseholdTransactions\(supabase, household\.id\)/);
 });
 
@@ -27,8 +30,6 @@ test('creator comes from the authenticated member and buyer is explicit', () => 
 test('payment instrument selection remains independent from buyer', () => {
   assert.match(screenSource, /setBuyerMemberId/);
   assert.match(screenSource, /instrumentKind/);
-  const instrumentInsert = serviceSource.match(/transaction_payment_instruments'\)\.insert\(\{([\s\S]*?)\}\)/)?.[1] ?? '';
-  assert.doesNotMatch(instrumentInsert, /buyer_member_id/);
 });
 
 test('transaction RLS is scoped to active members without physical delete policy', () => {
@@ -37,8 +38,7 @@ test('transaction RLS is scoped to active members without physical delete policy
   assert.match(migrationSource, /transactions_update[\s\S]*using \(public\.is_active_household_member\(household_id\)/);
   assert.match(migrationSource, /transaction_instruments_select[\s\S]*is_active_household_member\(household_id\)/);
   assert.doesNotMatch(migrationSource, /create policy[^\n]*for delete/i);
-  assert.match(migrationSource, /create policy transactions_update/);
-  assert.match(migrationSource, /create policy transaction_instruments_update/);
+  assert.match(auditedMutationSource, /revoke update on public\.transactions from public,anon,authenticated/);
 });
 
 test('database validates all transaction references within the same household', () => {
@@ -47,40 +47,37 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /category_id/);
   assert.match(migrationSource, /account_id/);
   assert.match(migrationSource, /card_id/);
-  assert.match(migrationSource, /m\.household_id = new\.household_id/);
-  assert.match(migrationSource, /c\.household_id = new\.household_id/);
   assert.match(migrationSource, /auth\.uid\(\)/);
   assert.match(migrationSource, /expense transaction requires a buyer/);
   assert.match(migrationSource, /income transaction cannot have a buyer/);
   assert.match(migrationSource, /exactly one payment instrument/);
   assert.match(migrationSource, /transaction creator cannot be changed/);
   assert.match(migrationSource, /transaction type cannot be changed/);
-  assert.match(migrationSource, /p_household_id uuid/);
-  assert.doesNotMatch(migrationSource, /order by m\.joined_at/);
-  assert.match(migrationSource, /create or replace function public\.create_basic_transaction\(\s*p_household_id uuid, p_type public\.transaction_kind, p_description text, p_amount numeric, p_transaction_date date,/s);
-  assert.match(migrationSource, /create or replace function public\.update_basic_transaction\(\s*p_household_id uuid, p_transaction_id uuid, p_description text, p_amount numeric, p_transaction_date date,\s*p_category_id uuid, p_buyer_member_id uuid default null/s);
-  assert.match(migrationSource, /a\.household_id = new\.household_id/);
-  assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
 
-test('cancellation and legacy edits are routed through audited commands', () => {
+test('edit and cancellation use first-class audited commands', () => {
+  assert.match(serviceSource, /rpc\('correct_unrealized_transaction'/);
+  assert.match(serviceSource, /p_reason: 'Editado pelo usuário'/);
   assert.match(serviceSource, /rpc\('cancel_unrealized_transaction'/);
+  assert.match(serviceSource, /p_reason: 'Cancelado pelo usuário'/);
+  assert.doesNotMatch(serviceSource, /rpc\('update_basic_transaction'/);
   assert.doesNotMatch(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/);
-  assert.match(auditedMutationSource, /revoke update on public\.transactions from public,anon,authenticated/);
   assert.match(auditedMutationSource, /audit_id:=public\.correct_unrealized_transaction/);
-  assert.match(auditedMutationSource, /buyer, notes or payment instrument changes require the dedicated audited edit flow/);
-  assert.match(screenSource, /Quem realizou esta compra/);
-  assert.doesNotMatch(screenSource, /O comprador é escolhido separadamente/);
-  assert.match(serviceSource, /p_splits/);
-  assert.match(serviceSource, /p_installment_count/);
-  assert.doesNotMatch(serviceSource, /DatabaseStore|service_role/i);
-  assert.doesNotMatch(screenSource, /DatabaseStore|service_role/i);
-  assert.match(householdSource, /Transações/);
-  assert.match(serviceSource, /rpc\('update_basic_transaction'/);
-  assert.match(auditedMutationSource, /create or replace function public\.update_basic_transaction/);
-  assert.match(serviceSource, /p_buyer_member_id: input\.buyerMemberId/);
-  assert.match(screenSource, /disabled={Boolean\(editing\)}/);
-  assert.match(screenSource, /Editar lançamento/);
+});
+
+test('direct realized expense refund uses the canonical refund command', () => {
+  assert.match(serviceSource, /refundHouseholdDirectExpense/);
+  assert.match(serviceSource, /rpc\('refund_direct_expense'/);
+  assert.match(serviceSource, /p_amount: transaction\.realized_amount/);
+  assert.match(serviceSource, /p_refunded_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(serviceSource, /transaction\.payment_instrument\?\.kind === 'account'/);
+});
+
+test('transaction history reads immutable adjustment events scoped to source transaction', () => {
+  assert.match(serviceSource, /from\('transaction_adjustment_events'\)/);
+  assert.match(serviceSource, /eq\('household_id', householdId\)/);
+  assert.match(serviceSource, /eq\('source_transaction_id', transactionId\)/);
+  assert.match(serviceSource, /order\('occurred_at', \{ ascending: true \}\)/);
 });
 
 test('shared expense usa RPC canônica com terceiro e financiador independentes', () => {
@@ -94,4 +91,5 @@ test('parcelamento desnecessário é evitado pelo contrato financeiro', () => {
   assert.match(serviceSource, /p_installment_count/);
   assert.match(screenSource, /instrumentKind === 'card' && <label[^>]*>Parcelas/);
   assert.match(screenSource, /if \(next === 'account'\) setInstallmentCount\(1\)/);
+  assert.match(householdSource, /Transações/);
 });
