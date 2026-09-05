@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const serviceSource = await readFile(new URL('./householdTransactions.ts', import.meta.url), 'utf8');
 const migrationSource = await readFile(new URL('../../supabase/migrations/202609030013_transactions_rls.sql', import.meta.url), 'utf8');
+const auditedMutationSource = await readFile(new URL('../../supabase/migrations/202609050036_audited_mutation_settlement_guards.sql', import.meta.url), 'utf8');
 const screenSource = await readFile(new URL('../components/auth/HouseholdTransactionsSetup.tsx', import.meta.url), 'utf8');
 const householdSource = await readFile(new URL('../components/auth/PendingHouseholdScreen.tsx', import.meta.url), 'utf8');
 
@@ -62,9 +63,12 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /c\.household_id = new\.household_id/);
 });
 
-test('cancellation remains soft delete after financial core consolidation', () => {
-  assert.match(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/);
-  assert.match(serviceSource, /\.is\('deleted_at', null\)/);
+test('cancellation and legacy edits are routed through audited commands', () => {
+  assert.match(serviceSource, /rpc\('cancel_unrealized_transaction'/);
+  assert.doesNotMatch(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(auditedMutationSource, /revoke update on public\.transactions from public,anon,authenticated/);
+  assert.match(auditedMutationSource, /audit_id:=public\.correct_unrealized_transaction/);
+  assert.match(auditedMutationSource, /buyer, notes or payment instrument changes require the dedicated audited edit flow/);
   assert.match(screenSource, /Quem realizou esta compra/);
   assert.doesNotMatch(screenSource, /O comprador é escolhido separadamente/);
   assert.match(serviceSource, /p_splits/);
@@ -73,12 +77,8 @@ test('cancellation remains soft delete after financial core consolidation', () =
   assert.doesNotMatch(screenSource, /DatabaseStore|service_role/i);
   assert.match(householdSource, /Transações/);
   assert.match(serviceSource, /rpc\('update_basic_transaction'/);
-  assert.doesNotMatch(migrationSource, /p_type.*update_basic_transaction/i);
-  assert.match(migrationSource, /create_basic_transaction/);
-  assert.match(migrationSource, /update_basic_transaction/);
+  assert.match(auditedMutationSource, /create or replace function public\.update_basic_transaction/);
   assert.match(serviceSource, /p_buyer_member_id: input\.buyerMemberId/);
-  assert.match(migrationSource, /p_household_id uuid, p_transaction_id uuid/);
-  assert.match(migrationSource, /p_buyer_member_id uuid default null/);
   assert.match(screenSource, /disabled={Boolean\(editing\)}/);
   assert.match(screenSource, /Editar lançamento/);
 });
