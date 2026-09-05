@@ -58,7 +58,7 @@ describe('Migration 028 health, attention and confidence', () => {
       assert.match(sql, new RegExp(`view public\\.${view}[\\s\\S]*?security_invoker=true`));
     }
     assert.match(sql, /security invoker/);
-    assert.match(sql, /revoke all on function public\.financial_household_health_position\(uuid\)/);
-    assert.match(sql, /grant execute on function public\.financial_attention_items\(uuid\) to authenticated/);
+    assert.match(sql, /revoke all on function public\.financial_household_health_position\(uuid\),[\s\S]*?public\.financial_attention_items\(uuid\) from public,anon/);
+    assert.match(sql, /grant execute on function public\.financial_household_health_position\(uuid\),[\s\S]*?public\.financial_attention_items\(uuid\) to authenticated/);
   });
 });
