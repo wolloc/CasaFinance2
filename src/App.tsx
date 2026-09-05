@@ -15,7 +15,8 @@ import { triggerHaptic } from './utils/haptics.js';
 import { PwaUpdateNotice } from './components/common/PwaUpdateNotice.js';
 import { SupabaseAuthProvider, useSupabaseAuth } from './context/SupabaseAuthContext.js';
 import { AuthScreen } from './components/auth/AuthScreen.js';
-import { PendingHouseholdScreen } from './components/auth/PendingHouseholdScreen.js';
+import { HouseholdOnboarding } from './components/auth/HouseholdOnboarding.js';
+import { CasaFinanceApp } from './components/app/CasaFinanceApp.js';
 import {
   LayoutDashboard,
   Receipt,
@@ -340,7 +341,7 @@ const AppContent: React.FC = () => {
 };
 
 function AuthenticatedAppBoundary() {
-  const { user, isLoading } = useSupabaseAuth();
+  const { user, isLoading, household, householdLoading } = useSupabaseAuth();
 
   if (isLoading) {
     return <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-sm font-semibold text-slate-300">Recuperando sessão segura…</div>;
@@ -350,7 +351,8 @@ function AuthenticatedAppBoundary() {
 
   // Deliberately do not mount the legacy AuthProvider here. It initializes the
   // in-memory demo identity, which must never be confused with a Supabase user.
-  return <PendingHouseholdScreen />;
+  if (householdLoading) return <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-slate-300">Verificando sua Casa…</div>;
+  return household ? <CasaFinanceApp /> : <HouseholdOnboarding />;
 }
 
 export default function App() {
