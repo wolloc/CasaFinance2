@@ -36,9 +36,22 @@ describe('Etapa 10H.5 member settlements migration', () => {
     assert.match(reconcile, /public\.economic_allocations/);
     assert.match(reconcile, /public\.funding_events/);
     assert.match(reconcile, /public\.account_ownerships/);
-    assert.match(reconcile, /fe\.amount\/count\(\*\) over\(\)/);
+    assert.match(reconcile, /coalesce\(sum\(a\.amount\)\*ins\.amount\/tx_total,0\)/);
+    assert.match(reconcile, /array_agg\(member_id order by balance/);
     assert.match(reconcile, /public\.installments/);
     assert.doesNotMatch(reconcile, /buyer_member_id/);
+    const cardProjection = reconcile.slice(reconcile.indexOf('Project each card installment'), reconcile.indexOf('Real funding normally'));
+    assert.doesNotMatch(cardProjection, /limit 1/i);
+  });
+
+  it('uses canonical funder except for exactly two active joint-account owners', async () => {
+    const sql = await migration('202609050023_member_settlements.sql');
+    const reconcile = sql.slice(sql.indexOf('function public.reconcile_member_settlements'), sql.indexOf('function public.trigger_reconcile_member_settlements'));
+    assert.match(reconcile, /select fs\.funder_member_id,sum\(fs\.amount\) funding_amount/);
+    assert.match(reconcile, /oc\.owner_count<>2/);
+    assert.match(reconcile, /oc\.owner_count=2/);
+    assert.match(reconcile, /select ao\.member_id,sum\(fs\.amount\/2\) funding_amount/);
+    assert.match(reconcile, /funding member and source account must be active in household/);
   });
 
   it('concretizes installment projections and enforces source idempotency', async () => {
@@ -46,7 +59,10 @@ describe('Etapa 10H.5 member settlements migration', () => {
     assert.match(sql, /member_settlement_installment_origin_unique/);
     assert.match(sql, /member_settlement_funding_origin_unique/);
     assert.match(sql, /member_settlement_movement_origin_unique/);
-    assert.match(sql, /update public\.member_settlement_events set state='realized'.*source_funding_event_id=fe\.id/);
+    assert.match(sql, /if funded_total<effect then continue/);
+    assert.match(sql, /update public\.member_settlement_events set state='realized',amount=effect.*source_funding_event_id=fe\.id/);
+    assert.match(sql, /where member_settlement_events\.state in \('projected','cancelled'\)/);
+    assert.match(sql, /member_settlement_events\.source_funding_event_id is null/);
     assert.doesNotMatch(sql, /source_invoice_id/);
   });
 

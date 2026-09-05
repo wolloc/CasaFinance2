@@ -106,42 +106,110 @@ create trigger member_settlement_schedule_links before insert or update on publi
 -- card projections use the explicit card owner and the installment schedule.
 create or replace function public.reconcile_member_settlements(p_transaction_id uuid)
 returns void language plpgsql security definer set search_path=public,pg_temp as $$
-declare tx public.transactions; creator uuid; card_owner uuid; ins record; fe record; debtor uuid; creditor uuid; effect numeric; tx_total numeric;
+declare tx public.transactions; creator uuid; card_owner uuid; ins record; fe record; debtor uuid; creditor uuid; effect numeric; tx_total numeric; funded_total numeric;
 begin
   select * into tx from public.transactions where id=p_transaction_id and deleted_at is null;
   if tx.id is null or tx.type<>'expense' or tx.economic_state in ('cancelled','reversed') then return; end if;
   creator:=tx.created_by_member_id; tx_total:=public.financial_effective_total_amount(tx.economic_state,tx.estimated_amount,tx.confirmed_amount,tx.realized_amount,tx.amount);
   if tx_total<=0 then return; end if;
 
-  -- Project each card installment against the card owner. Buyer is deliberately absent.
+  -- Project each card installment against the card owner. Every member allocation
+  -- participates in the balance calculation; buyer and third-party allocations
+  -- are deliberately absent. Third-party positions belong to their own ledger.
   select c.owner_member_id into card_owner from public.transaction_payment_instruments pi join public.cards c on c.id=pi.card_id and c.household_id=tx.household_id where pi.transaction_id=tx.id and pi.kind='card';
   if card_owner is not null then
     for ins in select i.* from public.installments i join public.installment_plans p on p.id=i.installment_plan_id where p.purchase_transaction_id=tx.id loop
-      select a.responsible_member_id,round(a.amount*ins.amount/tx_total,2) into debtor,effect
-        from public.economic_allocations a where a.transaction_id=tx.id and a.responsible_member_id is not null and a.responsible_member_id<>card_owner order by a.allocation_order limit 1;
+      with balances as (
+        select m.id member_id,
+          (case when m.id=card_owner then ins.amount else 0 end)-coalesce(sum(a.amount)*ins.amount/tx_total,0) balance
+        from public.household_members m
+        left join public.economic_allocations a on a.transaction_id=tx.id and a.responsible_member_id=m.id
+        where m.household_id=tx.household_id and m.deactivated_at is null
+        group by m.id
+      )
+      select (array_agg(member_id order by balance,member_id) filter(where balance<0))[1],
+             (array_agg(member_id order by balance desc,member_id) filter(where balance>0))[1],
+             round(least(abs(min(balance) filter(where balance<0)),max(balance) filter(where balance>0)),2)
+        into debtor,creditor,effect from balances;
       if debtor is not null and effect>0 then
+        update public.member_settlement_events set state='cancelled',updated_at=now()
+         where source_installment_id=ins.id and kind='responsibility_funding' and state='projected'
+           and (debtor_member_id<>debtor or creditor_member_id<>creditor);
         insert into public.member_settlement_events(household_id,created_by_member_id,debtor_member_id,creditor_member_id,amount,state,kind,financial_date,source_transaction_id,source_installment_id)
-        values(tx.household_id,creator,debtor,card_owner,effect,'projected','responsibility_funding',coalesce(ins.due_date,ins.competence_date),tx.id,ins.id)
+        values(tx.household_id,creator,debtor,creditor,effect,'projected','responsibility_funding',coalesce(ins.due_date,ins.competence_date),tx.id,ins.id)
         on conflict (source_installment_id,debtor_member_id,creditor_member_id) where source_installment_id is not null and kind='responsibility_funding'
-        do update set amount=excluded.amount,financial_date=excluded.financial_date,updated_at=now();
+        do update set amount=excluded.amount,state='projected',financial_date=excluded.financial_date,updated_at=now()
+        where member_settlement_events.state in ('projected','cancelled')
+          and member_settlement_events.occurred_at is null
+          and member_settlement_events.source_funding_event_id is null;
+      else
+        update public.member_settlement_events set state='cancelled',updated_at=now()
+         where source_installment_id=ins.id and kind='responsibility_funding' and state='projected';
       end if;
     end loop;
   end if;
 
-  -- Real funding. Two account owners split liquidity funding 50/50; a single
-  -- owner receives 100%. This never writes economic responsibility.
+  -- Real funding normally belongs to funding_events.funder_member_id, regardless
+  -- of account ownership. The only exception is the explicit joint-liquidity
+  -- convention: exactly two active account owners split that funding 50/50.
+  -- This attribution never writes or changes economic responsibility.
   for fe in select f.* from public.funding_events f where f.financed_transaction_id=tx.id loop
-    with funders as (
-      select ao.member_id,fe.amount/count(*) over() funding_amount from public.account_ownerships ao where ao.account_id=fe.source_account_id and ao.household_id=tx.household_id
+    funded_total:=fe.amount;
+    if not exists(select 1 from public.household_members where id=fe.funder_member_id and household_id=tx.household_id and deactivated_at is null)
+       or not exists(select 1 from public.accounts where id=fe.source_account_id and household_id=tx.household_id and deactivated_at is null) then
+      raise exception 'funding member and source account must be active in household' using errcode='23514';
+    end if;
+
+    if fe.installment_id is not null then
+      select i.amount,coalesce(sum(f.amount),0) into effect,funded_total
+        from public.installments i left join public.funding_events f on f.installment_id=i.id
+       where i.id=fe.installment_id group by i.amount;
+      -- Conservative partial-card rule for 023: keep the single obligation
+      -- projected until its installment is fully funded. Never mark the whole
+      -- projected amount realized after only a partial invoice payment.
+      if funded_total<effect then continue; end if;
+      if fe.id<>(select f.id from public.funding_events f where f.installment_id=fe.installment_id order by f.created_at desc,f.id desc fetch first 1 row only) then continue; end if;
+    end if;
+
+    with funding_sources as (
+      select f.* from public.funding_events f
+       where (fe.installment_id is null and f.id=fe.id)
+          or (fe.installment_id is not null and f.installment_id=fe.installment_id)
+    ), owner_counts as (
+      select fs.id funding_id,count(om.id) owner_count
+        from funding_sources fs
+        left join public.account_ownerships ao on ao.account_id=fs.source_account_id and ao.household_id=tx.household_id
+        left join public.household_members om on om.id=ao.member_id and om.household_id=tx.household_id and om.deactivated_at is null
+       group by fs.id
+    ), funders as (
+      select ao.member_id,sum(fs.amount/2) funding_amount
+        from funding_sources fs join owner_counts oc on oc.funding_id=fs.id and oc.owner_count=2
+        join public.account_ownerships ao on ao.account_id=fs.source_account_id and ao.household_id=tx.household_id
+        join public.household_members om on om.id=ao.member_id and om.household_id=tx.household_id and om.deactivated_at is null
+       group by ao.member_id
+      union all
+      select fs.funder_member_id,sum(fs.amount) funding_amount
+        from funding_sources fs join owner_counts oc on oc.funding_id=fs.id and oc.owner_count<>2
+       group by fs.funder_member_id
     ), balances as (
-      select m.id member_id,coalesce(f.funding_amount,0)-coalesce(a.amount*fe.amount/tx_total,0) balance
+      select m.id member_id,coalesce(sum(f.funding_amount),0)-coalesce(sum(a.amount)*funded_total/tx_total,0) balance
       from public.household_members m left join funders f on f.member_id=m.id
       left join public.economic_allocations a on a.transaction_id=tx.id and a.responsible_member_id=m.id
       where m.household_id=tx.household_id and m.deactivated_at is null
-    ) select (select member_id from balances where balance<0 order by balance limit 1),(select member_id from balances where balance>0 order by balance desc limit 1),least(abs((select balance from balances where balance<0 order by balance limit 1)),(select balance from balances where balance>0 order by balance desc limit 1)) into debtor,creditor,effect;
+      group by m.id
+    ) select (array_agg(member_id order by balance,member_id) filter(where balance<0))[1],
+             (array_agg(member_id order by balance desc,member_id) filter(where balance>0))[1],
+             round(least(abs(min(balance) filter(where balance<0)),max(balance) filter(where balance>0)),2)
+        into debtor,creditor,effect from balances;
+    if fe.installment_id is not null then
+      update public.member_settlement_events set state='cancelled',updated_at=now()
+       where source_installment_id=fe.installment_id and kind='responsibility_funding' and state='projected'
+         and (debtor is null or creditor is null or effect<=0 or debtor_member_id<>debtor or creditor_member_id<>creditor);
+    end if;
     if debtor is not null and creditor is not null and effect>0 then
       if fe.installment_id is not null and exists(select 1 from public.member_settlement_events where source_installment_id=fe.installment_id and debtor_member_id=debtor and creditor_member_id=creditor) then
-        update public.member_settlement_events set state='realized',occurred_at=fe.funded_at,source_funding_event_id=fe.id,updated_at=now() where source_installment_id=fe.installment_id and debtor_member_id=debtor and creditor_member_id=creditor;
+        update public.member_settlement_events set state='realized',amount=effect,occurred_at=fe.funded_at,source_funding_event_id=fe.id,updated_at=now()
+         where source_installment_id=fe.installment_id and debtor_member_id=debtor and creditor_member_id=creditor and state='projected';
       else
         insert into public.member_settlement_events(household_id,created_by_member_id,debtor_member_id,creditor_member_id,amount,state,kind,financial_date,occurred_at,source_transaction_id,source_funding_event_id)
         values(tx.household_id,creator,debtor,creditor,effect,'realized','responsibility_funding',fe.funded_at::date,fe.funded_at,tx.id,fe.id)
