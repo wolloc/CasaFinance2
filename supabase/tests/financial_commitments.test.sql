@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(25);
 
 insert into auth.users (id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values
@@ -36,16 +36,35 @@ select is((select sum(effective_amount) from public.financial_commitment_positio
 select is((select sum(effective_amount) from public.financial_commitment_positions where source_transaction_id='24000000-0000-4000-8000-000000000050' and financial_month='2026-11-01'),200::numeric,'November contains one 200 installment');
 select results_eq($$select count(*),sum(effective_amount)::bigint from public.financial_commitment_positions where source_transaction_id='24000000-0000-4000-8000-000000000050'$$,$$values(12::bigint,2400::bigint)$$,'purchase amount is not duplicated with installments');
 
--- Invoice metadata and its neutral payment never add rows.
+-- Invoice metadata and its neutral payment never add rows. Financing context
+-- alone is not settlement evidence.
 insert into public.card_invoices(id,household_id,card_id,competence_date,closing_date,due_date,total_amount)
 values ('24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000040','2026-10-01','2026-10-02','2026-10-09',200);
 update public.installments set invoice_id='24000000-0000-4000-8000-000000000080' where installment_plan_id='24000000-0000-4000-8000-000000000060' and number=1;
 insert into public.transactions(id,household_id,created_by_member_id,type,status,economic_state,description,amount,estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date,settled_at)
-values ('24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000021','invoice_payment','paid','realized','Invoice payment',200,200,200,200,'2026-10-09','2026-10-01',now());
+values ('24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000021','invoice_payment','paid','realized','Partial invoice payment',100,100,100,100,'2026-10-09','2026-10-01',now());
 insert into public.card_invoice_payments(household_id,invoice_id,payment_transaction_id,source_account_id,amount,paid_at)
-values ('24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000030',200,now());
+values ('24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000030',100,now());
+insert into public.financing_allocations(household_id,transaction_id,mechanism,amount,card_id,invoice_id,installment_id)
+values ('24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000050','card_purchase',200,'24000000-0000-4000-8000-000000000040','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000061');
+select results_eq($$select realized_amount,remaining_amount from public.financial_commitment_positions where source_installment_id='24000000-0000-4000-8000-000000000061'$$,$$values(0::numeric,200::numeric)$$,'financing context without allocated invoice-payment funding does not realize installment');
+
+insert into public.funding_events(id,household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,invoice_id,installment_id,amount,funded_at)
+values ('24000000-0000-4000-8000-000000000090','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000050','24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000021','24000000-0000-4000-8000-000000000030','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000061',100,now());
+select results_eq($$select realized_amount,remaining_amount,commitment_state::text from public.financial_commitment_positions where source_installment_id='24000000-0000-4000-8000-000000000061'$$,$$values(100::numeric,100::numeric,'confirmed'::text)$$,'partial real invoice payment realizes only 100 of installment');
+select throws_ok($$insert into public.funding_events(household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,invoice_id,installment_id,amount,funded_at) values ('24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000050','24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000021','24000000-0000-4000-8000-000000000030','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000061',100,now())$$,'23505',null,'duplicate funding for the same invoice payment is rejected');
+select results_eq($$select realized_amount,remaining_amount from public.financial_commitment_positions where source_installment_id='24000000-0000-4000-8000-000000000061'$$,$$values(100::numeric,100::numeric)$$,'rejected funding retry cannot duplicate realization');
+
+insert into public.transactions(id,household_id,created_by_member_id,type,status,economic_state,description,amount,estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date,settled_at)
+values ('24000000-0000-4000-8000-000000000082','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000021','invoice_payment','paid','realized','Final invoice payment',100,100,100,100,'2026-10-09','2026-10-01',now());
+insert into public.card_invoice_payments(household_id,invoice_id,payment_transaction_id,source_account_id,amount,paid_at)
+values ('24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000082','24000000-0000-4000-8000-000000000030',100,now());
+insert into public.funding_events(id,household_id,financed_transaction_id,funding_transaction_id,funder_member_id,source_account_id,invoice_id,installment_id,amount,funded_at)
+values ('24000000-0000-4000-8000-000000000091','24000000-0000-4000-8000-000000000010','24000000-0000-4000-8000-000000000050','24000000-0000-4000-8000-000000000082','24000000-0000-4000-8000-000000000021','24000000-0000-4000-8000-000000000030','24000000-0000-4000-8000-000000000080','24000000-0000-4000-8000-000000000061',100,now());
+update public.card_invoices set settled_amount=200,status='paid',settled_at=now() where id='24000000-0000-4000-8000-000000000080';
+select results_eq($$select realized_amount,remaining_amount,commitment_state::text from public.financial_commitment_positions where source_installment_id='24000000-0000-4000-8000-000000000061'$$,$$values(200::numeric,0::numeric,'realized'::text)$$,'fully paid invoice realizes the complete installment');
 select is((select count(*) from public.financial_commitment_positions where source_invoice_id='24000000-0000-4000-8000-000000000080'),1::bigint,'invoice does not duplicate its installment');
-select is((select count(*) from public.financial_commitment_positions where source_transaction_id='24000000-0000-4000-8000-000000000081'),0::bigint,'invoice payment creates no commitment');
+select is((select count(*) from public.financial_commitment_positions where source_transaction_id in ('24000000-0000-4000-8000-000000000081','24000000-0000-4000-8000-000000000082')),0::bigint,'invoice payments create no commitments');
 
 -- Direct fallback amounts exercise forecast, confirmation, partial/full
 -- realization, cancellation, reversal, due-date priority, and cents.

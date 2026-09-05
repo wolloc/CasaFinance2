@@ -40,12 +40,19 @@ describe('Etapa 10H.6 canonical financial commitments migration', () => {
     assert.doesNotMatch(sql, /where o\.kind\s*(?:=|in\s*\()[^\n;]*receivable/i);
   });
 
-  it('does not turn invoices, invoice payments, or additive amount versions into commitments', async () => {
+  it('uses invoice payment as settlement evidence without emitting payment commitments', async () => {
     const sql = await migration('202609050024_financial_commitments.sql');
+    assert.match(sql, /from public\.card_invoice_payments cip/);
+    assert.match(sql, /allocated\.funding_transaction_id=cip\.payment_transaction_id/);
+    assert.match(sql, /allocated\.source_account_id=cip\.source_account_id/);
+    assert.match(sql, /payment\.type='invoice_payment'/);
+    assert.match(sql, /payment\.status='paid'/);
+    assert.match(sql, /payment\.amount=cip\.amount/);
+    assert.match(sql, /having sum\(allocated\.amount\)=cip\.amount/);
     assert.doesNotMatch(sql, /from public\.card_invoices\s+(?:as\s+)?[a-z]+\s*(?:\n|$)/i);
-    assert.doesNotMatch(sql, /from public\.card_invoice_payments/i);
     assert.doesNotMatch(sql, /from public\.money_movements/i);
     assert.doesNotMatch(sql, /estimated_amount\s*\+\s*confirmed_amount|confirmed_amount\s*\+\s*realized_amount/i);
     assert.doesNotMatch(sql, /'invoice_payment'\s*(?:::text)?\s+as\s+commitment_type/i);
+    assert.doesNotMatch(sql, /'card_invoice_payment'\s*(?:::text)?\s+as\s+source_type/i);
   });
 });

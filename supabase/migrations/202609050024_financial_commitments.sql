@@ -4,11 +4,46 @@
 create or replace view public.financial_commitment_positions
 with (security_invoker=true) as
 with
+invoice_payment_evidence as (
+  select cip.household_id, cip.invoice_id, cip.payment_transaction_id,
+    cip.source_account_id
+  from public.card_invoice_payments cip
+  join public.transactions payment
+    on payment.id=cip.payment_transaction_id
+   and payment.household_id=cip.household_id
+   and payment.type='invoice_payment'
+   and payment.status='paid'
+   and payment.settled_at is not null
+   and payment.deleted_at is null
+   and payment.amount=cip.amount
+  join public.funding_events allocated
+    on allocated.household_id=cip.household_id
+   and allocated.invoice_id=cip.invoice_id
+   and allocated.funding_transaction_id=cip.payment_transaction_id
+   and allocated.source_account_id=cip.source_account_id
+  group by cip.household_id,cip.invoice_id,cip.payment_transaction_id,
+    cip.source_account_id,cip.amount
+  having sum(allocated.amount)=cip.amount
+),
 installment_funding as (
-  select household_id, installment_id, sum(amount)::numeric(19,2) as realized_amount
-  from public.funding_events
-  where installment_id is not null
-  group by household_id, installment_id
+  select f.household_id, f.installment_id,
+    sum(f.amount)::numeric(19,2) as realized_amount
+  from public.funding_events f
+  join public.installments i
+    on i.id=f.installment_id
+   and i.household_id=f.household_id
+   and i.invoice_id=f.invoice_id
+  join public.installment_plans ip
+    on ip.id=i.installment_plan_id
+   and ip.household_id=f.household_id
+   and ip.purchase_transaction_id=f.financed_transaction_id
+  join invoice_payment_evidence paid
+    on paid.household_id=f.household_id
+   and paid.invoice_id=f.invoice_id
+   and paid.payment_transaction_id=f.funding_transaction_id
+   and paid.source_account_id=f.source_account_id
+  where f.installment_id is not null and f.invoice_id is not null
+  group by f.household_id, f.installment_id
 ),
 direct_funding as (
   select household_id, financed_transaction_id, sum(amount)::numeric(19,2) as realized_amount
@@ -147,8 +182,12 @@ comment on view public.financial_commitment_positions is
 -- * direct/recurring realization uses the economic realized_amount and explicit
 --   non-invoice funding, because a generic movement cannot safely be attributed
 --   to a commitment without one of those links;
--- * installment realization uses installment-scoped funding_events created by
---   invoice settlement, while invoice payment itself remains outside the union;
+-- * installment realization requires the complete settlement evidence chain:
+--   an installment-scoped funding_event whose invoice, purchase, account, and
+--   funding transaction match a paid card_invoice_payment transaction. The
+--   current pay_card_invoice RPC creates this chain atomically and can allocate
+--   a partial invoice payment to an installment; the payment remains evidence
+--   only and never becomes a row in raw_positions;
 -- * rules without a materialized recurring_occurrence are projections, not
 --   commitments, and therefore remain for the later cumulative projection layer.
 -- Existing household/date indexes on installments, obligations, occurrences,
