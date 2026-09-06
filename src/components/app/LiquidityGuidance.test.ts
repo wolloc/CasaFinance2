@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const screen=await readFile(new URL('./CasaHomeScreen.tsx',import.meta.url),'utf8');const service=await readFile(new URL('../../finance/financialDashboard.ts',import.meta.url),'utf8');
+test('Home distinguishes bank balance, committed and free cash',()=>{assert.match(screen,/Saldo atual/);assert.match(screen,/Já comprometido/);assert.match(screen,/Livre após compromissos/);assert.match(screen,/inclui entradas confiáveis esperadas/);});
+test('coverage guidance never presents reserves or credit as cash',()=>{assert.match(screen,/O Casa não movimenta reserva, investimento ou LIS sozinho/);assert.match(screen,/continuam fora do saldo disponível/);assert.match(service,/financial_liquidity_guidance/);});
+test('negative coverage gives decision support rather than inventing movement',()=>{assert.match(screen,/Possíveis decisões: transferir recurso disponível, resgatar reserva\/investimento explicitamente ou estruturar crédito\/empréstimo/);});
