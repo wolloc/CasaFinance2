@@ -1,0 +1,4 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const ui=await readFile(new URL('./FinancialPriorityCenter.tsx',import.meta.url),'utf8');const app=await readFile(new URL('./CasaFinanceApp.tsx',import.meta.url),'utf8');
+test('priority center explains ordering and does not pretend to act',()=>{assert.match(ui,/Prioridade \{index\+1\}/);assert.match(ui,/priority_reason/);assert.match(ui,/A ordem não paga, transfere nem corrige nada sozinha/);});
+test('contextual actions navigate to canonical areas only',()=>{assert.match(ui,/Resolver em Gastos|action_label/);assert.match(app,/action==='expenses'/);assert.match(app,/action==='invoices'/);assert.match(app,/action==='income'/);assert.doesNotMatch(app,/create_financial_transaction|settle_|insert\(/);});
