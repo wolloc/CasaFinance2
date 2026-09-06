@@ -15,7 +15,18 @@ export type HouseholdTransaction = {
 };
 
 export type TransactionInput = { description: string; amount: string; transactionDate: string; categoryId: string; buyerMemberId: string | null; notes?: string; instrumentKind?: InstrumentKind; accountId?: string; cardId?: string; splits?: Array<{ memberId?: string; partyId?: string; amount: string; percentage: string }>; installmentCount?: number };
-export type TransactionAdjustmentEvent = { id: string; kind: 'correction' | 'cancellation' | 'refund'; amount: string | null; reason: string; occurred_at: string; created_at: string };
+export type TransactionAdjustmentEvent = {
+  id: string;
+  kind: 'correction' | 'cancellation' | 'refund';
+  amount: string | null;
+  reason: string;
+  before_payload: Record<string, unknown> | null;
+  after_payload: Record<string, unknown> | null;
+  related_transaction_id: string | null;
+  created_by_member_id: string;
+  occurred_at: string;
+  created_at: string;
+};
 
 const transactionColumns = 'id, household_id, created_by_member_id, buyer_member_id, category_id, invoice_id, type, status, economic_state, description, amount, realized_amount, transaction_date, competence_date, due_date, settled_at, notes, deleted_at, category:categories(name, type), buyer:household_members!transactions_buyer_member_id_fkey(profiles(display_name)), payment_instrument:transaction_payment_instruments(kind, account_id, card_id)';
 const requestKey = (operation: string, transactionId: string) => `ui-${operation}:${transactionId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
@@ -66,8 +77,13 @@ export async function listHouseholdTransactions(client: SupabaseClient, househol
 }
 
 export async function listTransactionAdjustmentEvents(client: SupabaseClient, householdId: string, transactionId: string) {
-  const response = await client.from('transaction_adjustment_events').select('id, kind, amount, reason, occurred_at, created_at').eq('household_id', householdId).eq('source_transaction_id', transactionId).order('occurred_at', { ascending: true });
-  if (response.error) throw response.error; return (response.data ?? []) as TransactionAdjustmentEvent[];
+  const response = await client.from('transaction_adjustment_events')
+    .select('id, kind, amount, reason, before_payload, after_payload, related_transaction_id, created_by_member_id, occurred_at, created_at')
+    .eq('household_id', householdId)
+    .eq('source_transaction_id', transactionId)
+    .order('occurred_at', { ascending: true });
+  if (response.error) throw response.error;
+  return (response.data ?? []) as TransactionAdjustmentEvent[];
 }
 
 export async function createHouseholdTransaction(client: SupabaseClient, householdId: string, type: TransactionKind, input: TransactionInput) {

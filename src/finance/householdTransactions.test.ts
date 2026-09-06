@@ -52,6 +52,17 @@ test('closed financial states remain without mutable direct actions', () => {
 
 test('transaction history reads immutable adjustment events scoped to source transaction', () => {
   assert.match(serviceSource, /from\('transaction_adjustment_events'\)/); assert.match(serviceSource, /eq\('household_id', householdId\)/); assert.match(serviceSource, /eq\('source_transaction_id', transactionId\)/); assert.match(serviceSource, /order\('occurred_at', \{ ascending: true \}\)/);
+  assert.match(serviceSource, /before_payload/); assert.match(serviceSource, /after_payload/); assert.match(serviceSource, /created_by_member_id/); assert.match(serviceSource, /related_transaction_id/);
+});
+
+test('transaction history is visible as read-only audited UI', () => {
+  assert.match(screenSource, /listTransactionAdjustmentEvents\(supabase, household\.id, transaction\.id\)/);
+  assert.match(screenSource, />Histórico</);
+  assert.match(screenSource, /Histórico auditável/);
+  assert.match(screenSource, /Correções e reversões ficam registradas/);
+  assert.match(screenSource, /Descrição:|\['description', 'Descrição'\]/);
+  assert.match(screenSource, /Valor:|\['amount', 'Valor'\]/);
+  assert.doesNotMatch(screenSource, /transaction_adjustment_events[^\n]*(insert|update|delete)/i);
 });
 
 test('shared expense usa RPC canônica com terceiro e financiador independentes', () => { assert.match(serviceSource, /create_and_settle_shared_expense/); assert.match(serviceSource, /party_id/); assert.match(serviceSource, /p_funder_member_id/); assert.match(serviceSource, /p_gross_amount/); });
