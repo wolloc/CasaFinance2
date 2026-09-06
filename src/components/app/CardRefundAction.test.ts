@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const ui=await readFile(new URL('./CardRefundAction.tsx',import.meta.url),'utf8');const service=await readFile(new URL('../../finance/cardRefunds.ts',import.meta.url),'utf8');const journey=await readFile(new URL('./CardFinancialJourney.tsx',import.meta.url),'utf8');
+test('user explicitly chooses purchase and invoice/parcel that received credit',()=>{assert.match(ui,/Qual compra foi estornada/);assert.match(ui,/Em qual fatura\/parcela o crédito apareceu/);assert.match(ui,/Se o banco lançou o crédito em outra fatura, escolha a que realmente aparece/);});
+test('copy states invoice credit is not income or account cash',()=>{assert.match(ui,/não coloca dinheiro na conta/);assert.match(ui,/nenhuma renda foi criada e nenhum dinheiro entrou em conta/);assert.match(journey,/Crédito em fatura reduz a obrigação do cartão\. Não é renda e não significa dinheiro entrando em conta/);});
+test('service uses dedicated card refund read model and rpc',()=>{assert.match(service,/financial_card_refund_positions/);assert.match(service,/record_card_invoice_credit_refund/);});
+test('paid invoice route remains explicitly out of scope',()=>{assert.match(ui,/crédito lançado depois que a parcela\/fatura já foi paga/);});
