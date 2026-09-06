@@ -24,6 +24,6 @@ test('invoice attention becomes transient payment intent only',()=>{
 
 test('canonical payment flow rereads and settles the current invoice state',()=>{
   assert.match(adjustmentSource,/listFinancialInvoices/);
-  assert.match(adjustmentSource,/payFinancialInvoice/);
+  assert.match(adjustmentSource,/payHouseholdInvoice/);
   assert.match(adjustmentSource,/outstanding_amount/);
 });
