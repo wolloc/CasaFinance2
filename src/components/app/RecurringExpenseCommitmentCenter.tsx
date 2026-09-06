@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { BellRing, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts } from '../../finance/householdFinancialAccounts.js';
+import type { RecurringExpenseActionIntent, RecurringExpenseActionMode } from '../../finance/recurringExpenseIntent.js';
 import { confirmRecurringExpenseOccurrence, listRecurringExpenseCommitments, settleRecurringExpenseOccurrence, type RecurringExpenseCommitment } from '../../finance/recurringExpenseCommitments.js';
 
 const transactionalTypes = new Set(['cash','checking','savings','digital_wallet']);
@@ -10,26 +11,28 @@ const money = (value: string|number) => Number(value).toLocaleString('pt-BR',{st
 const localDateTime = () => { const now=new Date(); const local=new Date(now.getTime()-now.getTimezoneOffset()*60000); return local.toISOString().slice(0,16); };
 const stateLabel = { overdue:'Vencida', due_today:'Vence hoje', due_soon:'Vence em breve', upcoming:'Próximos 7 dias' } as const;
 
-export function RecurringExpenseCommitmentCenter({ onChanged }: { onChanged?: () => void }) {
+export function RecurringExpenseCommitmentCenter({ onChanged, initialIntent }: { onChanged?: () => void; initialIntent?: RecurringExpenseActionIntent | null }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [items,setItems]=useState<RecurringExpenseCommitment[]>([]);
   const [accounts,setAccounts]=useState<Array<{id:string;name:string;type:string}>>([]);
   const [selectedId,setSelectedId]=useState('');
-  const [mode,setMode]=useState<'confirm'|'pay'|null>(null);
+  const [mode,setMode]=useState<RecurringExpenseActionMode|null>(null);
   const [amount,setAmount]=useState('');
   const [accountId,setAccountId]=useState('');
   const [funderMemberId,setFunderMemberId]=useState('');
   const [paidAt,setPaidAt]=useState(localDateTime());
   const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false);
   const [error,setError]=useState<string|null>(null); const [success,setSuccess]=useState<string|null>(null);
+  const handledIntent=useRef(false);
   const selected=useMemo(()=>items.find((item)=>item.occurrence_id===selectedId)??null,[items,selectedId]);
 
   const load=async()=>{ if(!supabase||!household)return; setLoading(true); setError(null); try { const [commitments,financial]=await Promise.all([listRecurringExpenseCommitments(supabase,household.id),listHouseholdFinancialAccounts(supabase,household.id)]); setItems(commitments); setAccounts(financial.accounts.filter((account)=>transactionalTypes.has(account.type))); } catch { setError('Não foi possível carregar as contas recorrentes próximas do vencimento.'); } finally { setLoading(false); } };
   useEffect(()=>{load();},[household?.id]);
-  const open=(item:RecurringExpenseCommitment,next:'confirm'|'pay')=>{setSelectedId(item.occurrence_id);setMode(next);setAmount(item.remaining_amount);setAccountId(item.planned_account_id??'');setFunderMemberId('');setPaidAt(localDateTime());setError(null);setSuccess(null);};
+  const open=(item:RecurringExpenseCommitment,next:RecurringExpenseActionMode)=>{setSelectedId(item.occurrence_id);setMode(next);setAmount(item.remaining_amount);setAccountId(item.planned_account_id??'');setFunderMemberId('');setPaidAt(localDateTime());setError(null);setSuccess(null);};
+  useEffect(()=>{if(loading||handledIntent.current||!initialIntent)return;handledIntent.current=true;const target=items.find((item)=>item.occurrence_id===initialIntent.occurrenceId);if(target)open(target,initialIntent.mode);else setError('Essa conta mudou ou já foi resolvida. O Casa atualizou a lista antes de permitir qualquer ação.');},[loading,items,initialIntent]);
   const close=()=>{setSelectedId('');setMode(null);};
 
-  const submit=async(event:FormEvent)=>{event.preventDefault();if(!supabase||!household||!selected||!mode)return;const parsed=Number(amount.replace(',','.'));if(!Number.isFinite(parsed)||parsed<=0){setError('Informe um valor maior que zero.');return;}if(mode==='pay'&&!accountId){setError('Informe de onde o dinheiro realmente saiu.');return;}if(mode==='pay'&&!funderMemberId){setError('Informe quem efetivamente bancou.');return;}setSaving(true);setError(null);setSuccess(null);try{if(mode==='confirm'){await confirmRecurringExpenseOccurrence(supabase,household.id,selected.occurrence_id,parsed.toFixed(2));setSuccess('Valor desta ocorrência confirmado. A projeção foi atualizada, mas nenhum saldo de conta foi movimentado.');}else{await settleRecurringExpenseOccurrence(supabase,{householdId:household.id,occurrenceId:selected.occurrence_id,accountId,funderMemberId,amount:parsed.toFixed(2),paidAt:new Date(paidAt).toISOString()});setSuccess(accountId===selected.planned_account_id?'Pagamento confirmado. O caixa agora reflete a saída real.':'Pagamento confirmado por outro recurso. A previsão original foi preservada e o caixa saiu somente da conta informada.');}close();await load();onChanged?.();}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível atualizar esta conta recorrente.');}finally{setSaving(false);}};
+  const submit=async(event:FormEvent)=>{event.preventDefault();if(!supabase||!household||!selected||!mode)return;const parsed=Number(amount.replace(',','.'));if(!Number.isFinite(parsed)||parsed<=0){setError('Informe um valor maior que zero.');return;}if(parsed>Number(selected.remaining_amount)){setError('O valor não pode superar o que ainda está em aberto nesta ocorrência.');return;}if(mode==='pay'&&!accountId){setError('Informe de onde o dinheiro realmente saiu.');return;}if(mode==='pay'&&!funderMemberId){setError('Informe quem efetivamente bancou.');return;}setSaving(true);setError(null);setSuccess(null);try{if(mode==='confirm'){await confirmRecurringExpenseOccurrence(supabase,household.id,selected.occurrence_id,parsed.toFixed(2));setSuccess('Valor desta ocorrência confirmado. A projeção foi atualizada, mas nenhum saldo de conta foi movimentado.');}else{await settleRecurringExpenseOccurrence(supabase,{householdId:household.id,occurrenceId:selected.occurrence_id,accountId,funderMemberId,amount:parsed.toFixed(2),paidAt:new Date(paidAt).toISOString()});setSuccess(accountId===selected.planned_account_id?'Pagamento confirmado. O caixa agora reflete a saída real.':'Pagamento confirmado por outro recurso. A previsão original foi preservada e o caixa saiu somente da conta informada.');}close();await load();onChanged?.();}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível atualizar esta conta recorrente.');}finally{setSaving(false);}};
 
   return <section className="rounded-2xl border border-amber-900/60 bg-amber-950/10 p-4">
     <div className="flex items-start gap-3"><BellRing className="mt-0.5 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">Contas previstas para pagar</h2><p className="mt-1 text-sm text-slate-400">Elas já reduzem o que o Casa considera livre na projeção. O saldo real da conta só muda quando você confirma por onde o dinheiro saiu.</p></div></div>
