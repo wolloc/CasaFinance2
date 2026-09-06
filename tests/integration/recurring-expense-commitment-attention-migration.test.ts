@@ -11,9 +11,11 @@ test('046 exposes near-due recurring occurrences as read-only attention position
   assert.match(sql,/source_type='recurring_occurrence'/);
 });
 
-test('confirming occurrence changes forecast amount without creating cash',()=>{
+test('confirming occurrence is auditable and changes amount without creating cash',()=>{
   const confirm=sql.slice(sql.indexOf('confirm_recurring_expense_occurrence'),sql.indexOf('create or replace function public.settle_recurring_expense_occurrence'));
+  assert.match(confirm,/transaction_adjustment_events/);
   assert.match(confirm,/confirm_financial_transaction/);
+  assert.match(confirm,/recurring_occurrence_id/);
   assert.doesNotMatch(confirm,/insert into public\.money_movements/);
   assert.doesNotMatch(confirm,/insert into public\.funding_events/);
 });
