@@ -9,7 +9,7 @@ const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',curr
 
 export function ProjectionReviewCenter({onNavigate}:{onNavigate?:(action:AttentionNavigationAction)=>void}){
   const{household}=useSupabaseAuth();const[items,setItems]=useState<ProjectionReviewItem[]>([]);const[loading,setLoading]=useState(true);const[failed,setFailed]=useState(false);
-  useEffect(()=>{let cancelled=false;if(!supabase||!household)return;setLoading(true);setFailed(false);supabase.rpc('financial_projection_review_items',{p_household_id:household.id}).then(({data,error})=>{if(cancelled)return;if(error){setFailed(true);return;}setItems((data??[])as ProjectionReviewItem[]);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id]);
+  useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}const load=async()=>{setLoading(true);setFailed(false);try{const{data,error}=await supabase.rpc('financial_projection_review_items',{p_household_id:household.id});if(cancelled)return;if(error){setFailed(true);return;}setItems((data??[])as ProjectionReviewItem[]);}catch{if(!cancelled)setFailed(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id]);
   if(loading)return <div className="mt-3 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin"/>Conferindo previsões que ainda precisam de confirmação…</div>;
   if(failed||items.length===0)return null;
   const visible=items.slice(0,5);
