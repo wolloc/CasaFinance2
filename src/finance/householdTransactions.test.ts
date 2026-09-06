@@ -42,8 +42,8 @@ test('shared or externally paid expenses do not advertise direct refund', () => 
   assert.match(serviceSource, /from\('financial_obligations'\)/); assert.match(serviceSource, /from\('external_payment_events'\)/); assert.match(serviceSource, /!dependencies\.has_financial_obligation/); assert.match(serviceSource, /!dependencies\.has_external_payment_event/);
 });
 
-test('eligible direct realized expense requires one fully funded account route for refund', () => {
-  assert.match(serviceSource, /refundHouseholdDirectExpense/); assert.match(serviceSource, /rpc\('refund_direct_expense'/); assert.match(serviceSource, /p_amount: transaction\.realized_amount/); assert.match(serviceSource, /p_refunded_at: new Date\(\)\.toISOString\(\)/); assert.match(serviceSource, /transaction\.payment_instrument\?\.kind === 'account'/); assert.match(serviceSource, /direct_funding_total/); assert.match(serviceSource, /direct_funding_account_count === 1/);
+test('eligible direct realized expense refunds only the remaining refundable balance', () => {
+  assert.match(serviceSource, /refundHouseholdDirectExpense/); assert.match(serviceSource, /transaction_adjustment_events/); assert.match(serviceSource, /const refunded/); assert.match(serviceSource, /const remaining = Math\.max/); assert.match(serviceSource, /rpc\('refund_direct_expense_partial'/); assert.match(serviceSource, /p_amount: remaining/); assert.match(serviceSource, /transaction\.payment_instrument\?\.kind === 'account'/); assert.match(serviceSource, /direct_funding_total/); assert.match(serviceSource, /direct_funding_account_count === 1/);
 });
 
 test('closed financial states remain without mutable direct actions', () => {
