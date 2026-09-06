@@ -55,6 +55,48 @@ export async function createManualThirdPartyObligation(client: SupabaseClient, i
   return result.data as string;
 }
 
+export async function correctManualThirdPartyObligation(client: SupabaseClient, input: {
+  householdId: string;
+  obligationId: string;
+  counterpartyId: string;
+  amount: string;
+  obligationDate: string;
+  dueDate?: string;
+  description: string;
+  reason: string;
+  notes?: string;
+}) {
+  const result = await client.rpc('correct_manual_third_party_obligation', {
+    p_household_id: input.householdId,
+    p_obligation_id: input.obligationId,
+    p_counterparty_id: input.counterpartyId,
+    p_amount: input.amount,
+    p_obligation_date: input.obligationDate,
+    p_due_date: input.dueDate || null,
+    p_description: input.description.trim(),
+    p_reason: input.reason.trim(),
+    p_request_key: crypto.randomUUID(),
+    p_notes: input.notes?.trim() || null,
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
+export async function cancelManualThirdPartyObligation(client: SupabaseClient, input: {
+  householdId: string;
+  obligationId: string;
+  reason: string;
+}) {
+  const result = await client.rpc('cancel_manual_third_party_obligation', {
+    p_household_id: input.householdId,
+    p_obligation_id: input.obligationId,
+    p_reason: input.reason.trim(),
+    p_request_key: crypto.randomUUID(),
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
 function buildMemberAmountSplits(amount: string, allocations: Array<{ memberId: string; percentage: number }>, totalError: string): MemberAmountSplit[] {
   const totalCents = Math.round(Number(amount) * 100);
   const active = allocations.filter((allocation) => allocation.percentage > 0);
@@ -162,6 +204,11 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
       outstanding_amount: Math.max(0, Number(row.original_amount) - settled),
     } as ThirdPartyObligation;
   }).filter((row) => row.outstanding_amount > 0);
+}
+
+export async function listEditableManualThirdPartyObligations(client: SupabaseClient, householdId: string) {
+  const rows = await listOpenThirdPartyObligations(client, householdId);
+  return rows.filter((row) => row.origin_kind === 'manual' && row.state === 'open' && row.settled_amount === 0);
 }
 
 export async function settleThirdPartyObligation(client: SupabaseClient, input: {
