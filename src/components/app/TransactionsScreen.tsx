@@ -6,6 +6,7 @@ import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
 import { RecurringExpenseCommitmentCenter } from './RecurringExpenseCommitmentCenter.js';
 import { DirectExpensePaymentAction } from './DirectExpensePaymentAction.js';
 import { PartialDirectRefundAction } from './PartialDirectRefundAction.js';
+import { CardRefundAction } from './CardRefundAction.js';
 
 export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   if (mode === 'income') return <IncomeLedgerScreen />;
@@ -13,6 +14,7 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
     <RecurringExpenseCommitmentCenter />
     <DirectExpensePaymentAction />
     <PartialDirectRefundAction />
+    <CardRefundAction />
     <RecurringExpenseAction />
     <RecurringExpenseManagement />
     <HouseholdTransactionsSetup embedded mode={mode} />
