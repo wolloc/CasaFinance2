@@ -49,6 +49,7 @@ export async function listRecurringExpenseRules(client: SupabaseClient, househol
     .is('deactivated_at', null)
     .is('income_nature', null)
     .not('template_transaction_id', 'is', null)
+    .not('estimated_amount', 'is', null)
     .order('created_at', { ascending: false });
   if (rulesResponse.error) throw rulesResponse.error;
   const rules = rulesResponse.data ?? [];
