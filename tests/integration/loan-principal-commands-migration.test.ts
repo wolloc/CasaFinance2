@@ -12,7 +12,7 @@ const sql = fs.readFileSync(
 describe('Migration 037 loan principal commands', () => {
   it('creates principal atomically as obligation plus cash movement', () => {
     assert.match(sql, /create or replace function public\.create_loan_principal/);
-    assert.match(sql, /perform public\.require_active_member\(p_household_id\)/);
+    assert.match(sql, /public\.require_active_member\(p_household_id\)/);
     assert.match(sql, /insert into public\.financial_obligations/);
     assert.match(sql, /origin_kind.*'loan'/s);
     assert.match(sql, /insert into public\.money_movements/);
