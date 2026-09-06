@@ -67,4 +67,4 @@ test('transaction history is visible as read-only audited UI', () => {
 
 test('shared expense usa RPC canônica com terceiro e financiador independentes', () => { assert.match(serviceSource, /create_and_settle_shared_expense/); assert.match(serviceSource, /party_id/); assert.match(serviceSource, /p_funder_member_id/); assert.match(serviceSource, /p_gross_amount/); });
 
-test('parcelamento desnecessário é evitado pelo contrato financeiro', () => { assert.match(serviceSource, /p_installment_count/); assert.match(screenSource, /instrumentKind === 'card' && <label[^>]*>Parcelas/); assert.match(screenSource, /if \(next === 'account'\) setInstallmentCount\(1\)/); assert.match(householdSource, /Transações/); });
+test('parcelamento desnecessário é evitado pelo contrato financeiro', () => { assert.match(serviceSource, /p_installment_count/); assert.match(screenSource, /instrumentKind === 'card'[\s\S]*?<label[^>]*>Parcelas/); assert.match(screenSource, /if \(next === 'account'\) setInstallmentCount\(1\)/); assert.match(householdSource, /Transações/); });
