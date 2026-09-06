@@ -6,9 +6,11 @@ const appSource = await readFile(new URL('./CasaFinanceApp.tsx', import.meta.url
 const actionsSource = await readFile(new URL('./GlobalActions.tsx', import.meta.url), 'utf8');
 const adjustmentSource = await readFile(new URL('./NewAdjustmentScreen.tsx', import.meta.url), 'utf8');
 const invoicePaymentSource = await readFile(new URL('./InvoicePaymentAdjustment.tsx', import.meta.url), 'utf8');
+const thirdPartySource = await readFile(new URL('./ThirdPartySettlementAdjustment.tsx', import.meta.url), 'utf8');
 const settlementService = await readFile(new URL('../../finance/memberSettlements.ts', import.meta.url), 'utf8');
 const transferService = await readFile(new URL('../../finance/resourceTransfers.ts', import.meta.url), 'utf8');
 const invoicePaymentService = await readFile(new URL('../../finance/invoicePayments.ts', import.meta.url), 'utf8');
+const thirdPartyService = await readFile(new URL('../../finance/thirdPartyObligations.ts', import.meta.url), 'utf8');
 const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 
@@ -68,4 +70,17 @@ test('invoice payment uses canonical pay_card_invoice without recognizing a seco
   assert.match(invoicePaymentSource, /sem criar uma segunda despesa/);
   assert.match(productSpec, /pagamento da fatura.*não cria nova despesa/i);
   assert.match(constitution, /fatura.*não cria uma segunda despesa/i);
+});
+
+test('third-party settlement liquidates canonical obligations without creating income or expense', () => {
+  assert.match(thirdPartyService, /financial_obligations/);
+  assert.match(thirdPartyService, /obligation_events/);
+  assert.match(thirdPartyService, /rpc\('settle_financial_obligation'/);
+  assert.doesNotMatch(thirdPartyService, /from\('transactions'\).*insert|createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/s);
+  assert.match(adjustmentSource, /selected === 'third-party'/);
+  assert.match(thirdPartySource, /Receber um valor a receber não vira renda/);
+  assert.match(thirdPartySource, /pagar um valor a pagar não vira nova despesa/);
+  assert.match(thirdPartySource, /numericAmount > outstanding/);
+  assert.match(thirdPartySource, /quem efetivamente financiou/i);
+  assert.match(constitution, /caixa aumenta e o recebível diminui, mas renda continua zero/i);
 });
