@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, CircleGauge, CreditCard, Landmark, LoaderCircle, TrendingUp, UsersRound, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
-import { getFinancialDashboard } from '../../finance/financialDashboard.js';
+import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
 
 const money = (value: number | string | null | undefined) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
 const monthLabel = (value: string) => new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
@@ -10,10 +10,14 @@ const healthText = { green: 'Saudável', yellow: 'Atenção', red: 'Crítico' } 
 const healthClass = { green: 'text-emerald-300', yellow: 'text-amber-300', red: 'text-rose-300' } as const;
 
 type Dashboard = Awaited<ReturnType<typeof getFinancialDashboard>>;
+type Perspective = 'household' | string;
 
 export function CasaHomeScreen() {
   const { household, householdMembers } = useSupabaseAuth();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [perspective, setPerspective] = useState<Perspective>('household');
+  const [memberProjection, setMemberProjection] = useState<MemberMonthlyProjection[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -23,16 +27,49 @@ export function CasaHomeScreen() {
     getFinancialDashboard(supabase, household.id).then(setDashboard).catch(() => setError(true)).finally(() => setLoading(false));
   }, [household?.id]);
 
+  useEffect(() => {
+    if (!supabase || !household || perspective === 'household') {
+      setMemberProjection([]);
+      return;
+    }
+    setMemberLoading(true);
+    getMemberFinancialPerspective(supabase, household.id, perspective)
+      .then(setMemberProjection)
+      .catch(() => setMemberProjection([]))
+      .finally(() => setMemberLoading(false));
+  }, [household?.id, perspective]);
+
   if (loading) return <LoaderCircle aria-label="Carregando posição financeira" className="mx-auto mt-16 h-7 w-7 animate-spin text-blue-400" />;
   if (error || !dashboard) return <p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">Não foi possível carregar a posição financeira.</p>;
 
+  const selectedMember = householdMembers.find((member) => member.id === perspective) ?? null;
   const { household: position, health, confidence, attention, projection, cards, settlements, resources } = dashboard;
   const currentMonth = projection[0];
   const openSettlements = settlements.filter((item) => Number(item.realized_outstanding) > 0 || Number(item.projected_outstanding) > 0);
   const memberName = (id: string) => householdMembers.find((member) => member.id === id)?.display_name ?? 'Membro';
 
+  const perspectiveSelector = <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-1" aria-label="Perspectiva financeira">
+    <button type="button" onClick={() => setPerspective('household')} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective === 'household' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>Nossa Casa</button>
+    {householdMembers.slice(0, 2).map((member) => <button key={member.id} type="button" onClick={() => setPerspective(member.id)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective === member.id ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>{member.display_name}</button>)}
+  </div>;
+
+  if (perspective !== 'household') {
+    const current = memberProjection[0];
+    return <div className="space-y-7">
+      <header><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Perspectiva financeira</p><h1 className="mt-1 text-2xl font-black">{selectedMember?.display_name ?? 'Membro'}</h1><p className="mt-1 text-sm text-slate-400">Quanto desta pessoa está disponível, comprometido e projetado sem retirar investimentos nem depender financeiramente do outro membro.</p></header>
+      {perspectiveSelector}
+      {memberLoading ? <LoaderCircle aria-label="Carregando perspectiva individual" className="mx-auto h-7 w-7 animate-spin text-blue-400" /> : <>
+        <section><div className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 shadow-xl"><p className="text-sm text-blue-100">Posso movimentar hoje</p><strong className="mt-1 block text-3xl font-black">{money(current?.opening_liquidity)}</strong><p className="mt-1 text-xs text-blue-100/80">Conta individual entra 100%; conta conjunta entra 50/50 apenas para liquidez.</p><div className="mt-5 border-t border-white/20 pt-4"><p className="text-sm text-blue-100">Deve sobrar comigo <span className="text-xs">(projeção)</span></p><strong className="mt-1 block text-2xl">{money(current?.projected_ending_liquidity)}</strong></div></div></section>
+        <section aria-labelledby="minha-posicao"><h2 id="minha-posicao" className="mb-3 flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-cyan-400" />Minha posição</h2><div className="grid grid-cols-2 gap-3"><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Minha responsabilidade</p><strong className="mt-2 block">{money(current?.economic_responsibility_remaining)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Pode sair dos meus recursos</p><strong className="mt-2 block">{money(current?.projected_funding_remaining)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">A receber do outro membro</p><strong className="mt-2 block">{money(current?.settlement_receivable_position)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">A pagar ao outro membro</p><strong className="mt-2 block">{money(current?.settlement_payable_position)}</strong></article></div><p className="mt-2 text-xs text-slate-500">Responsabilidade econômica não é alterada por conta, cartão, comprador ou por quem efetivamente pagou.</p></section>
+        <section aria-labelledby="meu-mes"><h2 id="meu-mes" className="mb-3 flex items-center gap-2 font-bold"><TrendingUp className="h-5 w-5 text-emerald-400" />Este mês</h2><div className="grid grid-cols-2 gap-3"><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Entrou pra mim</p><strong className="mt-2 block">{money(current?.realized_true_income_in_month)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Ainda entra pra mim</p><strong className="mt-2 block">{money(current?.expected_reliable_income_remaining)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Já saiu dos meus recursos</p><strong className="mt-2 block">{money(current?.realized_funding_in_month)}</strong></article><article className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p className="text-xs text-slate-400">Ainda pode sair</p><strong className="mt-2 block">{money(current?.projected_funding_remaining)}</strong></article></div>{Number(current?.unattributed_funding_remaining ?? 0) > 0 && <p className="mt-3 rounded-2xl border border-amber-900/60 bg-amber-950/20 p-3 text-xs text-amber-200">Há {money(current?.unattributed_funding_remaining)} de compromissos sem rota de funding atribuída. O Casa não vai adivinhar de quem esse dinheiro sairá.</p>}</section>
+        <section aria-labelledby="meu-futuro"><h2 id="meu-futuro" className="mb-3 flex items-center gap-2 font-bold"><Landmark className="h-5 w-5 text-emerald-400" />Olhando pra frente</h2><div className="space-y-3">{memberProjection.map((month) => <article key={month.financial_month} className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-center justify-between"><h3 className="font-bold capitalize">{monthLabel(month.financial_month)}</h3><strong className={Number(month.projected_ending_liquidity) < 0 ? 'text-rose-300' : 'text-emerald-300'}>{money(month.projected_ending_liquidity)}</strong></div><p className="mt-1 text-xs text-slate-500">Liquidez individual projetada no fim do mês</p></article>)}</div></section>
+      </>}
+    </div>;
+  }
+
   return <div className="space-y-7">
     <header><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Nossa Casa</p><h1 className="mt-1 text-2xl font-black">{household?.name}</h1><p className="mt-1 text-sm text-slate-400">O que temos hoje, o que ainda está comprometido e como os próximos meses estão se formando.</p></header>
+    {perspectiveSelector}
 
     <section aria-labelledby="como-estamos"><h2 id="como-estamos" className="mb-3 flex items-center gap-2 font-bold"><CircleGauge className="h-5 w-5 text-blue-400" />Como estamos?</h2><div className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 shadow-xl"><div className="flex items-start justify-between gap-4"><div><p className="text-sm text-blue-100">Saldo atual</p><strong className="mt-1 block text-3xl font-black">{money(health?.current_cash ?? resources.availableCash)}</strong><p className="mt-1 text-xs text-blue-100/80">Somente dinheiro realizado disponível. Limites, reservas e valores a receber ficam fora.</p></div>{health && <span className={`rounded-full bg-black/20 px-3 py-1 text-xs font-bold ${healthClass[health.health]}`}>{healthText[health.health]}</span>}</div><div className="mt-5 border-t border-white/20 pt-4"><p className="text-sm text-blue-100">Deve sobrar <span className="text-xs">(projeção)</span></p><strong className="mt-1 block text-2xl">{money(health?.projected_ending_cash ?? position?.projected_balance)}</strong>{confidence && <p className="mt-2 text-xs text-blue-100/80">{confidence.confidence_label}</p>}</div></div></section>
 
