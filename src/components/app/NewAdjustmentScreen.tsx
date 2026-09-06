@@ -6,6 +6,7 @@ import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../fin
 import { listMemberSettlementPositions, settleMemberPosition, type MemberSettlementPosition } from '../../finance/memberSettlements.js';
 
 const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 
 const intentions = [
   { id: 'transfer', label: 'Transferência entre recursos', description: 'Mover dinheiro entre contas ou recursos sem criar renda ou despesa.', icon: ArrowLeftRight, ready: false },
@@ -54,14 +55,16 @@ export function NewAdjustmentScreen() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!supabase || !household) return;
+    const normalizedAmount = normalizeAmount(amount);
+    const numericAmount = Number(normalizedAmount);
     if (!payer || !receiver || payer === receiver) { setError('Escolha quem paga e quem recebe.'); return; }
-    if (Number(amount) <= 0) { setError('Informe um valor maior que zero.'); return; }
-    if (Number(amount) > realizedOutstanding) { setError('O valor não pode superar a dívida realizada em aberto.'); return; }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setError('Informe um valor maior que zero.'); return; }
+    if (numericAmount > realizedOutstanding) { setError('O valor não pode superar a dívida realizada em aberto.'); return; }
     if (!sourceAccount || !destinationAccount) { setError('Informe de qual recurso sai e em qual recurso entra.'); return; }
     if (sourceAccount === destinationAccount) { setError('Origem e destino precisam ser recursos diferentes.'); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
-      await settleMemberPosition(supabase, { householdId: household.id, payerMemberId: payer, receiverMemberId: receiver, amount, sourceAccountId: sourceAccount, destinationAccountId: destinationAccount, notes });
+      await settleMemberPosition(supabase, { householdId: household.id, payerMemberId: payer, receiverMemberId: receiver, amount: normalizedAmount, sourceAccountId: sourceAccount, destinationAccountId: destinationAccount, notes });
       setSuccess('Acerto registrado como movimentação neutra. Nenhuma renda ou despesa nova foi criada.');
       setAmount(''); setNotes(''); await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o acerto.'); }
