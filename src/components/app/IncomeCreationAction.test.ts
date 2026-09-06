@@ -11,7 +11,7 @@ const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', i
 test('income creation uses its dedicated canonical RPC instead of the generic transaction creator', () => {
   assert.match(serviceSource, /rpc\('create_income_fact'/);
   assert.doesNotMatch(serviceSource, /create_financial_transaction|createHouseholdTransaction/);
-  assert.match(transactionsScreenSource, /if \(mode === 'income'\) return <IncomeLedgerScreen \/>/);
+  assert.match(transactionsScreenSource, /if \(mode === 'income'\) return <IncomeLedgerScreen/);
   assert.doesNotMatch(transactionsScreenSource, /mode === 'income'.*HouseholdTransactionsSetup/s);
 });
 
@@ -36,7 +36,7 @@ test('income UX preserves forecast versus realized cash and excludes neutral inf
 
 test('dedicated income screen keeps creation, receipt and read list in one journey', () => {
   assert.match(ledgerSource, /<IncomeCreationAction onCreated=\{refresh\}\/>/);
-  assert.match(ledgerSource, /<IncomeReceiptAction onCompleted=\{refresh\}\/>/);
+  assert.match(ledgerSource, /<IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\} onCompleted=\{refresh\}\/>/);
   assert.match(ledgerSource, /Rendas cadastradas/);
   assert.match(ledgerSource, /row\.type === 'income'/);
 });
