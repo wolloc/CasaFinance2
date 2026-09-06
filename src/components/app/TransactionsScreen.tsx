@@ -8,6 +8,7 @@ import { DirectExpensePaymentAction } from './DirectExpensePaymentAction.js';
 import { PartialDirectRefundAction } from './PartialDirectRefundAction.js';
 import { CardRefundAction } from './CardRefundAction.js';
 import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
+import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 
 export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   if (mode === 'income') return <IncomeLedgerScreen />;
@@ -17,6 +18,7 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
     <PartialDirectRefundAction />
     <CardRefundAction />
     <PostPaymentCardRefundAction />
+    <ExpenseRoleCorrectionAction />
     <RecurringExpenseAction />
     <RecurringExpenseManagement />
     <HouseholdTransactionsSetup embedded mode={mode} />
