@@ -3,11 +3,18 @@ import { LoaderCircle, ReceiptText } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
+import { ensureRecurringIncomeHorizon } from '../../finance/recurringIncome.js';
 import { IncomeCreationAction } from './IncomeCreationAction.js';
 import { IncomeReceiptAction } from './IncomeReceiptAction.js';
+import { RecurringIncomeAction } from './RecurringIncomeAction.js';
 
 const money = (value: string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const stateLabel: Record<string,string> = { forecast: 'Prevista', confirmed: 'Confirmada', realized: 'Realizada', cancelled: 'Cancelada', reversed: 'Estornada' };
+const horizonDate = () => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
 export function IncomeLedgerScreen() {
   const { household } = useSupabaseAuth();
@@ -20,7 +27,8 @@ export function IncomeLedgerScreen() {
     if (!supabase || !household) return;
     let active = true;
     setLoading(true); setError(null);
-    listHouseholdTransactions(supabase, household.id)
+    ensureRecurringIncomeHorizon(supabase, household.id, horizonDate())
+      .then(() => listHouseholdTransactions(supabase!, household.id))
       .then((transactions) => { if (active) setRows(transactions.filter((row) => row.type === 'income')); })
       .catch(() => { if (active) setError('Não foi possível carregar as rendas da Casa.'); })
       .finally(() => { if (active) setLoading(false); });
@@ -32,6 +40,7 @@ export function IncomeLedgerScreen() {
   return <div className="space-y-5">
     <header><h1 className="text-2xl font-black">Entradas</h1><p className="mt-1 text-sm text-slate-400">Renda verdadeira, previsão e caixa real ficam separados. O Casa nunca transforma transferência, acerto ou empréstimo em renda.</p></header>
     <IncomeCreationAction onCreated={refresh}/>
+    <RecurringIncomeAction onCreated={refresh}/>
     <IncomeReceiptAction onCompleted={refresh}/>
     <section className="space-y-3">
       <h2 className="font-bold">Rendas cadastradas</h2>
