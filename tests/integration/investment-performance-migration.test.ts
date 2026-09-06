@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const sql=await readFile(new URL('../../supabase/migrations/202609060053_investment_performance_events.sql',import.meta.url),'utf8');
+test('principal remains separate from investment performance',()=>{assert.match(sql,/investment_performance_kind as enum \('yield','loss'\)/);assert.match(sql,/record_investment_performance/);assert.doesNotMatch(sql,/create_transfer\(/);});
+test('yield is true economic income but does not create available cash movement',()=>{assert.match(sql,/when p_kind='yield' then 'income'/);assert.match(sql,/interest_yield/);assert.match(sql,/transaction_components[\s\S]*'yield'/);assert.doesNotMatch(sql,/insert into public\.money_movements/);});
+test('loss reduces patrimonial balance without becoming consumption expense',()=>{assert.match(sql,/when p_kind='yield' then p_amount else -p_amount end/);assert.match(sql,/when p_kind='yield' then 'income'[\s\S]*else 'adjustment'/);assert.doesNotMatch(sql,/then 'expense'/);});
+test('performance only applies to investments or reserves',()=>{assert.match(sql,/account_row\.type='investment' or account_row\.resource_restriction='reserve'/);assert.match(sql,/is_active_household_member/);assert.match(sql,/security_invoker=true/);});
