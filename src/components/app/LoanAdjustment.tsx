@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase.js';
 import { isTransactionalResource, listInvestmentReserveResources, type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
 import { createFinancialParty, createLoanPrincipal, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
 import { LoanChargesAdjustment } from './LoanChargesAdjustment.js';
+import { LoanPaymentAdjustment } from './LoanPaymentAdjustment.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
@@ -74,5 +75,6 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
       {accounts.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400"><UserPlus className="mr-1 inline h-4 w-4"/>Cadastre um recurso transacional antes de registrar o principal.</p>}
     </form>}
     <LoanChargesAdjustment/>
+    <LoanPaymentAdjustment/>
   </div>;
 }
