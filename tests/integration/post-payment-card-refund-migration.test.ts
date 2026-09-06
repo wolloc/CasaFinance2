@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const sql=await readFile(new URL('../../supabase/migrations/202609060059_post_payment_card_refunds.sql',import.meta.url),'utf8');
+test('post-payment refund distinguishes future invoice credit from cash return',()=>{assert.match(sql,/future_invoice_credit/);assert.match(sql,/cash_return/);assert.match(sql,/destination_account_id/);assert.match(sql,/target_invoice_id/);});
+test('cash return is refund cash, never true income',()=>{assert.match(sql,/money_movements/);assert.match(sql,/'refund','realized'/);assert.doesNotMatch(sql,/kind,state,amount[^;]*'income'/);});
+test('safe route refuses ambiguous responsibility or funding',()=>{assert.match(sql,/shared or multi-route funding requires explicit refund redistribution/);assert.match(sql,/responsible_member_id=f\.funder_member_id/);assert.match(sql,/refund beneficiary differs from the unambiguous original responsible funder/);});
+test('future credit reduces obligation without cash movement',()=>{assert.match(sql,/update public\.card_invoices set total_amount=total_amount-p_amount/);assert.match(sql,/future invoice target required/);});
