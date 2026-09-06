@@ -19,8 +19,9 @@ export type ThirdPartyObligation = {
 
 export type FinancialPartyOption = { id: string; name: string };
 export type ReceivableLossAllocation = { memberId: string; percentage: number };
+export type DebtForgivenessAllocation = { memberId: string; percentage: number };
 
-type LossSplit = { member_id: string; percentage: number; amount: number };
+type MemberAmountSplit = { member_id: string; percentage: number; amount: number };
 
 export async function listFinancialPartyOptions(client: SupabaseClient, householdId: string): Promise<FinancialPartyOption[]> {
   const result = await client.from('financial_parties').select('id,name').eq('household_id', householdId).is('deactivated_at', null).order('name');
@@ -54,13 +55,13 @@ export async function createManualThirdPartyObligation(client: SupabaseClient, i
   return result.data as string;
 }
 
-export function buildReceivableLossSplits(amount: string, allocations: ReceivableLossAllocation[]): LossSplit[] {
+function buildMemberAmountSplits(amount: string, allocations: Array<{ memberId: string; percentage: number }>, totalError: string): MemberAmountSplit[] {
   const totalCents = Math.round(Number(amount) * 100);
   const active = allocations.filter((allocation) => allocation.percentage > 0);
   const percentageTotal = active.reduce((sum, allocation) => sum + allocation.percentage, 0);
-  if (!Number.isFinite(totalCents) || totalCents <= 0) throw new Error('Valor da perda inválido.');
-  if (active.length === 0 || Math.abs(percentageTotal - 100) > 0.000001) throw new Error('A responsabilidade pela perda precisa totalizar 100%.');
-  if (new Set(active.map((allocation) => allocation.memberId)).size !== active.length) throw new Error('Cada membro deve aparecer apenas uma vez na responsabilidade.');
+  if (!Number.isFinite(totalCents) || totalCents <= 0) throw new Error('Valor inválido.');
+  if (active.length === 0 || Math.abs(percentageTotal - 100) > 0.000001) throw new Error(totalError);
+  if (new Set(active.map((allocation) => allocation.memberId)).size !== active.length) throw new Error('Cada membro deve aparecer apenas uma vez.');
 
   const raw = active.map((allocation, index) => {
     const exact = totalCents * allocation.percentage / 100;
@@ -76,6 +77,14 @@ export function buildReceivableLossSplits(amount: string, allocations: Receivabl
     remainder -= 1;
   }
   return raw.map((row) => ({ member_id: row.memberId, percentage: row.percentage, amount: (cents.get(row.index) ?? 0) / 100 }));
+}
+
+export function buildReceivableLossSplits(amount: string, allocations: ReceivableLossAllocation[]): MemberAmountSplit[] {
+  return buildMemberAmountSplits(amount, allocations, 'A responsabilidade pela perda precisa totalizar 100%.');
+}
+
+export function buildDebtForgivenessSplits(amount: string, allocations: DebtForgivenessAllocation[]): MemberAmountSplit[] {
+  return buildMemberAmountSplits(amount, allocations, 'O benefício econômico do perdão precisa totalizar 100%.');
 }
 
 export async function writeOffThirdPartyReceivable(client: SupabaseClient, input: {
@@ -94,6 +103,28 @@ export async function writeOffThirdPartyReceivable(client: SupabaseClient, input
     p_loss_date: input.lossDate,
     p_splits: splits,
     p_category_id: null,
+    p_notes: input.notes?.trim() || null,
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
+export async function forgiveThirdPartyPayable(client: SupabaseClient, input: {
+  householdId: string;
+  obligationId: string;
+  amount: string;
+  forgivenDate: string;
+  allocations: DebtForgivenessAllocation[];
+  notes?: string;
+}) {
+  const splits = buildDebtForgivenessSplits(input.amount, input.allocations);
+  const result = await client.rpc('forgive_payable_obligation', {
+    p_household_id: input.householdId,
+    p_obligation_id: input.obligationId,
+    p_amount: input.amount,
+    p_forgiven_date: input.forgivenDate,
+    p_allocations: splits,
+    p_request_key: crypto.randomUUID(),
     p_notes: input.notes?.trim() || null,
   });
   if (result.error) throw result.error;
