@@ -8,6 +8,10 @@ import { payHouseholdInvoice } from '../../finance/invoicePayments.js';
 
 const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
+const localDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
   const { household, householdMembers } = useSupabaseAuth();
@@ -17,7 +21,7 @@ export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
   const [sourceAccountId, setSourceAccountId] = useState('');
   const [funderMemberId, setFunderMemberId] = useState('');
   const [amount, setAmount] = useState('');
-  const [paidDate, setPaidDate] = useState(new Date().toISOString().slice(0, 10));
+  const [paidDate, setPaidDate] = useState(localDate());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
