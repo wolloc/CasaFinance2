@@ -104,7 +104,12 @@ export async function cancelHouseholdTransaction(client: SupabaseClient, househo
 }
 
 export async function refundHouseholdDirectExpense(client: SupabaseClient, householdId: string, transaction: HouseholdTransaction) {
-  const response = await client.rpc('refund_direct_expense', { p_household_id: householdId, p_transaction_id: transaction.id, p_amount: transaction.realized_amount, p_refunded_at: new Date().toISOString(), p_reason: 'Estorno registrado pelo usuário', p_request_key: requestKey('refund', transaction.id) });
+  const refunds = await client.from('transaction_adjustment_events').select('amount').eq('household_id', householdId).eq('source_transaction_id', transaction.id).eq('kind', 'refund');
+  if (refunds.error) throw refunds.error;
+  const refunded = (refunds.data ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const remaining = Math.max(0, Number(transaction.realized_amount) - refunded);
+  if (remaining <= 0) return;
+  const response = await client.rpc('refund_direct_expense_partial', { p_household_id: householdId, p_transaction_id: transaction.id, p_amount: remaining, p_refunded_at: new Date().toISOString(), p_reason: 'Estorno integral do saldo restante registrado pelo usuário', p_request_key: requestKey('refund', transaction.id) });
   if (response.error) throw response.error;
 }
 
