@@ -8,11 +8,13 @@ const adjustmentSource = await readFile(new URL('./NewAdjustmentScreen.tsx', imp
 const invoicePaymentSource = await readFile(new URL('./InvoicePaymentAdjustment.tsx', import.meta.url), 'utf8');
 const thirdPartySource = await readFile(new URL('./ThirdPartySettlementAdjustment.tsx', import.meta.url), 'utf8');
 const investmentReserveSource = await readFile(new URL('./InvestmentReserveAdjustment.tsx', import.meta.url), 'utf8');
+const loanSource = await readFile(new URL('./LoanAdjustment.tsx', import.meta.url), 'utf8');
 const settlementService = await readFile(new URL('../../finance/memberSettlements.ts', import.meta.url), 'utf8');
 const transferService = await readFile(new URL('../../finance/resourceTransfers.ts', import.meta.url), 'utf8');
 const invoicePaymentService = await readFile(new URL('../../finance/invoicePayments.ts', import.meta.url), 'utf8');
 const thirdPartyService = await readFile(new URL('../../finance/thirdPartyObligations.ts', import.meta.url), 'utf8');
 const investmentReserveService = await readFile(new URL('../../finance/investmentReserveAdjustments.ts', import.meta.url), 'utf8');
+const loanService = await readFile(new URL('../../finance/loanPrincipals.ts', import.meta.url), 'utf8');
 const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 
@@ -27,12 +29,12 @@ test('all three Product Spec global actions are present independently', () => {
   assert.match(appSource, /onAdjustment=\{openAdjustment\}/);
 });
 
-test('Novo acerto exposes explicit intentions without pretending unfinished flows are operational', () => {
+test('Novo acerto exposes all six Product Spec intentions as operational flows', () => {
   for (const label of ['Transferência entre recursos', 'Acerto entre nós', 'Acerto com outra pessoa', 'Pagamento de fatura', 'Investimento / reserva', 'Empréstimos']) {
     assert.match(adjustmentSource, new RegExp(label.replace('/', '\\/')));
     assert.match(productSpec, new RegExp(label.replace('/', '\\/')));
   }
-  assert.match(adjustmentSource, /Em preparação/);
+  assert.doesNotMatch(adjustmentSource, /ready: false/);
 });
 
 test('member settlement uses the canonical neutral RPC and never writes an income or expense', () => {
@@ -100,4 +102,20 @@ test('investment and reserve principal movement stays economically neutral', () 
   assert.match(investmentReserveSource, /Nenhuma renda foi criada/);
   assert.match(productSpec, /aporte\/resgate de principal neutros, rendimento\/perda separados/i);
   assert.match(constitution, /resgate de principal/i);
+});
+
+test('loan principal creates obligation and cash without becoming income or expense', () => {
+  assert.match(loanService, /rpc\('create_loan_principal'/);
+  assert.match(loanService, /rpc\('create_financial_party'/);
+  assert.doesNotMatch(loanService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
+  assert.match(adjustmentSource, /selected === 'loan'/);
+  assert.match(loanSource, /Emprestei dinheiro/);
+  assert.match(loanSource, /Peguei emprestado/);
+  assert.match(loanSource, /Emprestar dinheiro não é despesa/);
+  assert.match(loanSource, /pegar dinheiro emprestado não é renda/i);
+  assert.match(loanSource, /Juros, tarifas e perdas são fatos econômicos separados/);
+  assert.match(loanSource, /caixa diminuiu e nasceu um valor a receber/);
+  assert.match(loanSource, /caixa aumentou e nasceu um valor a pagar/);
+  assert.match(productSpec, /empréstimo tomado/i);
+  assert.match(constitution, /empréstimo/i);
 });
