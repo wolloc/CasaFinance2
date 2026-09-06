@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.js';
 import type { TransactionKind } from '../../finance/householdTransactions.js';
+import { consumeRecurringExpenseActionIntent } from '../../finance/recurringExpenseIntent.js';
 import { IncomeLedgerScreen } from './IncomeLedgerScreen.js';
 import { RecurringExpenseAction } from './RecurringExpenseAction.js';
 import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
@@ -12,9 +14,10 @@ import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
 import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 
 export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
+  const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   if (mode === 'income') return <IncomeLedgerScreen />;
   return <div className="space-y-4">
-    <RecurringExpenseCommitmentCenter />
+    <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />
     <DirectExpensePaymentAction />
     <ExternalExpensePaymentAction />
     <PartialDirectRefundAction />
