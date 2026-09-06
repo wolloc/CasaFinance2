@@ -46,20 +46,18 @@ as $$
            when a.attention_type in ('overdue_commitment','recurring_expense_due') then 'expenses'
            when a.attention_type in ('overdue_invoice','card_coverage_risk','card_over_limit') then 'invoices'
            when a.attention_type='delayed_expected_income' then 'income'
-           when a.attention_type in ('negative_projection','overdraft_in_use') then 'coverage'
            else null end,
          case
            when a.attention_type in ('overdue_commitment','recurring_expense_due') then 'Resolver em Gastos'
            when a.attention_type in ('overdue_invoice','card_coverage_risk','card_over_limit') then 'Ver faturas'
            when a.attention_type='delayed_expected_income' then 'Revisar entrada'
-           when a.attention_type in ('negative_projection','overdraft_in_use') then 'Planejar cobertura'
            else null end
     from public.financial_attention_items(p_household_id) a
    order by priority_score desc, a.due_date nulls last, a.amount desc;
 $$;
 
 comment on function public.financial_priority_attention_items(uuid) is
-  'Canonical read-only priority layer over actionable attention. Ranking explains urgency and suggests navigation only; no suggested action creates a financial fact.';
+  'Canonical read-only priority layer over actionable attention. Ranking explains urgency and suggests navigation only when the destination is unambiguous; no suggested action creates a financial fact.';
 
 revoke all on function public.financial_priority_attention_items(uuid) from public,anon;
 grant execute on function public.financial_priority_attention_items(uuid) to authenticated;
