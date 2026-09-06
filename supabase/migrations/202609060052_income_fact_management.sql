@@ -59,7 +59,7 @@ begin
 
   update public.money_movements set
     amount=p_amount,description=trim(p_description),category_id=p_category_id,
-    movement_date=p_expected_date,competence_date=date_trunc('month',p_expected_date)::date,updated_at=now()
+    movement_date=p_expected_date,competence_date=date_trunc('month',p_expected_date)::date
   where id=movement.id;
 
   return event_id;
@@ -95,14 +95,15 @@ begin
   select * into movement from public.money_movements m
    where m.household_id=p_household_id and m.related_transaction_id=tx.id and m.kind='income' and m.state='projected'
    order by m.created_at limit 1 for update;
-  if movement.id is null then raise exception 'projected income movement not found' using errcode='0A000'; end if;
+  if movement.id is null or exists(select 1 from public.money_movements m where m.household_id=p_household_id and m.related_transaction_id=tx.id and m.kind='income' and m.state='projected' and m.id<>movement.id)
+  then raise exception 'income projected cash leg is not uniquely resolvable' using errcode='0A000'; end if;
 
   insert into public.transaction_adjustment_events(household_id,source_transaction_id,kind,before_payload,after_payload,reason,request_key,created_by_member_id)
   values(p_household_id,tx.id,'cancellation',jsonb_build_object('economic_state',tx.economic_state,'status',tx.status,'amount',tx.amount),jsonb_build_object('economic_state','cancelled','status','cancelled','amount',tx.amount),trim(p_reason),trim(p_request_key),caller.id)
   returning id into event_id;
 
   update public.transactions set economic_state='cancelled',status='cancelled',updated_at=now() where id=tx.id;
-  update public.money_movements set state='cancelled',updated_at=now() where id=movement.id;
+  update public.money_movements set state='cancelled' where id=movement.id;
   return event_id;
 end $$;
 
