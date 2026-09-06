@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Banknote, LoaderCircle, UserPlus } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
-import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
+import { isTransactionalResource, listInvestmentReserveResources, type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
 import { createFinancialParty, createLoanPrincipal, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
@@ -16,7 +16,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
   const { household } = useSupabaseAuth();
   const [direction, setDirection] = useState<'granted' | 'taken'>('granted');
   const [parties, setParties] = useState<FinancialParty[]>([]);
-  const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
+  const [accounts, setAccounts] = useState<InvestmentReserveResource[]>([]);
   const [counterpartyId, setCounterpartyId] = useState('');
   const [newPartyName, setNewPartyName] = useState('');
   const [accountId, setAccountId] = useState('');
@@ -34,12 +34,12 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
     if (!supabase || !household) return;
     setLoading(true); setError(null);
     try {
-      const [people, financial] = await Promise.all([
+      const [people, resources] = await Promise.all([
         listFinancialParties(supabase, household.id),
-        listHouseholdFinancialAccounts(supabase, household.id),
+        listInvestmentReserveResources(supabase, household.id),
       ]);
       setParties(people);
-      setAccounts(financial.accounts.filter((account) => account.type !== 'meal_benefit'));
+      setAccounts(resources.filter(isTransactionalResource));
     } catch { setError('Não foi possível carregar pessoas e recursos da Casa.'); }
     finally { setLoading(false); }
   };
@@ -90,7 +90,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
       <div className="rounded-xl bg-slate-950 p-3 text-xs text-slate-400">{direction === 'granted' ? 'O dinheiro sai da Casa e nasce um recebível contra a outra pessoa.' : 'O dinheiro entra na Casa e nasce um pagável para a outra pessoa.'} O principal permanece neutro no resultado econômico.</div>
       <label className="block text-sm">Pessoa<select value={counterpartyId} onChange={(event) => { setCounterpartyId(event.target.value); if (event.target.value) setNewPartyName(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Nova pessoa</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
       {!counterpartyId && <label className="block text-sm">Nome da pessoa<input value={newPartyName} onChange={(event) => setNewPartyName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: Letícia" /></label>}
-      <label className="block text-sm">{direction === 'granted' ? 'De qual recurso o dinheiro saiu?' : 'Em qual recurso o dinheiro entrou?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+      <label className="block text-sm">{direction === 'granted' ? 'De qual recurso o dinheiro saiu?' : 'Em qual recurso o dinheiro entrou?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.account_id} value={account.account_id}>{account.name}</option>)}</select></label>
       <label className="block text-sm">Valor do principal<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
       <label className="block text-sm">Data do empréstimo<input type="date" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <label className="block text-sm">Data prevista de devolução (opcional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
@@ -100,7 +100,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
       {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}
       {success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
       <button type="submit" disabled={saving || accounts.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><Banknote className="h-4 w-4"/>{saving ? 'Registrando…' : 'Registrar empréstimo'}</button>
-      {accounts.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400"><UserPlus className="mr-1 inline h-4 w-4"/>Cadastre um recurso financeiro antes de registrar o principal.</p>}
+      {accounts.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400"><UserPlus className="mr-1 inline h-4 w-4"/>Cadastre um recurso transacional antes de registrar o principal.</p>}
     </form>}
   </div>;
 }
