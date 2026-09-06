@@ -8,6 +8,7 @@ const localDate = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
+const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const money = (value: string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const frequencyLabel: Record<RecurringExpenseFrequency,string> = { weekly: 'Semanal', monthly: 'Mensal', yearly: 'Anual' };
 
@@ -44,9 +45,10 @@ export function RecurringExpenseManagement({ onChanged }: { onChanged?: () => vo
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!supabase || !household || !selected || !mode) return;
+    const normalizedAmount = normalizeAmount(amount);
     if (!reason.trim()) { setError('Explique o motivo da mudança para manter o histórico auditável.'); return; }
     if (effectiveFrom < localDate()) { setError('A mudança só pode valer de hoje em diante.'); return; }
-    if (mode === 'revise' && (!Number.isFinite(Number(amount.replace(',', '.'))) || Number(amount.replace(',', '.')) <= 0)) { setError('Informe um valor maior que zero.'); return; }
+    if (mode === 'revise' && (!Number.isFinite(Number(normalizedAmount)) || Number(normalizedAmount) <= 0)) { setError('Informe um valor maior que zero.'); return; }
     if (mode === 'revise' && (!Number.isInteger(intervalCount) || intervalCount < 1)) { setError('O intervalo precisa ser de pelo menos 1 período.'); return; }
     if (mode === 'revise' && endDate && endDate < effectiveFrom) { setError('A data final não pode ser anterior ao início da nova versão.'); return; }
 
@@ -56,7 +58,7 @@ export function RecurringExpenseManagement({ onChanged }: { onChanged?: () => vo
         await closeRecurringExpenseRule(supabase, { householdId: household.id, ruleId: selected.id, effectiveFrom, reason });
         setSuccess('Série encerrada dali em diante. Gastos e efeitos financeiros anteriores foram preservados.');
       } else {
-        await reviseRecurringExpenseRule(supabase, { householdId: household.id, ruleId: selected.id, effectiveFrom, amount: amount.replace(',', '.'), frequency, intervalCount, endDate, reason });
+        await reviseRecurringExpenseRule(supabase, { householdId: household.id, ruleId: selected.id, effectiveFrom, amount: normalizedAmount, frequency, intervalCount, endDate, reason });
         setSuccess('Nova versão criada. O passado permaneceu intacto e apenas o futuro foi recalculado.');
       }
       setSelected(null); setMode(null); await load(); onChanged?.();
