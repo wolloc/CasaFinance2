@@ -65,6 +65,27 @@ export type MonthlyProjection = {
   projected_ending_cash: number;
 };
 
+export type MemberMonthlyProjection = {
+  household_id: string;
+  member_id: string;
+  reference_month: string;
+  financial_month: string;
+  month_index: number;
+  opening_liquidity: number;
+  realized_true_income_in_month: number;
+  expected_reliable_income_remaining: number;
+  economic_responsibility_remaining: number;
+  realized_funding_in_month: number;
+  projected_funding_remaining: number;
+  unattributed_funding_remaining: number;
+  scheduled_settlement_inflow: number;
+  scheduled_settlement_outflow: number;
+  settlement_receivable_position: number;
+  settlement_payable_position: number;
+  projected_net_change: number;
+  projected_ending_liquidity: number;
+};
+
 export type CardHealthPosition = {
   card_id: string;
   card_name: string;
@@ -115,6 +136,17 @@ const summarizeResources = (rows: AccountBalanceRow[]): ResourceSummary => rows.
   else if (!row.is_restricted) summary.availableCash += amount;
   return summary;
 }, { availableCash: 0, benefits: 0, reserves: 0, investments: 0 });
+
+export async function getMemberFinancialPerspective(client: SupabaseClient, householdId: string, memberId: string): Promise<MemberMonthlyProjection[]> {
+  const response = await client.rpc('financial_member_monthly_projection', {
+    p_household_id: householdId,
+    p_member_id: memberId,
+    p_reference_month: currentMonth(),
+    p_horizon_months: 3,
+  });
+  if (response.error) throw response.error;
+  return (response.data ?? []) as MemberMonthlyProjection[];
+}
 
 export async function getFinancialDashboard(client: SupabaseClient, householdId: string) {
   const [household, members, health, confidence, attention, projection, cards, settlements, accountBalances] = await Promise.all([
