@@ -7,6 +7,7 @@ import { ensureRecurringIncomeHorizon } from '../../finance/recurringIncome.js';
 import { IncomeCreationAction } from './IncomeCreationAction.js';
 import { IncomeReceiptAction } from './IncomeReceiptAction.js';
 import { RecurringIncomeAction } from './RecurringIncomeAction.js';
+import { RecurringIncomeManagement } from './RecurringIncomeManagement.js';
 
 const money = (value: string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const stateLabel: Record<string,string> = { forecast: 'Prevista', confirmed: 'Confirmada', realized: 'Realizada', cancelled: 'Cancelada', reversed: 'Estornada' };
@@ -41,6 +42,7 @@ export function IncomeLedgerScreen() {
     <header><h1 className="text-2xl font-black">Entradas</h1><p className="mt-1 text-sm text-slate-400">Renda verdadeira, previsão e caixa real ficam separados. O Casa nunca transforma transferência, acerto ou empréstimo em renda.</p></header>
     <IncomeCreationAction onCreated={refresh}/>
     <RecurringIncomeAction onCreated={refresh}/>
+    <RecurringIncomeManagement refreshKey={refreshKey} onChanged={refresh}/>
     <IncomeReceiptAction onCompleted={refresh}/>
     <section className="space-y-3">
       <h2 className="font-bold">Rendas cadastradas</h2>
