@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const screen=await readFile(new URL('./InvestmentReserveAdjustment.tsx',import.meta.url),'utf8');const service=await readFile(new URL('../../finance/investmentReserveAdjustments.ts',import.meta.url),'utf8');
+test('investment UI separates principal from performance',()=>{assert.match(screen,/Aporte \/ resgate/);assert.match(screen,/Rendimento \/ perda/);assert.match(screen,/Aporte e resgate apenas movem patrimônio/);});
+test('yield and loss explain their different economic meaning',()=>{assert.match(screen,/renda econômica verdadeira/);assert.match(screen,/não melhora o dinheiro livre da Casa até um resgate explícito/);assert.match(screen,/não é tratada como compra ou despesa de consumo/);});
+test('performance uses dedicated canonical RPC and history read model',()=>{assert.match(service,/record_investment_performance/);assert.match(service,/financial_investment_performance_positions/);assert.doesNotMatch(service,/createIncomeFact|createHouseholdTransaction/);});
