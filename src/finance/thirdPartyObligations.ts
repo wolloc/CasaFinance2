@@ -18,6 +18,9 @@ export type ThirdPartyObligation = {
 };
 
 export type FinancialPartyOption = { id: string; name: string };
+export type ReceivableLossAllocation = { memberId: string; percentage: number };
+
+type LossSplit = { member_id: string; percentage: number; amount: number };
 
 export async function listFinancialPartyOptions(client: SupabaseClient, householdId: string): Promise<FinancialPartyOption[]> {
   const result = await client.from('financial_parties').select('id,name').eq('household_id', householdId).is('deactivated_at', null).order('name');
@@ -45,6 +48,52 @@ export async function createManualThirdPartyObligation(client: SupabaseClient, i
     p_due_date: input.dueDate || null,
     p_description: input.description.trim(),
     p_request_key: requestKey,
+    p_notes: input.notes?.trim() || null,
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
+export function buildReceivableLossSplits(amount: string, allocations: ReceivableLossAllocation[]): LossSplit[] {
+  const totalCents = Math.round(Number(amount) * 100);
+  const active = allocations.filter((allocation) => allocation.percentage > 0);
+  const percentageTotal = active.reduce((sum, allocation) => sum + allocation.percentage, 0);
+  if (!Number.isFinite(totalCents) || totalCents <= 0) throw new Error('Valor da perda inválido.');
+  if (active.length === 0 || Math.abs(percentageTotal - 100) > 0.000001) throw new Error('A responsabilidade pela perda precisa totalizar 100%.');
+  if (new Set(active.map((allocation) => allocation.memberId)).size !== active.length) throw new Error('Cada membro deve aparecer apenas uma vez na responsabilidade.');
+
+  const raw = active.map((allocation, index) => {
+    const exact = totalCents * allocation.percentage / 100;
+    const base = Math.floor(exact);
+    return { ...allocation, index, base, fraction: exact - base };
+  });
+  let remainder = totalCents - raw.reduce((sum, row) => sum + row.base, 0);
+  const priority = [...raw].sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  const cents = new Map(raw.map((row) => [row.index, row.base]));
+  for (const row of priority) {
+    if (remainder <= 0) break;
+    cents.set(row.index, (cents.get(row.index) ?? 0) + 1);
+    remainder -= 1;
+  }
+  return raw.map((row) => ({ member_id: row.memberId, percentage: row.percentage, amount: (cents.get(row.index) ?? 0) / 100 }));
+}
+
+export async function writeOffThirdPartyReceivable(client: SupabaseClient, input: {
+  householdId: string;
+  obligationId: string;
+  amount: string;
+  lossDate: string;
+  allocations: ReceivableLossAllocation[];
+  notes?: string;
+}) {
+  const splits = buildReceivableLossSplits(input.amount, input.allocations);
+  const result = await client.rpc('write_off_receivable', {
+    p_household_id: input.householdId,
+    p_obligation_id: input.obligationId,
+    p_amount: input.amount,
+    p_loss_date: input.lossDate,
+    p_splits: splits,
+    p_category_id: null,
     p_notes: input.notes?.trim() || null,
   });
   if (result.error) throw result.error;
