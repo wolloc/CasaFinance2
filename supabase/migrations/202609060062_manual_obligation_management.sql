@@ -48,6 +48,7 @@ declare
   caller public.household_members;
   obligation public.financial_obligations;
   existing public.manual_obligation_adjustment_events;
+  event_id uuid;
   before_payload jsonb;
   after_payload jsonb;
 begin
@@ -66,7 +67,12 @@ begin
   select * into existing
   from public.manual_obligation_adjustment_events
   where household_id=p_household_id and request_key=trim(p_request_key);
-  if existing.id is not null then return existing.id; end if;
+  if existing.id is not null then
+    if existing.action<>'correction' or existing.obligation_id<>p_obligation_id then
+      raise exception 'idempotency key already used with different command' using errcode='23505';
+    end if;
+    return existing.id;
+  end if;
 
   select * into obligation
   from public.financial_obligations
@@ -114,10 +120,10 @@ begin
     household_id,obligation_id,action,before_payload,after_payload,reason,request_key,created_by_member_id
   ) values (
     p_household_id,obligation.id,'correction',before_payload,after_payload,trim(p_reason),trim(p_request_key),caller.id
-  ) returning id into p_obligation_id;
+  ) returning id into event_id;
 
   -- Correção administrativa: deliberadamente sem transactions, money_movements, funding_events ou obligation_events.
-  return p_obligation_id;
+  return event_id;
 end
 $$;
 
@@ -148,7 +154,12 @@ begin
   select * into existing
   from public.manual_obligation_adjustment_events
   where household_id=p_household_id and request_key=trim(p_request_key);
-  if existing.id is not null then return existing.id; end if;
+  if existing.id is not null then
+    if existing.action<>'cancellation' or existing.obligation_id<>p_obligation_id then
+      raise exception 'idempotency key already used with different command' using errcode='23505';
+    end if;
+    return existing.id;
+  end if;
 
   select * into obligation
   from public.financial_obligations
