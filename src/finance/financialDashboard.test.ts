@@ -8,7 +8,8 @@ const productSpec = await readFile(new URL('../../docs/product-spec-v2.md', impo
 
 test('Casa home follows the canonical section order from Product Spec v2', () => {
   const labels = ['Como estamos?', 'Precisa de atenção', 'Este mês', 'Nosso dinheiro', 'Cartões', 'Acertos', 'Olhando pra frente'];
-  const screenIndexes = labels.map((label) => screenSource.indexOf(label));
+  const householdView = screenSource.slice(screenSource.lastIndexOf('return <div className="space-y-7">'));
+  const screenIndexes = labels.map((label) => householdView.indexOf(label));
   const specIndexes = labels.map((label) => productSpec.indexOf(label));
   assert.ok(screenIndexes.every((index) => index >= 0));
   assert.ok(specIndexes.every((index) => index >= 0));
