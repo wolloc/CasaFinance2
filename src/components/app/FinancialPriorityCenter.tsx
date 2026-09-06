@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight } from 'lucide-react';
 import type { AttentionItem } from '../../finance/financialDashboard.js';
+import { ProjectionReviewCenter } from './ProjectionReviewCenter.js';
 
 const money=(value:number|string|null|undefined)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
 
@@ -12,5 +13,6 @@ export function FinancialPriorityCenter({items,onNavigate}:{items:AttentionItem[
       {item.recommended_action&&item.action_label&&<button type="button" onClick={()=>onNavigate?.(item.recommended_action as AttentionNavigationAction)} className="mt-3 flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 px-3 text-xs font-bold text-blue-200">{item.action_label}<ArrowRight className="h-4 w-4"/></button>}
     </article>)}</div>}
     {items.length>1&&<p className="mt-2 text-xs text-slate-500">O Casa ordena primeiro o que combina maior gravidade, vencimento e impacto financeiro. A ordem não paga, transfere nem corrige nada sozinha.</p>}
+    <ProjectionReviewCenter onNavigate={onNavigate}/>
   </section>;
 }

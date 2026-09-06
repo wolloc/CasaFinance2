@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const review=await readFile(new URL('./ProjectionReviewCenter.tsx',import.meta.url),'utf8');const priority=await readFile(new URL('./FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+test('priority center includes persistent projection review follow-through',()=>{assert.match(priority,/ProjectionReviewCenter/);assert.match(review,/Revisar projeção/);assert.match(review,/continuam aqui até o acontecimento ser realmente confirmado, corrigido, recebido, pago ou cancelado/i);});
+test('opening a review never clears it',()=>{assert.match(review,/Abrir ou visualizar uma revisão não dá baixa em nada/i);assert.match(review,/desaparece somente quando o fato financeiro subjacente é resolvido/i);assert.doesNotMatch(review,/\.insert\(|\.update\(|\.delete\(|\.upsert\(/);});
+test('review actions only navigate to canonical resolution areas',()=>{assert.match(review,/onNavigate\?\.\(item\.recommended_action\)/);assert.match(review,/financial_projection_review_items/);});
