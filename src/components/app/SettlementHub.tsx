@@ -1,0 +1,31 @@
+import { useEffect, useMemo, useState } from 'react';
+import { HandCoins, LoaderCircle, UsersRound } from 'lucide-react';
+import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { supabase } from '../../lib/supabase.js';
+import { listMemberSettlementPositions, type MemberSettlementPosition } from '../../finance/memberSettlements.js';
+import { listOpenThirdPartyObligations, type ThirdPartyObligation } from '../../finance/thirdPartyObligations.js';
+import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
+
+const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const dateLabel=(value:string|null)=>{if(!value)return 'Sem vencimento';const date=new Date(`${value}T12:00:00`);const today=new Date();today.setHours(0,0,0,0);date.setHours(0,0,0,0);if(date.getTime()<today.getTime())return `Venceu em ${date.toLocaleDateString('pt-BR')}`;if(date.getTime()===today.getTime())return 'Vence hoje';return `Vence em ${date.toLocaleDateString('pt-BR')}`;};
+
+export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIntent)=>void}){
+  const{household,householdMembers}=useSupabaseAuth();
+  const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
+  const[thirdPartyRows,setThirdPartyRows]=useState<ThirdPartyObligation[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState(false);
+  useEffect(()=>{let cancelled=false;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listMemberSettlementPositions(supabase,household.id),listOpenThirdPartyObligations(supabase,household.id)]).then(([members,thirdParties])=>{if(cancelled)return;setMemberRows(members);setThirdPartyRows(thirdParties);}).catch(()=>{if(!cancelled)setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id]);
+  const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
+  const realized=useMemo(()=>memberRows.filter(row=>Number(row.realized_outstanding)>0),[memberRows]);
+  const projected=useMemo(()=>memberRows.filter(row=>Number(row.realized_outstanding)<=0&&Number(row.projected_outstanding)>0),[memberRows]);
+  if(loading)return <section><h2 className="mb-3 flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-cyan-400"/>Acertos</h2><LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
+  return <section>
+    <div className="mb-3"><h2 className="flex items-center gap-2 font-bold"><UsersRound className="h-5 w-5 text-cyan-400"/>Acertos</h2><p className="mt-1 text-xs text-slate-500">O Casa mostra aqui o que já pode ser resolvido e o que ainda é apenas previsto.</p></div>
+    {error&&<p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">Não foi possível carregar os acertos agora.</p>}
+    {!error&&realized.length===0&&thirdPartyRows.length===0&&projected.length===0&&<p className="text-sm text-slate-400">Nenhum acerto em aberto.</p>}
+    {!error&&realized.length>0&&<div className="space-y-2"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Entre nós · já realizado</p>{realized.map(row=><article key={`${row.debtor_member_id}-${row.creditor_member_id}`} className="rounded-2xl border border-slate-800 p-4"><div className="flex items-start justify-between gap-3"><div><b>{memberName(row.debtor_member_id)} deve para {memberName(row.creditor_member_id)}</b><p className="mt-1 text-sm text-slate-400">Valor já realizado e disponível para acerto.</p></div><strong className="whitespace-nowrap text-cyan-200">{money(row.realized_outstanding)}</strong></div><button type="button" onClick={()=>onResolve?.({kind:'members',debtorMemberId:row.debtor_member_id,creditorMemberId:row.creditor_member_id,amount:Number(row.realized_outstanding)})} className="mt-3 min-h-10 w-full rounded-xl border border-cyan-800 bg-cyan-950/30 px-3 text-sm font-bold text-cyan-200">Resolver agora</button></article>)}</div>}
+    {!error&&thirdPartyRows.length>0&&<div className="mt-4 space-y-2"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Com outras pessoas</p>{thirdPartyRows.map(row=><article key={row.id} className="rounded-2xl border border-slate-800 p-4"><div className="flex items-start justify-between gap-3"><div><b>{row.kind==='receivable'?`${row.counterparty_name} deve para a Casa`:`A Casa deve para ${row.counterparty_name}`}</b><p className="mt-1 text-sm text-slate-400">{row.description}</p><p className={`mt-1 text-xs ${row.due_date&&new Date(`${row.due_date}T12:00:00`).getTime()<Date.now()?'text-amber-300':'text-slate-500'}`}>{dateLabel(row.due_date)}</p></div><strong className="whitespace-nowrap text-cyan-200">{money(row.outstanding_amount)}</strong></div><button type="button" onClick={()=>onResolve?.({kind:'third-party',obligationId:row.id,amount:Number(row.outstanding_amount)})} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-800 bg-cyan-950/30 px-3 text-sm font-bold text-cyan-200"><HandCoins className="h-4 w-4"/>{row.kind==='receivable'?'Registrar recebimento':'Registrar pagamento'}</button></article>)}</div>}
+    {!error&&projected.length>0&&<div className="mt-4 space-y-2"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Entre nós · previsto</p>{projected.map(row=><article key={`projected-${row.debtor_member_id}-${row.creditor_member_id}`} className="rounded-2xl border border-dashed border-slate-800 p-4"><div className="flex justify-between gap-3"><div><b>{memberName(row.debtor_member_id)} → {memberName(row.creditor_member_id)}</b><p className="text-xs text-slate-500">Ainda não é dívida realizada. Pode mudar quando o funding real acontecer.</p></div><strong className="whitespace-nowrap text-slate-400">{money(row.projected_outstanding)}</strong></div></article>)}</div>}
+  </section>;
+}

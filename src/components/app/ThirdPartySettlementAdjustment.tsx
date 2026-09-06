@@ -9,11 +9,11 @@ const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const date = new Date(); const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10); };
 
-export function ThirdPartySettlementAdjustment({ onBack }: { onBack: () => void }) {
+export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: { onBack: () => void; initialObligationId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [obligations, setObligations] = useState<ThirdPartyObligation[]>([]);
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
-  const [obligationId, setObligationId] = useState('');
+  const [obligationId, setObligationId] = useState(initialObligationId ?? '');
   const [accountId, setAccountId] = useState('');
   const [funderMemberId, setFunderMemberId] = useState('');
   const [amount, setAmount] = useState('');
@@ -34,6 +34,10 @@ export function ThirdPartySettlementAdjustment({ onBack }: { onBack: () => void 
       ]);
       setObligations(openObligations);
       setAccounts(financial.accounts);
+      if (initialObligationId) {
+        const initial = openObligations.find((item) => item.id === initialObligationId);
+        if (initial) { setObligationId(initial.id); setAmount(Number(initial.outstanding_amount).toFixed(2).replace('.', ',')); }
+      }
     } catch { setError('Não foi possível carregar os acertos com outras pessoas.'); }
     finally { setLoading(false); }
   };
@@ -77,7 +81,8 @@ export function ThirdPartySettlementAdjustment({ onBack }: { onBack: () => void 
     <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar às intenções</button>
     {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
       <div><h2 className="font-bold">Acerto com outra pessoa</h2><p className="mt-1 text-sm text-slate-400">Aqui o Casa só liquida uma obrigação com terceiro que já existe. Receber um valor a receber não vira renda; pagar um valor a pagar não vira nova despesa.</p></div>
-      <label className="block text-sm">Qual acerto aconteceu?<select value={obligationId} onChange={(event) => { setObligationId(event.target.value); setAmount(''); setAccountId(''); setFunderMemberId(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{obligations.map((item) => <option key={item.id} value={item.id}>{item.kind === 'receivable' ? 'A receber de' : 'A pagar para'} {item.counterparty_name} · {formatMoney(item.outstanding_amount)}</option>)}</select></label>
+      {initialObligationId&&selected&&<p className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-3 text-xs text-cyan-200">Este acerto veio da Home e já foi localizado. Confirme recurso, valor e data antes de registrar.</p>}
+      <label className="block text-sm">Qual acerto aconteceu?<select value={obligationId} onChange={(event) => { setObligationId(event.target.value); const next=obligations.find(item=>item.id===event.target.value); setAmount(next?Number(next.outstanding_amount).toFixed(2).replace('.', ','):''); setAccountId(''); setFunderMemberId(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{obligations.map((item) => <option key={item.id} value={item.id}>{item.kind === 'receivable' ? 'A receber de' : 'A pagar para'} {item.counterparty_name} · {formatMoney(item.outstanding_amount)}</option>)}</select></label>
       {selected && <div className="rounded-xl bg-slate-950 p-3 text-sm"><p className="font-semibold">{selected.description}</p><p className="mt-1 text-slate-400">Origem: {selected.origin_kind} · saldo em aberto <strong className="text-amber-200">{formatMoney(outstanding)}</strong></p></div>}
       {selected && <label className="block text-sm">{selected.kind === 'receivable' ? 'Em qual recurso o dinheiro entrou?' : 'De qual recurso o dinheiro saiu?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>}
       {needsFunder && <label className="block text-sm">Quem efetivamente financiou este pagamento?<select value={funderMemberId} onChange={(event) => setFunderMemberId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>}
