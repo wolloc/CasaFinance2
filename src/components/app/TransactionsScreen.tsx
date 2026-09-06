@@ -1,2 +1,6 @@
 import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.js';
-export function TransactionsScreen() { return <HouseholdTransactionsSetup embedded />; }
+import type { TransactionKind } from '../../finance/householdTransactions.js';
+
+export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
+  return <HouseholdTransactionsSetup embedded mode={mode} />;
+}
