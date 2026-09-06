@@ -31,7 +31,7 @@ describe('Migration 038 canonical income creation', () => {
     assert.match(sql, /p_economic_state not in \('forecast','confirmed'\)/);
     assert.match(sql, /case when p_economic_state='confirmed' then p_amount end/);
     assert.match(productSpec, /Estados seguem a prioridade conceitual \*\*Realizado > Confirmado > Previsto\*\*/);
-    assert.match(constitution, /Previsão não é realizado/i);
+    assert.match(constitution, /Previsto não é realizado/i);
   });
 
   it('matches the Product Spec true-income boundary', () => {
