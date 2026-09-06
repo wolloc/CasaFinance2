@@ -33,11 +33,13 @@ describe('Migration 037 loan principal commands', () => {
     assert.match(sql, /Principal is economically neutral/);
   });
 
-  it('validates household party, account, amount, direction and dates', () => {
+  it('validates household party, unrestricted transactional account, amount, direction and dates', () => {
     assert.match(sql, /p_direction not in \('granted','taken'\)/);
     assert.match(sql, /p_amount<=0/);
     assert.match(sql, /p_due_date<p_occurred_at/);
     assert.match(sql, /financial_parties[\s\S]*household_id=p_household_id[\s\S]*deactivated_at is null/);
-    assert.match(sql, /accounts[\s\S]*household_id=p_household_id[\s\S]*deactivated_at is null/);
+    assert.match(sql, /type in \('cash','checking','savings','digital_wallet'\)/);
+    assert.match(sql, /resource_restriction is null/);
+    assert.match(sql, /active unrestricted transactional household account required/);
   });
 });
