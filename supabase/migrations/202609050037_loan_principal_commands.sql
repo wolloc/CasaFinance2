@@ -40,9 +40,13 @@ begin
   end if;
   if not exists(
     select 1 from public.accounts
-    where id=p_account_id and household_id=p_household_id and deactivated_at is null
+    where id=p_account_id
+      and household_id=p_household_id
+      and deactivated_at is null
+      and type in ('cash','checking','savings','digital_wallet')
+      and resource_restriction is null
   ) then
-    raise exception 'active household account required' using errcode='23514';
+    raise exception 'active unrestricted transactional household account required' using errcode='23514';
   end if;
 
   obligation_kind:=case when p_direction='granted' then 'receivable'::public.obligation_kind else 'payable'::public.obligation_kind end;
