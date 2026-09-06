@@ -5,6 +5,7 @@ import { RecurringExpenseAction } from './RecurringExpenseAction.js';
 import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
 import { RecurringExpenseCommitmentCenter } from './RecurringExpenseCommitmentCenter.js';
 import { DirectExpensePaymentAction } from './DirectExpensePaymentAction.js';
+import { ExternalExpensePaymentAction } from './ExternalExpensePaymentAction.js';
 import { PartialDirectRefundAction } from './PartialDirectRefundAction.js';
 import { CardRefundAction } from './CardRefundAction.js';
 import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
@@ -15,6 +16,7 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   return <div className="space-y-4">
     <RecurringExpenseCommitmentCenter />
     <DirectExpensePaymentAction />
+    <ExternalExpensePaymentAction />
     <PartialDirectRefundAction />
     <CardRefundAction />
     <PostPaymentCardRefundAction />
