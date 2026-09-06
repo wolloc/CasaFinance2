@@ -17,6 +17,40 @@ export type ThirdPartyObligation = {
   outstanding_amount: number;
 };
 
+export type FinancialPartyOption = { id: string; name: string };
+
+export async function listFinancialPartyOptions(client: SupabaseClient, householdId: string): Promise<FinancialPartyOption[]> {
+  const result = await client.from('financial_parties').select('id,name').eq('household_id', householdId).is('deactivated_at', null).order('name');
+  if (result.error) throw result.error;
+  return (result.data ?? []) as FinancialPartyOption[];
+}
+
+export async function createManualThirdPartyObligation(client: SupabaseClient, input: {
+  householdId: string;
+  kind: 'receivable' | 'payable';
+  counterpartyId: string;
+  amount: string;
+  obligationDate: string;
+  dueDate?: string;
+  description: string;
+  notes?: string;
+}) {
+  const requestKey = crypto.randomUUID();
+  const result = await client.rpc('create_manual_third_party_obligation', {
+    p_household_id: input.householdId,
+    p_kind: input.kind,
+    p_counterparty_id: input.counterpartyId,
+    p_amount: input.amount,
+    p_obligation_date: input.obligationDate,
+    p_due_date: input.dueDate || null,
+    p_description: input.description.trim(),
+    p_request_key: requestKey,
+    p_notes: input.notes?.trim() || null,
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
 export async function listOpenThirdPartyObligations(client: SupabaseClient, householdId: string): Promise<ThirdPartyObligation[]> {
   const [obligations, parties, events] = await Promise.all([
     client.from('financial_obligations')
