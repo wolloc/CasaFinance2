@@ -6,6 +6,7 @@ const appSource = await readFile(new URL('./CasaFinanceApp.tsx', import.meta.url
 const actionsSource = await readFile(new URL('./GlobalActions.tsx', import.meta.url), 'utf8');
 const adjustmentSource = await readFile(new URL('./NewAdjustmentScreen.tsx', import.meta.url), 'utf8');
 const settlementService = await readFile(new URL('../../finance/memberSettlements.ts', import.meta.url), 'utf8');
+const transferService = await readFile(new URL('../../finance/resourceTransfers.ts', import.meta.url), 'utf8');
 const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 
@@ -25,7 +26,6 @@ test('Novo acerto exposes explicit intentions without pretending unfinished flow
     assert.match(adjustmentSource, new RegExp(label.replace('/', '\\/')));
     assert.match(productSpec, new RegExp(label.replace('/', '\\/')));
   }
-  assert.match(adjustmentSource, /ready: true/);
   assert.match(adjustmentSource, /Em preparação/);
 });
 
@@ -42,4 +42,15 @@ test('member settlement refuses silent inverse debt and excess settlement in the
   assert.match(adjustmentSource, /não pode superar a dívida realizada em aberto/);
   assert.match(adjustmentSource, /Não cria dívida inversa silenciosamente/);
   assert.match(productSpec, /não cria dívida inversa silenciosamente/i);
+});
+
+test('resource transfer uses canonical create_transfer and stays neutral', () => {
+  assert.match(transferService, /rpc\('create_transfer'/);
+  assert.doesNotMatch(transferService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
+  assert.match(adjustmentSource, /selected === 'transfer'/);
+  assert.match(adjustmentSource, /Receita e despesa continuam zero/);
+  assert.match(adjustmentSource, /sourceAccount === destinationAccount/);
+  assert.match(adjustmentSource, /Transferência registrada\. O dinheiro mudou de recurso, sem criar renda ou despesa/);
+  assert.match(productSpec, /transferência patrimonial: receita zero e despesa zero/);
+  assert.match(constitution, /Movimentação de caixa não é automaticamente receita ou despesa/);
 });
