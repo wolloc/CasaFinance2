@@ -8,7 +8,8 @@ const productSpec = await readFile(new URL('../../docs/product-spec-v2.md', impo
 
 test('Casa home follows the canonical section order from Product Spec v2', () => {
   const labels = ['Como estamos?', 'Precisa de atenção', 'Este mês', 'Nosso dinheiro', 'Cartões', 'Acertos', 'Olhando pra frente'];
-  const screenIndexes = labels.map((label) => screenSource.indexOf(label));
+  const householdView = screenSource.slice(screenSource.lastIndexOf('return <div className="space-y-7">'));
+  const screenIndexes = labels.map((label) => householdView.indexOf(label));
   const specIndexes = labels.map((label) => productSpec.indexOf(label));
   assert.ok(screenIndexes.every((index) => index >= 0));
   assert.ok(specIndexes.every((index) => index >= 0));
@@ -22,6 +23,36 @@ test('dashboard reads canonical health, confidence, attention and three-month pr
   assert.match(serviceSource, /rpc\('financial_attention_items'/);
   assert.match(serviceSource, /rpc\('financial_monthly_projection'/);
   assert.match(serviceSource, /p_horizon_months: 3/);
+});
+
+test('member selector uses canonical individual monthly projection instead of filtering household totals', () => {
+  assert.match(screenSource, /Nossa Casa/);
+  assert.match(screenSource, /setPerspective\(member\.id\)/);
+  assert.match(screenSource, /getMemberFinancialPerspective/);
+  assert.match(serviceSource, /rpc\('financial_member_monthly_projection'/);
+  assert.match(serviceSource, /p_member_id: memberId/);
+  assert.match(serviceSource, /p_horizon_months: 3/);
+  assert.doesNotMatch(screenSource, /available_money\s*\/\s*2|projected_balance\s*\/\s*2/);
+});
+
+test('individual perspective keeps liquidity, economic responsibility and funding distinct', () => {
+  assert.match(screenSource, /Posso movimentar hoje/);
+  assert.match(screenSource, /opening_liquidity/);
+  assert.match(screenSource, /Minha responsabilidade/);
+  assert.match(screenSource, /economic_responsibility_remaining/);
+  assert.match(screenSource, /Pode sair dos meus recursos/);
+  assert.match(screenSource, /projected_funding_remaining/);
+  assert.match(screenSource, /A receber do outro membro/);
+  assert.match(screenSource, /settlement_receivable_position/);
+  assert.match(screenSource, /Responsabilidade econômica não é alterada por conta, cartão, comprador ou por quem efetivamente pagou/);
+});
+
+test('individual perspective does not silently attribute unresolved funding or failed reads', () => {
+  assert.match(screenSource, /unattributed_funding_remaining/);
+  assert.match(screenSource, /O Casa não vai adivinhar de quem esse dinheiro sairá/);
+  assert.match(screenSource, /memberError/);
+  assert.match(screenSource, /Nenhum valor foi substituído por zero/);
+  assert.match(screenSource, /let cancelled = false/);
 });
 
 test('Casa home keeps current cash and projected ending cash conceptually separate', () => {
@@ -59,6 +90,6 @@ test('member settlements stay separate from buyer and payment instrument semanti
 
 test('dashboard layer is read-only and introduces no financial mutation', () => {
   assert.doesNotMatch(serviceSource, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/);
-  for (const rpc of ['financial_household_health_position', 'financial_attention_items', 'financial_monthly_projection']) assert.match(serviceSource, new RegExp(`rpc\\('${rpc}'`));
+  for (const rpc of ['financial_household_health_position', 'financial_attention_items', 'financial_monthly_projection', 'financial_member_monthly_projection']) assert.match(serviceSource, new RegExp(`rpc\\('${rpc}'`));
   assert.doesNotMatch(serviceSource, /create_financial_transaction|settle_|refund_|correct_|cancel_/);
 });
