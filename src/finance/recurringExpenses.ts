@@ -1,6 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type RecurringExpenseFrequency = 'weekly' | 'monthly' | 'yearly';
+export type RecurringExpenseRule = {
+  id: string;
+  template_transaction_id: string;
+  frequency: RecurringExpenseFrequency;
+  interval_count: number;
+  start_date: string;
+  end_date: string | null;
+  estimated_amount: string;
+  next_occurrence_date: string | null;
+  template_description: string;
+};
 
 export async function createRecurringExpenseFromTransaction(client: SupabaseClient, input: {
   householdId: string;
@@ -29,4 +40,78 @@ export async function ensureRecurringExpenseHorizon(client: SupabaseClient, hous
   });
   if (result.error) throw result.error;
   return Number(result.data ?? 0);
+}
+
+export async function listRecurringExpenseRules(client: SupabaseClient, householdId: string) {
+  const rulesResponse = await client.from('recurring_rules')
+    .select('id, template_transaction_id, frequency, interval_count, start_date, end_date, estimated_amount, next_occurrence_date')
+    .eq('household_id', householdId)
+    .is('deactivated_at', null)
+    .is('income_nature', null)
+    .not('template_transaction_id', 'is', null)
+    .not('estimated_amount', 'is', null)
+    .order('created_at', { ascending: false });
+  if (rulesResponse.error) throw rulesResponse.error;
+  const rules = rulesResponse.data ?? [];
+  const templateIds = rules.map((row) => row.template_transaction_id as string).filter(Boolean);
+  if (templateIds.length === 0) return [] as RecurringExpenseRule[];
+
+  const txResponse = await client.from('transactions')
+    .select('id, description, type, deleted_at')
+    .eq('household_id', householdId)
+    .in('id', templateIds);
+  if (txResponse.error) throw txResponse.error;
+  const descriptions = new Map((txResponse.data ?? []).filter((row) => row.type === 'expense' && row.deleted_at === null).map((row) => [row.id as string, row.description as string]));
+
+  return rules.filter((row) => descriptions.has(row.template_transaction_id as string)).map((row) => ({
+    id: row.id as string,
+    template_transaction_id: row.template_transaction_id as string,
+    frequency: row.frequency as RecurringExpenseFrequency,
+    interval_count: Number(row.interval_count),
+    start_date: row.start_date as string,
+    end_date: row.end_date as string | null,
+    estimated_amount: String(row.estimated_amount),
+    next_occurrence_date: row.next_occurrence_date as string | null,
+    template_description: descriptions.get(row.template_transaction_id as string) ?? 'Gasto recorrente',
+  }));
+}
+
+export async function reviseRecurringExpenseRule(client: SupabaseClient, input: {
+  householdId: string;
+  ruleId: string;
+  effectiveFrom: string;
+  amount: string;
+  frequency: RecurringExpenseFrequency;
+  intervalCount: number;
+  endDate?: string;
+  reason: string;
+}) {
+  const result = await client.rpc('revise_recurring_expense_rule', {
+    p_household_id: input.householdId,
+    p_rule_id: input.ruleId,
+    p_effective_from: input.effectiveFrom,
+    p_amount: input.amount,
+    p_frequency: input.frequency,
+    p_interval_count: input.intervalCount,
+    p_end_date: input.endDate || null,
+    p_reason: input.reason.trim(),
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
+}
+
+export async function closeRecurringExpenseRule(client: SupabaseClient, input: {
+  householdId: string;
+  ruleId: string;
+  effectiveFrom: string;
+  reason: string;
+}) {
+  const result = await client.rpc('close_recurring_expense_rule', {
+    p_household_id: input.householdId,
+    p_rule_id: input.ruleId,
+    p_effective_from: input.effectiveFrom,
+    p_reason: input.reason.trim(),
+  });
+  if (result.error) throw result.error;
+  return result.data as string;
 }
