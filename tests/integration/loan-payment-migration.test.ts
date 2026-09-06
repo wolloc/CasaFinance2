@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const sql=await readFile(new URL('../../supabase/migrations/202609060055_canonical_loan_payment.sql',import.meta.url),'utf8');
+test('loan payment creates one real cash movement',()=>{assert.equal((sql.match(/insert into public\.money_movements/g)||[]).length,1);assert.match(sql,/Pagamento de empréstimo/);assert.match(sql,/total_paid/);});
+test('principal and charges settle separate obligations without new economic charge',()=>{assert.match(sql,/principal_paid/);assert.match(sql,/charge_allocations/);assert.match(sql,/loan_charge_events/);assert.doesNotMatch(sql,/transaction_components/);assert.doesNotMatch(sql,/economic_allocations/);});
+test('charge funding is explicit while principal stays neutral',()=>{assert.match(sql,/p_funder_member_id/);assert.match(sql,/insert into public\.funding_events/);assert.match(sql,/charge_obligation\.source_transaction_id/);});
+test('only transactional cash source can pay and command is idempotent',()=>{assert.match(sql,/type in \('cash','checking','savings','digital_wallet'\)/);assert.match(sql,/resource_restriction is null/);assert.match(sql,/unique\(household_id,request_key\)/);});
