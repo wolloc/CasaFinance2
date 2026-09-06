@@ -20,8 +20,7 @@ describe('Migration 037 loan principal commands', () => {
   });
 
   it('maps granted loans to receivables and cash out, and taken loans to payables and cash in', () => {
-    assert.match(sql, /p_direction='granted'.*'receivable'/s);
-    assert.match(sql, /p_direction='taken'.*'payable'/s);
+    assert.match(sql, /case when p_direction='granted' then 'receivable'::public\.obligation_kind else 'payable'::public\.obligation_kind end/);
     assert.match(sql, /source_account_id,destination_account_id/s);
     assert.match(sql, /case when p_direction='granted' then p_account_id end/);
     assert.match(sql, /case when p_direction='taken' then p_account_id end/);
