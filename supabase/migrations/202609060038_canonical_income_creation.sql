@@ -34,6 +34,9 @@ begin
   if p_amount<=0 or length(trim(coalesce(p_description,'')))=0 or p_expected_date is null then
     raise exception 'positive amount, description and expected date are required' using errcode='22023';
   end if;
+  if p_income_nature is null then
+    raise exception 'income nature is required' using errcode='22004';
+  end if;
   if p_economic_state not in ('forecast','confirmed') then
     raise exception 'income creation state must be forecast or confirmed' using errcode='22023';
   end if;
