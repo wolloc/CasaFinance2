@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { CheckCircle2, LoaderCircle, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
@@ -13,7 +13,7 @@ const localDate = () => {
 
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export function IncomeReceiptAction({ onCompleted }: { onCompleted?: () => void }) {
+export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { onCompleted?: () => void; initialMoneyMovementId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [incomes, setIncomes] = useState<HouseholdTransaction[]>([]);
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
@@ -26,17 +26,31 @@ export function IncomeReceiptAction({ onCompleted }: { onCompleted?: () => void 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const handledIntent = useRef(false);
 
   const load = async () => {
     if (!supabase || !household) return;
-    setLoading(true);
+    setLoading(true); setError(null);
     try {
       const [transactions, resources] = await Promise.all([
         listHouseholdTransactions(supabase, household.id),
         listHouseholdFinancialAccounts(supabase, household.id),
       ]);
-      setIncomes(transactions.filter((row) => row.type === 'income' && !['cancelled', 'reversed'].includes(row.economic_state) && Number(row.realized_amount) < Number(row.amount)));
+      const pending = transactions.filter((row) => row.type === 'income' && !['cancelled', 'reversed'].includes(row.economic_state) && Number(row.realized_amount) < Number(row.amount));
+      setIncomes(pending);
       setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet'].includes(account.type)));
+      if (initialMoneyMovementId && !handledIntent.current) {
+        handledIntent.current = true;
+        const movement = await supabase.from('money_movements').select('related_transaction_id').eq('household_id', household.id).eq('id', initialMoneyMovementId).maybeSingle();
+        if (movement.error) throw movement.error;
+        const target = pending.find((income) => income.id === movement.data?.related_transaction_id);
+        if (target) {
+          setTransactionId(target.id);
+          setAmount(String(Math.max(0, Number(target.amount) - Number(target.realized_amount))));
+        } else {
+          setError('Essa entrada mudou ou já foi resolvida. O Casa atualizou os dados antes de permitir qualquer recebimento.');
+        }
+      }
     } catch {
       setError('Não foi possível carregar as entradas pendentes e os recursos da Casa.');
     } finally {
@@ -85,6 +99,7 @@ export function IncomeReceiptAction({ onCompleted }: { onCompleted?: () => void 
 
   return <section className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4">
     <div className="flex items-start gap-3"><WalletCards className="mt-0.5 h-5 w-5 text-emerald-300" /><div><h2 className="font-bold">Uma renda prevista realmente entrou?</h2><p className="mt-1 text-sm text-slate-400">Criar a entrada registra o fato econômico. Só esta confirmação movimenta o caixa e define explicitamente <strong>de quem é a renda</strong> e <strong>onde o dinheiro entrou</strong>.</p></div></div>
+    {initialMoneyMovementId&&<p className="mt-3 rounded-xl border border-cyan-900 bg-cyan-950/20 p-3 text-xs text-cyan-200">Você veio de uma entrada atrasada da Home. O Casa localizou o fato econômico ligado à previsão e releu o saldo pendente. Nada entra no caixa até sua confirmação.</p>}
     {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin" /> : incomes.length === 0 ? <p className="mt-4 text-sm text-slate-400">Não há renda pendente para confirmar.</p> : <form onSubmit={submit} className="mt-4 grid gap-3">
       <label className="text-sm font-semibold">Qual renda entrou?<select value={transactionId} onChange={(e) => chooseIncome(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"><option value="">Selecione</option>{incomes.map((income) => <option key={income.id} value={income.id}>{income.description} · falta {money(Number(income.amount) - Number(income.realized_amount))}</option>)}</select></label>
       <label className="text-sm font-semibold">De quem é esta renda?<select value={beneficiaryMemberId} onChange={(e) => setBeneficiaryMemberId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
