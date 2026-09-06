@@ -87,10 +87,37 @@ export type MemberSettlementPosition = {
   net_position: number;
 };
 
-const currentMonth = () => new Date().toISOString().slice(0, 7) + '-01';
+export type ResourceSummary = {
+  availableCash: number;
+  benefits: number;
+  reserves: number;
+  investments: number;
+};
+
+type AccountBalanceRow = {
+  type: string;
+  resource_restriction: string | null;
+  current_balance: number | string;
+  is_restricted: boolean;
+  is_investment: boolean;
+};
+
+const currentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+const summarizeResources = (rows: AccountBalanceRow[]): ResourceSummary => rows.reduce((summary, row) => {
+  const amount = Number(row.current_balance ?? 0);
+  if (row.is_investment) summary.investments += amount;
+  else if (row.resource_restriction === 'reserve') summary.reserves += amount;
+  else if (row.type === 'meal_benefit') summary.benefits += amount;
+  else if (!row.is_restricted) summary.availableCash += amount;
+  return summary;
+}, { availableCash: 0, benefits: 0, reserves: 0, investments: 0 });
 
 export async function getFinancialDashboard(client: SupabaseClient, householdId: string) {
-  const [household, members, health, confidence, attention, projection, cards, settlements] = await Promise.all([
+  const [household, members, health, confidence, attention, projection, cards, settlements, accountBalances] = await Promise.all([
     client.from('financial_household_position').select('*').eq('household_id', householdId).maybeSingle(),
     client.from('financial_member_positions').select('*').eq('household_id', householdId),
     client.rpc('financial_household_health_position', { p_household_id: householdId }),
@@ -99,9 +126,10 @@ export async function getFinancialDashboard(client: SupabaseClient, householdId:
     client.rpc('financial_monthly_projection', { p_household_id: householdId, p_reference_month: currentMonth(), p_horizon_months: 3 }),
     client.from('financial_card_health_positions').select('card_id,card_name,credit_limit,current_invoice_remaining,future_known_commitments,available_limit,utilization_ratio,over_limit_amount,next_due_date,card_health').eq('household_id', householdId).order('card_name'),
     client.from('financial_member_settlement_positions').select('debtor_member_id,creditor_member_id,realized_outstanding,projected_outstanding,scheduled_settlement_amount,net_position').eq('household_id', householdId),
+    client.from('financial_account_balances').select('type,resource_restriction,current_balance,is_restricted,is_investment').eq('household_id', householdId),
   ]);
 
-  for (const response of [household, members, health, confidence, attention, projection, cards, settlements]) {
+  for (const response of [household, members, health, confidence, attention, projection, cards, settlements, accountBalances]) {
     if (response.error) throw response.error;
   }
 
@@ -114,5 +142,6 @@ export async function getFinancialDashboard(client: SupabaseClient, householdId:
     projection: (projection.data ?? []) as MonthlyProjection[],
     cards: (cards.data ?? []) as CardHealthPosition[],
     settlements: (settlements.data ?? []) as MemberSettlementPosition[],
+    resources: summarizeResources((accountBalances.data ?? []) as AccountBalanceRow[]),
   };
 }
