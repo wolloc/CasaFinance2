@@ -1,0 +1,52 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { HandHeart, LoaderCircle } from 'lucide-react';
+import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { supabase } from '../../lib/supabase.js';
+import { listDirectExpensePaymentCandidates, type DirectExpensePaymentCandidate } from '../../finance/directExpensePayments.js';
+import { listFinancialPartyOptions, type FinancialPartyOption } from '../../finance/thirdPartyObligations.js';
+import { recordExternalExpensePayment, type ExternalPaymentIntent } from '../../finance/externalExpensePayments.js';
+
+const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const normalize=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
+const localDateTime=()=>{const now=new Date();const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);return local.toISOString().slice(0,16);};
+
+export function ExternalExpensePaymentAction(){
+  const {household}=useSupabaseAuth();
+  const [expenses,setExpenses]=useState<DirectExpensePaymentCandidate[]>([]);
+  const [parties,setParties]=useState<FinancialPartyOption[]>([]);
+  const [transactionId,setTransactionId]=useState('');
+  const [payerPartyId,setPayerPartyId]=useState('');
+  const [intent,setIntent]=useState<ExternalPaymentIntent>('gift');
+  const [amount,setAmount]=useState('');
+  const [occurredAt,setOccurredAt]=useState(localDateTime());
+  const [dueDate,setDueDate]=useState('');
+  const [notes,setNotes]=useState('');
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState<string|null>(null);
+  const [success,setSuccess]=useState<string|null>(null);
+  const selected=useMemo(()=>expenses.find(x=>x.id===transactionId)??null,[expenses,transactionId]);
+
+  const load=async()=>{if(!supabase||!household)return;setLoading(true);setError(null);try{const [expenseRows,partyRows]=await Promise.all([listDirectExpensePaymentCandidates(supabase,household.id),listFinancialPartyOptions(supabase,household.id)]);setExpenses(expenseRows);setParties(partyRows);}catch{setError('Não foi possível carregar gastos e pessoas externas.');}finally{setLoading(false);}};
+  useEffect(()=>{load();},[household?.id]);
+  useEffect(()=>{if(selected)setAmount(selected.remaining_amount.toFixed(2));},[selected?.id]);
+
+  const submit=async(event:FormEvent)=>{event.preventDefault();if(!supabase||!household||!selected)return;const parsed=Number(normalize(amount));if(!payerPartyId){setError('Informe quem pagou por fora da Casa.');return;}if(!Number.isFinite(parsed)||parsed<=0||parsed-selected.remaining_amount>0.005){setError(`O valor deve estar entre R$ 0,01 e ${money(selected.remaining_amount)}.`);return;}if(intent==='reimbursement'&&dueDate&&dueDate<occurredAt.slice(0,10)){setError('O vencimento do reembolso não pode ser anterior ao pagamento do terceiro.');return;}setSaving(true);setError(null);setSuccess(null);try{await recordExternalExpensePayment(supabase,{householdId:household.id,transactionId:selected.id,payerPartyId,intent,amount:parsed.toFixed(2),occurredAt:new Date(occurredAt).toISOString(),dueDate:intent==='reimbursement'?dueDate:null,notes});setSuccess(intent==='gift'?'Pagamento externo registrado como presente. A despesa continua existindo, mas a Casa não ganhou renda, não movimentou caixa e não deve reembolso.':'Pagamento externo registrado com reembolso. A Casa não movimentou caixa agora; nasceu uma obrigação de pagar o terceiro depois.');setTransactionId('');setAmount('');setDueDate('');await load();}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível registrar o pagamento externo.');}finally{setSaving(false);}};
+
+  return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+    <div className="flex items-start gap-3"><HandHeart className="mt-0.5 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">Outra pessoa pagou este gasto</h2><p className="mt-1 text-sm text-slate-400">Use quando alguém de fora da Casa pagou diretamente um gasto. O Casa precisa saber se foi um presente ou se vocês terão de devolver o dinheiro.</p></div></div>
+    <p className="mt-3 rounded-xl border border-amber-900/60 bg-amber-950/20 p-3 text-xs text-amber-200"><strong>Importante:</strong> o dinheiro não entrou numa conta da Casa. Por isso este fluxo não cria renda nem entrada de caixa. Ele apenas registra quem liquidou o gasto e, se houver reembolso, cria a obrigação correspondente.</p>
+    {loading?<LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/>:<form onSubmit={submit} className="mt-4 grid gap-3">
+      <label className="text-sm font-semibold">Qual gasto essa pessoa pagou?<select value={transactionId} onChange={e=>setTransactionId(e.target.value)} required className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione</option>{expenses.map(expense=><option key={expense.id} value={expense.id}>{expense.description} · falta {money(expense.remaining_amount)}</option>)}</select></label>
+      <label className="text-sm font-semibold">Quem pagou?<select value={payerPartyId} onChange={e=>setPayerPartyId(e.target.value)} required className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione a pessoa externa</option>{parties.map(party=><option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
+      {parties.length===0&&<p className="text-xs text-amber-300">Cadastre primeiro a pessoa em Configurações → Pessoas. O Casa não inventa um terceiro implícito.</p>}
+      <fieldset className="space-y-2"><legend className="text-sm font-semibold">Essa pessoa espera receber de volta?</legend><label className="flex items-start gap-2 text-sm"><input type="radio" checked={intent==='gift'} onChange={()=>setIntent('gift')}/><span><strong>Não. Foi um presente/ajuda.</strong><span className="block text-xs text-slate-500">A despesa é liquidada sem criar dívida com essa pessoa.</span></span></label><label className="flex items-start gap-2 text-sm"><input type="radio" checked={intent==='reimbursement'} onChange={()=>setIntent('reimbursement')}/><span><strong>Sim. Precisamos reembolsar.</strong><span className="block text-xs text-slate-500">O pagamento do terceiro liquida o gasto e nasce um valor a pagar para essa pessoa.</span></span></label></fieldset>
+      <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Quanto ela pagou?<input value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal" required className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label><label className="text-sm font-semibold">Quando?<input type="datetime-local" value={occurredAt} onChange={e=>setOccurredAt(e.target.value)} required className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label></div>
+      {intent==='reimbursement'&&<label className="text-sm font-semibold">Quando pretendemos reembolsar? <span className="font-normal text-slate-500">(opcional)</span><input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label>}
+      <label className="text-sm font-semibold">Observação <span className="font-normal text-slate-500">(opcional)</span><textarea value={notes} onChange={e=>setNotes(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"/></label>
+      {selected&&<p className="text-xs text-slate-400">Gasto: {money(selected.amount)} · já coberto: {money(selected.funded_amount+selected.external_paid_amount)} · ainda falta: {money(selected.remaining_amount)}</p>}
+      {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}{success&&<p role="status" className="text-sm text-emerald-300">{success}</p>}
+      <button disabled={saving||!selected||parties.length===0} className="min-h-11 rounded-xl bg-amber-500 px-4 font-bold text-slate-950 disabled:opacity-50">{saving?'Registrando…':'Registrar pagamento externo'}</button>
+    </form>}
+  </section>;
+}
