@@ -7,10 +7,12 @@ const actionsSource = await readFile(new URL('./GlobalActions.tsx', import.meta.
 const adjustmentSource = await readFile(new URL('./NewAdjustmentScreen.tsx', import.meta.url), 'utf8');
 const invoicePaymentSource = await readFile(new URL('./InvoicePaymentAdjustment.tsx', import.meta.url), 'utf8');
 const thirdPartySource = await readFile(new URL('./ThirdPartySettlementAdjustment.tsx', import.meta.url), 'utf8');
+const investmentReserveSource = await readFile(new URL('./InvestmentReserveAdjustment.tsx', import.meta.url), 'utf8');
 const settlementService = await readFile(new URL('../../finance/memberSettlements.ts', import.meta.url), 'utf8');
 const transferService = await readFile(new URL('../../finance/resourceTransfers.ts', import.meta.url), 'utf8');
 const invoicePaymentService = await readFile(new URL('../../finance/invoicePayments.ts', import.meta.url), 'utf8');
 const thirdPartyService = await readFile(new URL('../../finance/thirdPartyObligations.ts', import.meta.url), 'utf8');
+const investmentReserveService = await readFile(new URL('../../finance/investmentReserveAdjustments.ts', import.meta.url), 'utf8');
 const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 
@@ -83,4 +85,19 @@ test('third-party settlement liquidates canonical obligations without creating i
   assert.match(thirdPartySource, /numericAmount > outstanding/);
   assert.match(thirdPartySource, /quem efetivamente financiou/i);
   assert.match(constitution, /caixa aumenta e o recebível diminui, mas renda continua zero/i);
+});
+
+test('investment and reserve principal movement stays economically neutral', () => {
+  assert.match(investmentReserveService, /financial_account_balances/);
+  assert.match(investmentReserveService, /rpc\('create_transfer'/);
+  assert.match(investmentReserveService, /resource_restriction === 'reserve'/);
+  assert.doesNotMatch(investmentReserveService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
+  assert.match(adjustmentSource, /selected === 'reserve'/);
+  assert.match(investmentReserveSource, /movimenta apenas o principal/);
+  assert.match(investmentReserveSource, /Aporte e resgate não são despesa nem renda/);
+  assert.match(investmentReserveSource, /rendimento e perda são fatos econômicos separados/);
+  assert.match(investmentReserveSource, /Nenhuma despesa foi criada/);
+  assert.match(investmentReserveSource, /Nenhuma renda foi criada/);
+  assert.match(productSpec, /aporte\/resgate de principal neutros, rendimento\/perda separados/i);
+  assert.match(constitution, /resgate de principal/i);
 });
