@@ -46,9 +46,12 @@ test('individual perspective keeps liquidity, economic responsibility and fundin
   assert.match(screenSource, /Responsabilidade econômica não é alterada por conta, cartão, comprador ou por quem efetivamente pagou/);
 });
 
-test('individual perspective does not silently attribute unresolved funding', () => {
+test('individual perspective does not silently attribute unresolved funding or failed reads', () => {
   assert.match(screenSource, /unattributed_funding_remaining/);
   assert.match(screenSource, /O Casa não vai adivinhar de quem esse dinheiro sairá/);
+  assert.match(screenSource, /memberError/);
+  assert.match(screenSource, /Nenhum valor foi substituído por zero/);
+  assert.match(screenSource, /let cancelled = false/);
 });
 
 test('Casa home keeps current cash and projected ending cash conceptually separate', () => {
