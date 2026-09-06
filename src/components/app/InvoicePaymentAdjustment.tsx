@@ -13,14 +13,14 @@ const localDate = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
-export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
+export function InvoicePaymentAdjustment({ onBack, initialInvoiceId, initialAmount }: { onBack: () => void; initialInvoiceId?: string; initialAmount?: number }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [invoices, setInvoices] = useState<FinancialInvoice[]>([]);
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
-  const [invoiceId, setInvoiceId] = useState('');
+  const [invoiceId, setInvoiceId] = useState(initialInvoiceId ?? '');
   const [sourceAccountId, setSourceAccountId] = useState('');
   const [funderMemberId, setFunderMemberId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(initialAmount ? initialAmount.toFixed(2).replace('.', ',') : '');
   const [paidDate, setPaidDate] = useState(localDate());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -35,8 +35,14 @@ export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
         listFinancialInvoices(supabase, household.id),
         listHouseholdFinancialAccounts(supabase, household.id),
       ]);
-      setInvoices(invoiceRows.filter((invoice) => Number(invoice.outstanding_amount) > 0));
+      const openRows = invoiceRows.filter((invoice) => Number(invoice.outstanding_amount) > 0);
+      setInvoices(openRows);
       setAccounts(financial.accounts);
+      if (initialInvoiceId) {
+        const current = openRows.find((invoice) => invoice.invoice_id === initialInvoiceId);
+        if (!current) { setInvoiceId(''); setAmount(''); setError('Esta fatura não tem mais saldo em aberto. O Casa não vai usar o valor antigo da navegação.'); }
+        else { setInvoiceId(current.invoice_id); setAmount(Number(current.outstanding_amount).toFixed(2).replace('.', ',')); }
+      }
     } catch { setError('Não foi possível carregar as faturas e recursos da Casa.'); }
     finally { setLoading(false); }
   };
@@ -78,8 +84,8 @@ export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
     <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar às intenções</button>
     {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
       <div><h2 className="font-bold">Pagamento de fatura</h2><p className="mt-1 text-sm text-slate-400">A despesa já nasceu nas compras do cartão. Aqui o Casa registra apenas a liquidação da obrigação e a saída real de caixa.</p></div>
-      <label className="block text-sm">Qual fatura foi paga?<select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); setAmount(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{invoices.map((invoice) => <option key={invoice.invoice_id} value={invoice.invoice_id}>{invoice.card_name} · {invoice.competence_date} · em aberto {formatMoney(invoice.outstanding_amount)}</option>)}</select></label>
-      {selectedInvoice && <div className="rounded-xl bg-slate-950 p-3 text-sm"><p><span className="text-slate-400">Em aberto:</span> <strong className="text-amber-200">{formatMoney(outstanding)}</strong></p><p className="mt-1 text-xs text-slate-500">Conta prevista: {selectedInvoice.account_name ?? 'não definida'}. Isso é só uma previsão; abaixo você informa de onde o dinheiro realmente saiu.</p></div>}
+      <label className="block text-sm">Qual fatura foi paga?<select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); const current=invoices.find((invoice)=>invoice.invoice_id===event.target.value); setAmount(current?Number(current.outstanding_amount).toFixed(2).replace('.',','):''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{invoices.map((invoice) => <option key={invoice.invoice_id} value={invoice.invoice_id}>{invoice.card_name} · {invoice.competence_date} · em aberto {formatMoney(invoice.outstanding_amount)}</option>)}</select></label>
+      {selectedInvoice && <div className="rounded-xl bg-slate-950 p-3 text-sm"><p><span className="text-slate-400">Em aberto agora:</span> <strong className="text-amber-200">{formatMoney(outstanding)}</strong></p><p className="mt-1 text-xs text-slate-500">Conta prevista: {selectedInvoice.account_name ?? 'não definida'}. Isso é só uma previsão; abaixo você informa de onde o dinheiro realmente saiu.</p></div>}
       <label className="block text-sm">De qual recurso o dinheiro saiu?<select value={sourceAccountId} onChange={(event) => setSourceAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
       <label className="block text-sm">Quem efetivamente financiou este pagamento?<select value={funderMemberId} onChange={(event) => setFunderMemberId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
       <label className="block text-sm">Valor pago<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
@@ -87,7 +93,7 @@ export function InvoicePaymentAdjustment({ onBack }: { onBack: () => void }) {
       {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}
       {success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
       {invoices.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400">Não há faturas com saldo em aberto.</p>}
-      <button type="submit" disabled={saving || invoices.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><CreditCard className="h-4 w-4"/>{saving ? 'Registrando…' : 'Registrar pagamento'}</button>
+      <button type="submit" disabled={saving || invoices.length === 0 || !selectedInvoice} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><CreditCard className="h-4 w-4"/>{saving ? 'Registrando…' : 'Registrar pagamento'}</button>
     </form>}
   </div>;
 }
