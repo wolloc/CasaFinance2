@@ -8,6 +8,7 @@ import { createResourceTransfer } from '../../finance/resourceTransfers.js';
 import { InvoicePaymentAdjustment } from './InvoicePaymentAdjustment.js';
 import { ThirdPartySettlementAdjustment } from './ThirdPartySettlementAdjustment.js';
 import { InvestmentReserveAdjustment } from './InvestmentReserveAdjustment.js';
+import { LoanAdjustment } from './LoanAdjustment.js';
 
 const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
@@ -18,7 +19,7 @@ const intentions = [
   { id: 'third-party', label: 'Acerto com outra pessoa', description: 'Receber ou pagar valores vinculados a terceiros.', icon: HandCoins, ready: true },
   { id: 'invoice', label: 'Pagamento de fatura', description: 'Movimentar caixa para liquidar cartão sem criar uma nova despesa.', icon: CreditCard, ready: true },
   { id: 'reserve', label: 'Investimento / reserva', description: 'Aporte ou resgate de principal como movimento patrimonial neutro.', icon: PiggyBank, ready: true },
-  { id: 'loan', label: 'Empréstimos', description: 'Registrar movimentações de dívida sem tratar principal como renda ou despesa.', icon: Banknote, ready: false },
+  { id: 'loan', label: 'Empréstimos', description: 'Registrar principal, caixa e obrigação sem tratar dívida como renda ou despesa.', icon: Banknote, ready: true },
 ] as const;
 
 export function NewAdjustmentScreen() {
@@ -103,5 +104,6 @@ export function NewAdjustmentScreen() {
     {selected === 'third-party' && <ThirdPartySettlementAdjustment onBack={() => setSelected(null)} />}
     {selected === 'invoice' && <InvoicePaymentAdjustment onBack={() => setSelected(null)} />}
     {selected === 'reserve' && <InvestmentReserveAdjustment onBack={() => setSelected(null)} />}
+    {selected === 'loan' && <LoanAdjustment onBack={() => setSelected(null)} />}
   </section>;
 }
