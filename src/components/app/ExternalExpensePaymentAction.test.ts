@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import test from'node:test';
+const ui=await readFile(new URL('./ExternalExpensePaymentAction.tsx',import.meta.url),'utf8');const service=await readFile(new URL('../../finance/externalExpensePayments.ts',import.meta.url),'utf8');const screen=await readFile(new URL('./TransactionsScreen.tsx',import.meta.url),'utf8');
+test('external payer journey explicitly distinguishes gift from reimbursement',()=>{assert.match(ui,/Essa pessoa espera receber de volta/);assert.match(ui,/Foi um presente\/ajuda/);assert.match(ui,/Precisamos reembolsar/);assert.match(ui,/nasce um valor a pagar/);});
+test('copy preserves cash and income semantics',()=>{assert.match(ui,/não cria renda nem entrada de caixa/);assert.match(ui,/o dinheiro não entrou numa conta da Casa/);assert.match(ui,/A Casa não movimentou caixa agora/);});
+test('service calls canonical external payment rpc and never invents local cash inputs',()=>{assert.match(service,/record_external_expense_payment/);assert.match(service,/p_payer_party_id/);assert.match(service,/p_intent/);assert.doesNotMatch(service,/money_movements/);assert.doesNotMatch(service,/funding_events/);});
+test('expense screen exposes external payer action',()=>{assert.match(screen,/ExternalExpensePaymentAction/);});
