@@ -24,7 +24,7 @@ export function ThirdPartyReceivableWriteOff({onBack}:{onBack:()=>void}){
   const load=async()=>{if(!supabase||!household)return;setLoading(true);setError(null);try{const rows=await listOpenThirdPartyObligations(supabase,household.id);setReceivables(rows.filter(row=>row.kind==='receivable'));}catch{setError('Não foi possível carregar os valores a receber.');}finally{setLoading(false);}};
   useEffect(()=>{load();},[household?.id]);
   const selected=useMemo(()=>receivables.find(row=>row.id===obligationId),[receivables,obligationId]);
-  const percentageTotal=useMemo(()=>Object.values(percentages).reduce((sum,value)=>sum+(Number(value.replace(',','.'))||0),0),[percentages]);
+  const percentageTotal=useMemo(()=>householdMembers.reduce((sum,member)=>sum+(Number((percentages[member.id]??'0').replace(',','.'))||0),0),[householdMembers,percentages]);
 
   const chooseReceivable=(id:string)=>{setObligationId(id);const row=receivables.find(item=>item.id===id);setAmount(row?row.outstanding_amount.toFixed(2).replace('.',','):'');setPercentages({});setError(null);setSuccess(null);};
   const setAllTo=(memberId:string)=>{const next:Record<string,string>={};for(const member of householdMembers)next[member.id]=member.id===memberId?'100':'0';setPercentages(next);};
