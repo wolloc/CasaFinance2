@@ -36,7 +36,7 @@ export function IncomeReceiptAction({ onCompleted }: { onCompleted?: () => void 
         listHouseholdFinancialAccounts(supabase, household.id),
       ]);
       setIncomes(transactions.filter((row) => row.type === 'income' && !['cancelled', 'reversed'].includes(row.economic_state) && Number(row.realized_amount) < Number(row.amount)));
-      setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet'].includes(account.type) && account.resource_restriction == null));
+      setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet'].includes(account.type)));
     } catch {
       setError('Não foi possível carregar as entradas pendentes e os recursos da Casa.');
     } finally {
