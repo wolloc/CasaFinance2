@@ -10,16 +10,16 @@ const engine=await readFile(new URL('../../../supabase/migrations/202609040020_f
 test('receivable write-off is an explicit adjustment journey',()=>{
   assert.match(adjustment,/Valor que não será recebido/);
   assert.match(adjustment,/selected==='third-party-loss'/);
-  assert.match(source,/Dar baixa em valor que não será recebido/);
-  assert.match(source,/diferente de corrigir um lançamento feito por engano/);
+  assert.match(source,/Valor que não será recebido/);
+  assert.match(source,/Se o cadastro estava errado desde o começo, use a correção de cadastro/);
 });
 
 test('write-off delegates to canonical loss RPC and never settles cash',()=>{
   assert.match(service,/rpc\('write_off_receivable'/);
   assert.match(service,/p_splits: splits/);
   assert.doesNotMatch(service,/writeOffThirdPartyReceivable[\s\S]*rpc\('settle_financial_obligation'/);
-  assert.match(source,/Nenhum dinheiro entrou ou saiu/);
-  assert.match(source,/perda econômica/);
+  assert.match(source,/Nenhum dinheiro entrou ou saiu de uma conta/);
+  assert.match(source,/Isso registra uma perda/);
   assert.match(engine,/write_off_receivable/);
   assert.match(engine,/transaction_components[\s\S]+loss/);
 });
@@ -28,11 +28,11 @@ test('economic responsibility for the loss is explicit and totals one hundred pe
   assert.match(service,/responsabilidade pela perda precisa totalizar 100%/);
   assert.match(service,/member_id: row\.memberId/);
   assert.match(service,/percentage: row\.percentage/);
-  assert.match(source,/Quem assume economicamente essa perda/);
+  assert.match(source,/De quem é essa perda\?/);
   assert.match(source,/percentuais precisam totalizar 100%/);
 });
 
 test('write-off cannot exceed the receivable outstanding amount in the UI',()=>{
   assert.match(source,/numeric>selected\.outstanding_amount/);
-  assert.match(source,/não pode superar o saldo ainda a receber/);
+  assert.match(source,/não pode ser maior do que ainda falta receber/);
 });
