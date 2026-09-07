@@ -14,9 +14,9 @@ permissions:
 
 jobs:
   validate:
-    name: TypeScript and build
+    name: TypeScript, tests and build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -35,6 +35,12 @@ jobs:
 
       - name: Unit and integration tests
         run: npm test
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E smoke tests
+        run: npm run test:e2e
 
       - name: Secret scan
         run: npm run check:secrets
