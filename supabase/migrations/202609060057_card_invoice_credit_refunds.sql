@@ -240,14 +240,14 @@ with responsibility as (
 )
 select t.household_id,t.id transaction_id,t.amount::numeric(19,2) economic_amount,
        greatest(t.gross_effective_amount-coalesce(ref.refunded_amount,0),0)::numeric(19,2) effective_amount,
-       coalesce(ref.refunded_amount,0)::numeric(19,2) refunded_amount,
        coalesce(r.responsibility_breakdown,'[]'::jsonb) responsibility_breakdown,
        coalesce(m.member_funded_amount,0)::numeric(19,2) member_funded_amount,
        coalesce(x.external_paid_amount,0)::numeric(19,2) external_paid_amount,
        greatest(t.gross_effective_amount-coalesce(ref.refunded_amount,0)-coalesce(m.member_funded_amount,0)-coalesce(x.external_paid_amount,0),0)::numeric(19,2) remaining_to_fund,
        coalesce(m.funding_breakdown,'[]'::jsonb) funding_breakdown,
        coalesce(x.external_payment_breakdown,'[]'::jsonb) external_payment_breakdown,
-       coalesce(s.settlement_breakdown,'[]'::jsonb) settlement_breakdown
+       coalesce(s.settlement_breakdown,'[]'::jsonb) settlement_breakdown,
+       coalesce(ref.refunded_amount,0)::numeric(19,2) refunded_amount
 from base t
 left join responsibility r on r.household_id=t.household_id and r.transaction_id=t.id
 left join member_funding m on m.household_id=t.household_id and m.transaction_id=t.id
