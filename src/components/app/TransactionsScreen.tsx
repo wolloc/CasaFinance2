@@ -26,16 +26,28 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   const projectionIncomeIntent = useMemo(() => mode === 'income' ? consumeProjectionIncomeReviewIntent() : null, [mode]);
   if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} />;
   return <div className="space-y-4">
-    <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent?.commitmentKey} />
-    <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />
-    <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />
-    <ExternalExpensePaymentAction />
-    <PartialDirectRefundAction />
-    <CardRefundAction />
-    <PostPaymentCardRefundAction />
-    <ExpenseRoleCorrectionAction />
-    <RecurringExpenseAction />
-    <RecurringExpenseManagement />
+    {projectionExpenseIntent && <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent.commitmentKey} />}
+    {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
+    {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent.transactionId} />}
+
     <HouseholdTransactionsSetup embedded mode={mode} />
+
+    <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
+      <summary className="cursor-pointer list-none font-semibold text-slate-200">
+        Precisa ajustar algo?
+        <span className="mt-1 block text-xs font-normal text-slate-500">Estornos, pagamentos por terceiros, correções e recorrências ficam aqui para não atrapalhar o uso do dia a dia.</span>
+      </summary>
+      <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
+        {!recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={null} />}
+        {!directExpenseIntent && <DirectExpensePaymentAction />}
+        <ExternalExpensePaymentAction />
+        <PartialDirectRefundAction />
+        <CardRefundAction />
+        <PostPaymentCardRefundAction />
+        <ExpenseRoleCorrectionAction />
+        <RecurringExpenseAction />
+        <RecurringExpenseManagement />
+      </div>
+    </details>
   </div>;
 }
