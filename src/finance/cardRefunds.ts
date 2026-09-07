@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getRetryStableRequestKey, releaseRetryStableRequestKey } from './retryIdempotency.js';
 
 export type CardRefundTarget={invoice_id:string;invoice_month:string;due_date:string;installment_id:string|null;installment_number:number|null;commitment_amount:number|string;invoice_outstanding:number|string};
 export type CardRefundPosition={household_id:string;transaction_id:string;description:string;transaction_date:string;original_amount:number|string;refunded_amount:number|string;remaining_refundable_amount:number|string;last_refunded_at:string|null;card_id:string;card_name:string;installment_count:number;eligible_invoice_targets:CardRefundTarget[]};
@@ -10,11 +11,13 @@ export async function listCardRefundPositions(client:SupabaseClient,householdId:
 }
 
 export async function recordCardInvoiceCreditRefund(client:SupabaseClient,input:{householdId:string;transactionId:string;targetInvoiceId:string;amount:string;occurredAt:string;reason:string}){
-  const requestKey=`card-refund:${input.transactionId}:${input.targetInvoiceId}:${crypto.randomUUID()}`;
+  const identity=[input.householdId,input.transactionId,input.targetInvoiceId,input.amount,input.occurredAt,input.reason.trim()] as const;
+  const requestKey=getRetryStableRequestKey('card-refund',identity);
   const result=await client.rpc('record_card_invoice_credit_refund',{
     p_household_id:input.householdId,p_transaction_id:input.transactionId,p_target_invoice_id:input.targetInvoiceId,p_amount:input.amount,
     p_occurred_at:input.occurredAt,p_reason:input.reason.trim(),p_request_key:requestKey,
   });
   if(result.error)throw result.error;
+  releaseRetryStableRequestKey('card-refund',identity);
   return result.data as string;
 }
