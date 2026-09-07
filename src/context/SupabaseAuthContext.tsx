@@ -82,30 +82,34 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setHouseholdMembersError(null);
       return;
     }
+
     let mounted = true;
     setHouseholdLoading(true);
     setHouseholdMembersLoading(true);
     setHouseholdMembersError(null);
     setHouseholdMembers([]);
+
     findExistingHousehold(supabase, session)
       .then((existingHousehold) => { if (mounted) setHousehold(existingHousehold); })
       .catch(() => { if (mounted) setError('Não foi possível verificar sua Casa. Tente novamente.'); })
       .finally(() => { if (mounted) setHouseholdLoading(false); });
 
-    supabase.from('household_members')
-      .select('id, household_id, profile_id, role, profiles(display_name)')
-      .eq('profile_id', session.user.id)
-      .is('deactivated_at', null)
-      .maybeSingle()
-      .then(async ({ data, error: membershipError }) => {
+    const loadHouseholdMembers = async () => {
+      try {
+        const membershipResponse = await supabase.from('household_members')
+          .select('id, household_id, profile_id, role, profiles(display_name)')
+          .eq('profile_id', session.user.id)
+          .is('deactivated_at', null)
+          .maybeSingle();
         if (!mounted) return;
-        if (membershipError) throw membershipError;
-        if (!data) {
+        if (membershipResponse.error) throw membershipResponse.error;
+        if (!membershipResponse.data) {
           setHouseholdMembers([]);
           setHouseholdMembersError(null);
           return;
         }
-        const membership = data as { household_id: string };
+
+        const membership = membershipResponse.data as { household_id: string };
         const response = await supabase.from('household_members')
           .select('id, profile_id, role, profiles(display_name)')
           .eq('household_id', membership.household_id)
@@ -113,6 +117,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           .order('joined_at');
         if (!mounted) return;
         if (response.error) throw response.error;
+
         setHouseholdMembers((response.data ?? []).map((member) => ({
           id: member.id,
           profile_id: member.profile_id,
@@ -120,14 +125,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           display_name: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name ?? 'Membro',
         })));
         setHouseholdMembersError(null);
-      })
-      .catch(() => {
+      } catch {
         if (!mounted) return;
         setHouseholdMembers([]);
         setHouseholdMembersError('Não foi possível conferir quem faz parte da Casa. Tente novamente antes de registrar qualquer coisa.');
-      })
-      .finally(() => { if (mounted) setHouseholdMembersLoading(false); });
+      } finally {
+        if (mounted) setHouseholdMembersLoading(false);
+      }
+    };
 
+    void loadHouseholdMembers();
     return () => { mounted = false; };
   }, [session, householdRefreshVersion, householdMembersRefreshVersion]);
 
