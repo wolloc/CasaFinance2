@@ -18,6 +18,7 @@ import { CardRefundAction } from './CardRefundAction.js';
 import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
 import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { CardPixExpenseAction } from './CardPixExpenseAction.js';
+import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 
 export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: TransactionKind; createRequestId?: number }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
@@ -31,6 +32,7 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
+    <ExpenseMonthBrowser />
     <HouseholdTransactionsSetup embedded mode={mode} createRequestId={createRequestId} />
 
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
