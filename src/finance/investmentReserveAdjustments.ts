@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type InvestmentReserveResource = {
   account_id: string;
@@ -33,15 +34,29 @@ export const isInvestmentOrReserve = (resource: InvestmentReserveResource) => re
 export const isTransactionalResource = (resource: InvestmentReserveResource) => !isInvestmentOrReserve(resource) && !resource.is_restricted && ['cash', 'checking', 'savings', 'digital_wallet'].includes(resource.type);
 
 export async function moveInvestmentReservePrincipal(client: SupabaseClient, input: { householdId:string; sourceAccountId:string; destinationAccountId:string; amount:string; date:string; description:string; }) {
-  const result = await client.rpc('create_transfer', { p_household_id:input.householdId,p_source_account_id:input.sourceAccountId,p_destination_account_id:input.destinationAccountId,p_amount:input.amount,p_date:input.date,p_description:input.description.trim()||'Movimentação de principal' });
-  if (result.error) throw result.error;
-  return result.data as string;
+  const description = input.description.trim() || 'Movimentação de principal';
+  const identity = [input.householdId, input.sourceAccountId, input.destinationAccountId, input.amount, input.date, description] as const;
+  return runRetryStableRpc(client, 'investment-principal-transfer', identity, 'create_transfer_idempotent', {
+    p_household_id: input.householdId,
+    p_source_account_id: input.sourceAccountId,
+    p_destination_account_id: input.destinationAccountId,
+    p_amount: input.amount,
+    p_date: input.date,
+    p_description: description,
+  });
 }
 
 export async function recordInvestmentPerformance(client: SupabaseClient, input: { householdId:string; accountId:string; kind:InvestmentPerformanceKind; amount:string; date:string; description:string; }) {
-  const result = await client.rpc('record_investment_performance', { p_household_id:input.householdId,p_account_id:input.accountId,p_kind:input.kind,p_amount:input.amount,p_effective_date:input.date,p_description:input.description.trim() });
-  if (result.error) throw result.error;
-  return result.data as string;
+  const description = input.description.trim();
+  const identity = [input.householdId, input.accountId, input.kind, input.amount, input.date, description] as const;
+  return runRetryStableRpc(client, 'investment-performance', identity, 'record_investment_performance_idempotent', {
+    p_household_id: input.householdId,
+    p_account_id: input.accountId,
+    p_kind: input.kind,
+    p_amount: input.amount,
+    p_effective_date: input.date,
+    p_description: description,
+  });
 }
 
 export async function listInvestmentPerformance(client: SupabaseClient, householdId:string): Promise<InvestmentPerformanceEvent[]> {

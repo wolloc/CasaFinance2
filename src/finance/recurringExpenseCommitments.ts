@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type RecurringExpenseCommitment = {
   household_id: string;
@@ -32,7 +33,8 @@ export async function confirmRecurringExpenseOccurrence(client: SupabaseClient, 
 }
 
 export async function settleRecurringExpenseOccurrence(client: SupabaseClient, input: { householdId: string; occurrenceId: string; accountId: string; funderMemberId: string; amount: string; paidAt: string }) {
-  const response = await client.rpc('settle_recurring_expense_occurrence', {
+  const identity = [input.householdId, input.occurrenceId, input.accountId, input.funderMemberId, input.amount, input.paidAt] as const;
+  return runRetryStableRpc(client, 'settle-recurring-expense', identity, 'settle_recurring_expense_occurrence_idempotent', {
     p_household_id: input.householdId,
     p_occurrence_id: input.occurrenceId,
     p_source_account_id: input.accountId,
@@ -40,6 +42,4 @@ export async function settleRecurringExpenseOccurrence(client: SupabaseClient, i
     p_amount: input.amount,
     p_paid_at: input.paidAt,
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }

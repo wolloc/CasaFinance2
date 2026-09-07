@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type IncomeReceiptInput = {
   householdId: string;
@@ -10,7 +11,8 @@ export type IncomeReceiptInput = {
 };
 
 export async function settleHouseholdIncome(client: SupabaseClient, input: IncomeReceiptInput) {
-  const response = await client.rpc('settle_income', {
+  const identity = [input.householdId, input.transactionId, input.destinationAccountId, input.beneficiaryMemberId, input.amount, input.receivedAt] as const;
+  return runRetryStableRpc(client, 'settle-income', identity, 'settle_income_idempotent', {
     p_household_id: input.householdId,
     p_transaction_id: input.transactionId,
     p_destination_account_id: input.destinationAccountId,
@@ -18,6 +20,4 @@ export async function settleHouseholdIncome(client: SupabaseClient, input: Incom
     p_amount: input.amount,
     p_received_at: input.receivedAt,
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }

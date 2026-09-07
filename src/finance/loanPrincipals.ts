@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type FinancialParty = { id: string; name: string };
 
@@ -35,17 +36,19 @@ export async function createLoanPrincipal(client: SupabaseClient, input: {
   description: string;
   notes?: string;
 }) {
-  const result = await client.rpc('create_loan_principal', {
+  const dueDate = input.dueDate || null;
+  const description = input.description.trim() || 'Empréstimo';
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.direction, input.counterpartyId, input.accountId, input.amount, input.occurredAt, dueDate, description, notes] as const;
+  return runRetryStableRpc(client, 'create-loan-principal', identity, 'create_loan_principal_idempotent', {
     p_household_id: input.householdId,
     p_direction: input.direction,
     p_counterparty_id: input.counterpartyId,
     p_account_id: input.accountId,
     p_amount: input.amount,
     p_occurred_at: input.occurredAt,
-    p_due_date: input.dueDate || null,
-    p_description: input.description.trim() || 'Empréstimo',
-    p_notes: input.notes?.trim() || null,
+    p_due_date: dueDate,
+    p_description: description,
+    p_notes: notes,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }

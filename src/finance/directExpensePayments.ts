@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type DirectExpensePaymentCandidate = {
   id: string;
@@ -73,7 +74,8 @@ export async function settleDirectExpense(client: SupabaseClient, input: {
   amount: string;
   paidAt: string;
 }) {
-  const result = await client.rpc('settle_direct_expense', {
+  const identity = [input.householdId, input.transactionId, input.sourceAccountId, input.funderMemberId, input.amount, input.paidAt] as const;
+  return runRetryStableRpc(client, 'settle-direct-expense', identity, 'settle_direct_expense_idempotent', {
     p_household_id: input.householdId,
     p_transaction_id: input.transactionId,
     p_source_account_id: input.sourceAccountId,
@@ -81,6 +83,4 @@ export async function settleDirectExpense(client: SupabaseClient, input: {
     p_amount: input.amount,
     p_paid_at: input.paidAt,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }

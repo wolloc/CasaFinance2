@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type MemberSettlementPosition = {
   household_id: string;
@@ -48,15 +49,15 @@ export async function settleMemberPosition(client: SupabaseClient, input: {
   destinationAccountId: string;
   notes?: string;
 }) {
-  const response = await client.rpc('settle_member_position', {
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.payerMemberId, input.receiverMemberId, input.amount, input.sourceAccountId, input.destinationAccountId, notes] as const;
+  return runRetryStableRpc(client, 'settle-member-position', identity, 'settle_member_position_idempotent', {
     p_household_id: input.householdId,
     p_payer_member_id: input.payerMemberId,
     p_receiver_member_id: input.receiverMemberId,
     p_amount: input.amount,
     p_source_account_id: input.sourceAccountId,
     p_destination_account_id: input.destinationAccountId,
-    p_notes: input.notes?.trim() || null,
+    p_notes: notes,
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }

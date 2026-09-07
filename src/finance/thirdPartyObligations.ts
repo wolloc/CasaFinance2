@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getRetryStableRequestKey, releaseRetryStableRequestKey } from './retryIdempotency.js';
+import { getRetryStableRequestKey, releaseRetryStableRequestKey, runRetryStableRpc } from './retryIdempotency.js';
 
 export type ThirdPartyObligation = {
   id: string;
@@ -155,17 +155,17 @@ export async function writeOffThirdPartyReceivable(client: SupabaseClient, input
   notes?: string;
 }) {
   const splits = buildReceivableLossSplits(input.amount, input.allocations);
-  const result = await client.rpc('write_off_receivable', {
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.obligationId, input.amount, input.lossDate, splits, notes] as const;
+  return runRetryStableRpc(client, 'write-off-receivable', identity, 'write_off_receivable_idempotent', {
     p_household_id: input.householdId,
     p_obligation_id: input.obligationId,
     p_amount: input.amount,
     p_loss_date: input.lossDate,
     p_splits: splits,
     p_category_id: null,
-    p_notes: input.notes?.trim() || null,
+    p_notes: notes,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }
 
 export async function forgiveThirdPartyPayable(client: SupabaseClient, input: {
@@ -241,15 +241,16 @@ export async function settleThirdPartyObligation(client: SupabaseClient, input: 
   funderMemberId?: string;
   notes?: string;
 }) {
-  const result = await client.rpc('settle_financial_obligation', {
+  const funderMemberId = input.funderMemberId || null;
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.obligationId, input.accountId, input.amount, input.occurredAt, funderMemberId, notes] as const;
+  return runRetryStableRpc(client, 'settle-financial-obligation', identity, 'settle_financial_obligation_idempotent', {
     p_household_id: input.householdId,
     p_obligation_id: input.obligationId,
     p_account_id: input.accountId,
     p_amount: input.amount,
     p_occurred_at: input.occurredAt,
-    p_funder_member_id: input.funderMemberId || null,
-    p_notes: input.notes?.trim() || null,
+    p_funder_member_id: funderMemberId,
+    p_notes: notes,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }
