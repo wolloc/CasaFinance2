@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getRetryStableRequestKey, releaseRetryStableRequestKey } from './retryIdempotency.js';
 
 export type ThirdPartyObligation = {
   id: string;
@@ -39,19 +40,24 @@ export async function createManualThirdPartyObligation(client: SupabaseClient, i
   description: string;
   notes?: string;
 }) {
-  const requestKey = crypto.randomUUID();
+  const dueDate = input.dueDate || null;
+  const description = input.description.trim();
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.kind, input.counterpartyId, input.amount, input.obligationDate, dueDate, description, notes] as const;
+  const requestKey = getRetryStableRequestKey('manual-third-party-obligation-create', identity);
   const result = await client.rpc('create_manual_third_party_obligation', {
     p_household_id: input.householdId,
     p_kind: input.kind,
     p_counterparty_id: input.counterpartyId,
     p_amount: input.amount,
     p_obligation_date: input.obligationDate,
-    p_due_date: input.dueDate || null,
-    p_description: input.description.trim(),
+    p_due_date: dueDate,
+    p_description: description,
     p_request_key: requestKey,
-    p_notes: input.notes?.trim() || null,
+    p_notes: notes,
   });
   if (result.error) throw result.error;
+  releaseRetryStableRequestKey('manual-third-party-obligation-create', identity);
   return result.data as string;
 }
 
@@ -66,19 +72,26 @@ export async function correctManualThirdPartyObligation(client: SupabaseClient, 
   reason: string;
   notes?: string;
 }) {
+  const dueDate = input.dueDate || null;
+  const description = input.description.trim();
+  const reason = input.reason.trim();
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.obligationId, input.counterpartyId, input.amount, input.obligationDate, dueDate, description, reason, notes] as const;
+  const requestKey = getRetryStableRequestKey('manual-third-party-obligation-correct', identity);
   const result = await client.rpc('correct_manual_third_party_obligation', {
     p_household_id: input.householdId,
     p_obligation_id: input.obligationId,
     p_counterparty_id: input.counterpartyId,
     p_amount: input.amount,
     p_obligation_date: input.obligationDate,
-    p_due_date: input.dueDate || null,
-    p_description: input.description.trim(),
-    p_reason: input.reason.trim(),
-    p_request_key: crypto.randomUUID(),
-    p_notes: input.notes?.trim() || null,
+    p_due_date: dueDate,
+    p_description: description,
+    p_reason: reason,
+    p_request_key: requestKey,
+    p_notes: notes,
   });
   if (result.error) throw result.error;
+  releaseRetryStableRequestKey('manual-third-party-obligation-correct', identity);
   return result.data as string;
 }
 
@@ -87,13 +100,17 @@ export async function cancelManualThirdPartyObligation(client: SupabaseClient, i
   obligationId: string;
   reason: string;
 }) {
+  const reason = input.reason.trim();
+  const identity = [input.householdId, input.obligationId, reason] as const;
+  const requestKey = getRetryStableRequestKey('manual-third-party-obligation-cancel', identity);
   const result = await client.rpc('cancel_manual_third_party_obligation', {
     p_household_id: input.householdId,
     p_obligation_id: input.obligationId,
-    p_reason: input.reason.trim(),
-    p_request_key: crypto.randomUUID(),
+    p_reason: reason,
+    p_request_key: requestKey,
   });
   if (result.error) throw result.error;
+  releaseRetryStableRequestKey('manual-third-party-obligation-cancel', identity);
   return result.data as string;
 }
 
@@ -160,16 +177,20 @@ export async function forgiveThirdPartyPayable(client: SupabaseClient, input: {
   notes?: string;
 }) {
   const splits = buildDebtForgivenessSplits(input.amount, input.allocations);
+  const notes = input.notes?.trim() || null;
+  const identity = [input.householdId, input.obligationId, input.amount, input.forgivenDate, splits, notes] as const;
+  const requestKey = getRetryStableRequestKey('third-party-payable-forgive', identity);
   const result = await client.rpc('forgive_payable_obligation', {
     p_household_id: input.householdId,
     p_obligation_id: input.obligationId,
     p_amount: input.amount,
     p_forgiven_date: input.forgivenDate,
     p_allocations: splits,
-    p_request_key: crypto.randomUUID(),
-    p_notes: input.notes?.trim() || null,
+    p_request_key: requestKey,
+    p_notes: notes,
   });
   if (result.error) throw result.error;
+  releaseRetryStableRequestKey('third-party-payable-forgive', identity);
   return result.data as string;
 }
 
