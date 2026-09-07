@@ -10,9 +10,9 @@ import { LoanPaymentAdjustment } from './LoanPaymentAdjustment.js';
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
 
-export function LoanAdjustment({ onBack }: { onBack: () => void }) {
+export function LoanAdjustment({ onBack, backLabel = 'Voltar aos ajustes', initialDirection }: { onBack: () => void; backLabel?: string; initialDirection?: 'granted' | 'taken' }) {
   const { household } = useSupabaseAuth();
-  const [direction, setDirection] = useState<'granted' | 'taken'>('granted');
+  const [direction, setDirection] = useState<'granted' | 'taken'>(initialDirection ?? 'granted');
   const [parties, setParties] = useState<FinancialParty[]>([]);
   const [accounts, setAccounts] = useState<InvestmentReserveResource[]>([]);
   const [counterpartyId, setCounterpartyId] = useState('');
@@ -29,9 +29,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const clearLoadedContext = () => {
-    setParties([]); setAccounts([]); setCounterpartyId(''); setAccountId('');
-  };
+  const clearLoadedContext = () => { setParties([]); setAccounts([]); setCounterpartyId(''); setAccountId(''); };
   const load = async () => {
     if (!supabase || !household) return;
     setLoading(true); setLoadError(null); setError(null);
@@ -39,11 +37,12 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
     catch { clearLoadedContext(); setLoadError('Não foi possível conferir pessoas e contas da Casa. O empréstimo não pode ser registrado até uma nova leitura válida.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [household?.id]);
+  useEffect(() => { void load(); }, [household?.id]);
+  useEffect(() => { if (initialDirection) setDirection(initialDirection); }, [initialDirection]);
   const selectedParty = useMemo(() => parties.find((party) => party.id === counterpartyId), [parties, counterpartyId]);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!supabase || !household) return;
-    if (loadError) { setError('Confira novamente as pessoas e contas antes de registrar o empréstimo.'); return; }
+    if (loadError || loading) { setError('Confira novamente as pessoas e contas antes de registrar o empréstimo.'); return; }
     const normalizedAmount = normalizeAmount(amount); const numericAmount = Number(normalizedAmount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setError('Informe um valor maior que zero.'); return; }
     if (!accountId) { setError(direction === 'granted' ? 'Informe de qual recurso o dinheiro saiu.' : 'Informe em qual recurso o dinheiro entrou.'); return; }
@@ -60,7 +59,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
   };
 
   return <div className="space-y-4">
-    <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar aos ajustes</button>
+    <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← {backLabel}</button>
     {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : loadError ? <div className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
       <div><h2 className="font-bold">Empréstimos</h2><p className="mt-1 text-sm text-slate-400">Use quando vocês emprestarem dinheiro para alguém ou pegarem dinheiro emprestado. O Casa acompanha o valor que precisa voltar sem confundir empréstimo com gasto ou renda.</p></div>
       <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setDirection('granted')} className={`rounded-xl border p-3 text-sm font-semibold ${direction === 'granted' ? 'border-blue-500 bg-blue-950/50 text-blue-200' : 'border-slate-700 text-slate-400'}`}>Emprestei dinheiro</button><button type="button" onClick={() => setDirection('taken')} className={`rounded-xl border p-3 text-sm font-semibold ${direction === 'taken' ? 'border-blue-500 bg-blue-950/50 text-blue-200' : 'border-slate-700 text-slate-400'}`}>Peguei emprestado</button></div>
