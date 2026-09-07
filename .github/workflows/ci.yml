@@ -55,7 +55,15 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Production build
+        env:
+          VITE_SUPABASE_URL: https://release-contract.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
         run: npm run build
+
+      - name: Generate release provenance manifest
+        env:
+          VITE_SUPABASE_URL: https://release-contract.supabase.co
+        run: npm run release:manifest
 
   database-security:
     name: Supabase RLS and database contracts
