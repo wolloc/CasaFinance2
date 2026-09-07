@@ -89,3 +89,6 @@ jobs:
 
       - name: Run Marco 3 Auth JWT and PostgREST gate
         run: bash supabase/tests/marco3_auth_http.sh
+
+      - name: Run Marco 3 real financial HTTP gate
+        run: bash supabase/tests/marco3_financial_http.sh
