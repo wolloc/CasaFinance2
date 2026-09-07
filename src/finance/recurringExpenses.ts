@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type RecurringExpenseFrequency = 'weekly' | 'monthly' | 'yearly';
 export type RecurringExpenseRule = {
@@ -21,16 +22,11 @@ export async function createRecurringExpenseFromTransaction(client: SupabaseClie
   startDate: string;
   endDate?: string;
 }) {
-  const result = await client.rpc('create_recurring_expense_rule_from_transaction', {
-    p_household_id: input.householdId,
-    p_template_transaction_id: input.transactionId,
-    p_frequency: input.frequency,
-    p_interval_count: input.intervalCount,
-    p_start_date: input.startDate,
-    p_end_date: input.endDate || null,
+  const endDate=input.endDate||null;
+  const identity=[input.householdId,input.transactionId,input.frequency,input.intervalCount,input.startDate,endDate] as const;
+  return runRetryStableRpc(client,'create-recurring-expense',identity,'create_recurring_expense_rule_from_transaction_idempotent',{
+    p_household_id:input.householdId,p_template_transaction_id:input.transactionId,p_frequency:input.frequency,p_interval_count:input.intervalCount,p_start_date:input.startDate,p_end_date:endDate,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }
 
 export async function ensureRecurringExpenseHorizon(client: SupabaseClient, householdId: string, throughDate: string) {
@@ -86,18 +82,11 @@ export async function reviseRecurringExpenseRule(client: SupabaseClient, input: 
   endDate?: string;
   reason: string;
 }) {
-  const result = await client.rpc('revise_recurring_expense_rule', {
-    p_household_id: input.householdId,
-    p_rule_id: input.ruleId,
-    p_effective_from: input.effectiveFrom,
-    p_amount: input.amount,
-    p_frequency: input.frequency,
-    p_interval_count: input.intervalCount,
-    p_end_date: input.endDate || null,
-    p_reason: input.reason.trim(),
+  const endDate=input.endDate||null;const reason=input.reason.trim();
+  const identity=[input.householdId,input.ruleId,input.effectiveFrom,input.amount,input.frequency,input.intervalCount,endDate,reason] as const;
+  return runRetryStableRpc(client,'revise-recurring-expense',identity,'revise_recurring_expense_rule_idempotent',{
+    p_household_id:input.householdId,p_rule_id:input.ruleId,p_effective_from:input.effectiveFrom,p_amount:input.amount,p_frequency:input.frequency,p_interval_count:input.intervalCount,p_end_date:endDate,p_reason:reason,
   });
-  if (result.error) throw result.error;
-  return result.data as string;
 }
 
 export async function closeRecurringExpenseRule(client: SupabaseClient, input: {
@@ -106,12 +95,6 @@ export async function closeRecurringExpenseRule(client: SupabaseClient, input: {
   effectiveFrom: string;
   reason: string;
 }) {
-  const result = await client.rpc('close_recurring_expense_rule', {
-    p_household_id: input.householdId,
-    p_rule_id: input.ruleId,
-    p_effective_from: input.effectiveFrom,
-    p_reason: input.reason.trim(),
-  });
-  if (result.error) throw result.error;
-  return result.data as string;
+  const reason=input.reason.trim();const identity=[input.householdId,input.ruleId,input.effectiveFrom,reason] as const;
+  return runRetryStableRpc(client,'close-recurring-expense',identity,'close_recurring_expense_rule_idempotent',{p_household_id:input.householdId,p_rule_id:input.ruleId,p_effective_from:input.effectiveFrom,p_reason:reason});
 }

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const pendingRequestKeys = new Map<string, string>();
+const pendingIntentValues = new Map<string, unknown>();
 
 function signature(operation: string, identity: readonly unknown[]) {
   return `${operation}:${JSON.stringify(identity)}`;
@@ -20,8 +21,18 @@ export function getRetryStableRequestKey(operation: string, identity: readonly u
   return requestKey;
 }
 
+export function getRetryStableIntentValue<T>(operation: string, identity: readonly unknown[], factory: () => T): T {
+  const key = signature(operation, identity);
+  if (pendingIntentValues.has(key)) return pendingIntentValues.get(key) as T;
+  const value = factory();
+  pendingIntentValues.set(key, value);
+  return value;
+}
+
 export function releaseRetryStableRequestKey(operation: string, identity: readonly unknown[]) {
-  pendingRequestKeys.delete(signature(operation, identity));
+  const key = signature(operation, identity);
+  pendingRequestKeys.delete(key);
+  pendingIntentValues.delete(key);
 }
 
 export async function runRetryStableRpc(

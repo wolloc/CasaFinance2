@@ -13,7 +13,7 @@ test('active transaction listing is scoped to the household and exposes financia
 });
 
 test('creator comes from the authenticated member and buyer is explicit', () => {
-  assert.match(screenSource, /member\.profile_id === user\.id/); assert.match(screenSource, /const creator = householdMembers\.find/); assert.match(serviceSource, /rpc\('create_financial_transaction'/); assert.doesNotMatch(serviceSource, /created_by_member_id: createdByMemberId/); assert.match(serviceSource, /p_buyer_member_id: type === 'expense' \? input\.buyerMemberId : null/); assert.match(serviceSource, /p_household_id: householdId/); assert.doesNotMatch(serviceSource, /owner_member_id|owner_user_id/);
+  assert.match(screenSource, /member\.profile_id === user\.id/); assert.match(screenSource, /const creator = householdMembers\.find/); assert.ok(serviceSource.includes('create_financial_transaction_idempotent')); assert.ok(serviceSource.includes('runRetryStableRpc')); assert.doesNotMatch(serviceSource, /created_by_member_id: createdByMemberId/); assert.ok(serviceSource.includes("const buyerMemberId=type==='expense'?input.buyerMemberId:null")); assert.ok(serviceSource.includes('p_buyer_member_id:buyerMemberId')); assert.ok(serviceSource.includes('p_household_id:householdId')); assert.doesNotMatch(serviceSource, /owner_member_id|owner_user_id/);
 });
 
 test('payment instrument selection remains independent from buyer', () => { assert.match(screenSource, /setBuyerMemberId/); assert.match(screenSource, /instrumentKind/); });
@@ -26,12 +26,12 @@ test('database validates all transaction references within the same household', 
   assert.match(migrationSource, /created_by_member_id/); assert.match(migrationSource, /buyer_member_id/); assert.match(migrationSource, /category_id/); assert.match(migrationSource, /account_id/); assert.match(migrationSource, /card_id/); assert.match(migrationSource, /auth\.uid\(\)/); assert.match(migrationSource, /expense transaction requires a buyer/); assert.match(migrationSource, /income transaction cannot have a buyer/); assert.match(migrationSource, /exactly one payment instrument/); assert.match(migrationSource, /transaction creator cannot be changed/); assert.match(migrationSource, /transaction type cannot be changed/);
 });
 
-test('edit and cancellation use first-class audited commands', () => {
-  assert.match(serviceSource, /rpc\('correct_unrealized_transaction'/); assert.match(serviceSource, /p_reason: 'Editado pelo usuário'/); assert.match(serviceSource, /rpc\('cancel_unrealized_transaction'/); assert.match(serviceSource, /p_reason: 'Cancelado pelo usuário'/); assert.doesNotMatch(serviceSource, /rpc\('update_basic_transaction'/); assert.doesNotMatch(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/); assert.match(auditedMutationSource, /audit_id:=public\.correct_unrealized_transaction/);
+test('edit and cancellation use first-class audited retry-stable commands', () => {
+  assert.ok(serviceSource.includes("rpc('correct_unrealized_transaction'")); assert.ok(serviceSource.includes("const reason='Editado pelo usuário'")); assert.ok(serviceSource.includes('p_reason:reason')); assert.ok(serviceSource.includes("getRetryStableRequestKey('transaction-correction'")); assert.ok(serviceSource.includes("releaseRetryStableRequestKey('transaction-correction'")); assert.ok(serviceSource.includes("rpc('cancel_unrealized_transaction'")); assert.ok(serviceSource.includes("const reason='Cancelado pelo usuário'")); assert.ok(serviceSource.includes("getRetryStableRequestKey('transaction-cancel'")); assert.ok(serviceSource.includes("releaseRetryStableRequestKey('transaction-cancel'")); assert.doesNotMatch(serviceSource, /rpc\('update_basic_transaction'/); assert.doesNotMatch(serviceSource, /deleted_at: new Date\(\)\.toISOString\(\)/); assert.match(auditedMutationSource, /audit_id:=public\.correct_unrealized_transaction/);
 });
 
 test('correction preserves the existing due date instead of clearing it', () => {
-  assert.match(serviceSource, /select\('due_date'\)/); assert.match(serviceSource, /p_due_date: existing\.data\.due_date/); assert.doesNotMatch(serviceSource, /p_due_date: null/);
+  assert.match(serviceSource, /select\('due_date'\)/); assert.ok(serviceSource.includes('p_due_date:existing.data.due_date')); assert.doesNotMatch(serviceSource, /p_due_date:\s*null/);
 });
 
 test('recurring and linked financial facts suppress direct edit and cancellation', () => {
@@ -43,7 +43,7 @@ test('shared or externally paid expenses do not advertise direct refund', () => 
 });
 
 test('eligible direct realized expense refunds only the remaining refundable balance', () => {
-  assert.match(serviceSource, /refundHouseholdDirectExpense/); assert.match(serviceSource, /transaction_adjustment_events/); assert.match(serviceSource, /const refunded/); assert.match(serviceSource, /const remaining = Math\.max/); assert.match(serviceSource, /rpc\('refund_direct_expense_partial'/); assert.match(serviceSource, /p_amount: remaining/); assert.match(serviceSource, /transaction\.payment_instrument\?\.kind === 'account'/); assert.match(serviceSource, /direct_funding_total/); assert.match(serviceSource, /direct_funding_account_count === 1/);
+  assert.match(serviceSource, /refundHouseholdDirectExpense/); assert.match(serviceSource, /transaction_adjustment_events/); assert.match(serviceSource, /const refunded/); assert.match(serviceSource, /const remaining = Math\.max/); assert.ok(serviceSource.includes("rpc('refund_direct_expense_partial'")); assert.ok(serviceSource.includes('p_amount:remaining')); assert.ok(serviceSource.includes("getRetryStableIntentValue('transaction-full-refund'")); assert.match(serviceSource, /transaction\.payment_instrument\?\.kind === 'account'/); assert.match(serviceSource, /direct_funding_total/); assert.match(serviceSource, /direct_funding_account_count === 1/);
 });
 
 test('closed financial states remain without mutable direct actions', () => {
@@ -65,6 +65,6 @@ test('transaction history is visible as read-only audited UI', () => {
   assert.doesNotMatch(screenSource, /transaction_adjustment_events[^\n]*(insert|update|delete)/i);
 });
 
-test('shared expense usa RPC canônica com terceiro e financiador independentes', () => { assert.match(serviceSource, /create_and_settle_shared_expense/); assert.match(serviceSource, /party_id/); assert.match(serviceSource, /p_funder_member_id/); assert.match(serviceSource, /p_gross_amount/); });
+test('shared expense usa RPC canônica idempotente com terceiro e financiador independentes', () => { assert.match(serviceSource, /create_and_settle_shared_expense_idempotent/); assert.match(serviceSource, /party_id/); assert.match(serviceSource, /p_funder_member_id/); assert.match(serviceSource, /p_gross_amount/); });
 
 test('parcelamento desnecessário é evitado pelo contrato financeiro', () => { assert.match(serviceSource, /p_installment_count/); assert.match(screenSource, /instrumentKind === 'card'[\s\S]*?<label[^>]*>Parcelas/); assert.match(screenSource, /if \(next === 'account'\) setInstallmentCount\(1\)/); assert.match(householdSource, /Transações/); });
