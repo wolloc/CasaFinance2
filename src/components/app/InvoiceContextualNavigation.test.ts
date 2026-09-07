@@ -20,11 +20,11 @@ test('context stores only navigation intent and routes to the canonical adjustme
   assert.doesNotMatch(intent,/supabase|rpc\(|money_movements|funding_events/);
 });
 
-test('payment flow rereads current invoice balance and still requires explicit cash source and funder',()=>{
+test('payment flow rereads current invoice balance and still requires explicit cash account and payer',()=>{
   assert.match(adjustment,/listFinancialInvoices/);
-  assert.match(adjustment,/Esta fatura não tem mais saldo em aberto/);
-  assert.match(adjustment,/De qual recurso o dinheiro saiu\?/);
-  assert.match(adjustment,/Quem efetivamente financiou este pagamento\?/);
+  assert.match(adjustment,/Esta fatura não tem mais valor para pagar/);
+  assert.match(adjustment,/De qual conta o dinheiro saiu\?/);
+  assert.match(adjustment,/Quem pagou com o próprio dinheiro\?/);
   assert.match(adjustment,/payHouseholdInvoice/);
-  assert.match(adjustment,/pagamento não pode superar o valor em aberto/i);
+  assert.match(adjustment,/valor pago não pode ser maior do que ainda falta pagar/i);
 });
