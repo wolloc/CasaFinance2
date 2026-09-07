@@ -60,6 +60,8 @@ select i.household_id,i.card_id,c.name as card_name,i.invoice_id,i.invoice_month
        coalesce(p.payment_amount,0)::numeric(19,2) as payment_amount,
        p.last_paid_at,
        coalesce(p.payment_events,'[]'::jsonb) as payment_events,
+       0::numeric(19,2) as credit_amount,
+       '[]'::jsonb as credit_events,
        coalesce(f.funding_events,'[]'::jsonb) as funding_events,
        coalesce(s.settlement_events,'[]'::jsonb) as settlement_events
 from invoice_base i
@@ -70,7 +72,7 @@ left join funders f on f.household_id=i.household_id and f.invoice_id=i.invoice_
 left join settlements s on s.household_id=i.household_id and s.invoice_id=i.invoice_id;
 
 comment on view public.financial_card_journey_positions is
-  'Explains purchase/commitment -> invoice -> invoice payment -> member funding -> member settlement without creating a second expense. Payment evidence comes only from the canonical invoice-payment contract.';
+  'Explains purchase/commitment -> invoice -> invoice payment -> member funding -> member settlement without creating a second expense. Payment evidence comes only from the canonical invoice-payment contract. Credit columns are reserved as neutral placeholders until the explicit refund migration populates them.';
 
 revoke all on public.financial_card_journey_positions from public,anon;
 grant select on public.financial_card_journey_positions to authenticated;
