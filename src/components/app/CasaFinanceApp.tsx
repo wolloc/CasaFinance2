@@ -6,11 +6,14 @@ import { InvoicesScreen } from './InvoicesScreen.js';
 import { SettingsScreen } from './SettingsScreen.js';
 import { GlobalActions } from './GlobalActions.js';
 import { NewAdjustmentScreen } from './NewAdjustmentScreen.js';
+import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { supabase } from '../../lib/supabase.js';
 import { setCoverageActionIntent, type CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import { setSettlementActionIntent, type SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { setInvoicePaymentIntent } from '../../finance/invoicePaymentIntent.js';
 import { setRecurringExpenseActionIntent } from '../../finance/recurringExpenseIntent.js';
 import { setIncomeReceiptIntent } from '../../finance/incomeReceiptIntent.js';
+import { getScheduledMemberSettlementContext } from '../../finance/memberSettlements.js';
 import type { FinancialInvoice } from '../../finance/financialInvoices.js';
 import type { AttentionNavigationAction } from './FinancialPriorityCenter.js';
 
@@ -19,13 +22,13 @@ type PrimaryTab = 'home' | 'expenses' | 'income' | 'settings';
 const tabs = [['home','Casa',Home],['expenses','Gastos',Receipt],['income','Entradas',TrendingUp],['settings','Ajustes',Settings]] as const;
 
 export function CasaFinanceApp(){
- const[screen,setScreen]=useState<Screen>('home');const[returnTab,setReturnTab]=useState<PrimaryTab>('home');const activeTab:PrimaryTab=screen==='invoices'?'home':screen==='new-adjustment'?returnTab:screen;
+ const{household}=useSupabaseAuth();const[screen,setScreen]=useState<Screen>('home');const[returnTab,setReturnTab]=useState<PrimaryTab>('home');const activeTab:PrimaryTab=screen==='invoices'?'home':screen==='new-adjustment'?returnTab:screen;
  const openAdjustment=()=>{setReturnTab(activeTab);setScreen('new-adjustment');};
  const openCoverageAction=(kind:CoverageActionKind,suggestedAmount:number)=>{setCoverageActionIntent({kind,suggestedAmount});setReturnTab('home');setScreen('new-adjustment');};
  const openSettlementAction=(intent:SettlementActionIntent)=>{setSettlementActionIntent(intent);setReturnTab('home');setScreen('new-adjustment');};
  const openInvoicePaymentIntent=(invoiceId:string,suggestedAmount:number)=>{setInvoicePaymentIntent({invoiceId,suggestedAmount});setReturnTab('home');setScreen('new-adjustment');};
  const openInvoicePayment=(invoice:FinancialInvoice)=>openInvoicePaymentIntent(invoice.invoice_id,Number(invoice.outstanding_amount));
- const openAttentionAction=(action:AttentionNavigationAction)=>{if(action.kind==='recurring-expense'){setRecurringExpenseActionIntent({occurrenceId:action.occurrenceId,mode:'pay'});setScreen('expenses');return;}if(action.kind==='income-receipt'){setIncomeReceiptIntent({moneyMovementId:action.moneyMovementId});setScreen('income');return;}if(action.kind==='invoice-payment'){openInvoicePaymentIntent(action.invoiceId,action.amount);return;}if(action.kind==='third-party-obligation'){openSettlementAction({kind:'third-party',obligationId:action.obligationId,amount:action.amount});return;}if(action.kind==='navigate'){if(action.destination==='expenses')setScreen('expenses');else if(action.destination==='invoices')setScreen('invoices');else if(action.destination==='income')setScreen('income');}};
+ const openAttentionAction=async(action:AttentionNavigationAction)=>{if(action.kind==='recurring-expense'){setRecurringExpenseActionIntent({occurrenceId:action.occurrenceId,mode:'pay'});setScreen('expenses');return;}if(action.kind==='income-receipt'){setIncomeReceiptIntent({moneyMovementId:action.moneyMovementId});setScreen('income');return;}if(action.kind==='invoice-payment'){openInvoicePaymentIntent(action.invoiceId,action.amount);return;}if(action.kind==='member-settlement-schedule'){if(!supabase||!household)return;const context=await getScheduledMemberSettlementContext(supabase,household.id,action.scheduleId);if(context)openSettlementAction({kind:'members',debtorMemberId:context.payerMemberId,creditorMemberId:context.receiverMemberId,amount:context.amount});return;}if(action.kind==='third-party-obligation'){openSettlementAction({kind:'third-party',obligationId:action.obligationId,amount:action.amount});return;}if(action.kind==='navigate'){if(action.destination==='expenses')setScreen('expenses');else if(action.destination==='invoices')setScreen('invoices');else if(action.destination==='income')setScreen('income');}};
  return <main className="min-h-[100dvh] bg-slate-950 text-slate-100"><div className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col"><div className="flex-1 overflow-y-auto px-4 pb-44 pt-6 sm:px-6">
  {screen==='home'&&<><div className="mb-4 flex justify-end"><button type="button" onClick={()=>setScreen('invoices')} className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 text-xs font-semibold text-slate-300"><CreditCard className="h-4 w-4"/>Faturas</button></div><CasaHomeScreen onCoverageAction={openCoverageAction} onAttentionAction={openAttentionAction} onSettlementAction={openSettlementAction}/></>}
  {screen==='expenses'&&<TransactionsScreen mode="expense"/>}{screen==='income'&&<TransactionsScreen mode="income"/>}{screen==='settings'&&<SettingsScreen/>}

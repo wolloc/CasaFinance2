@@ -19,6 +19,26 @@ export async function listMemberSettlementPositions(client: SupabaseClient, hous
   return (response.data ?? []) as MemberSettlementPosition[];
 }
 
+export async function getScheduledMemberSettlementContext(client: SupabaseClient, householdId: string, scheduleId: string) {
+  const schedule = await client
+    .from('member_settlement_schedules')
+    .select('id,payer_member_id,receiver_member_id,amount,state')
+    .eq('household_id', householdId)
+    .eq('id', scheduleId)
+    .maybeSingle();
+  if (schedule.error) throw schedule.error;
+  if (!schedule.data || schedule.data.state !== 'scheduled') return null;
+  const positions = await listMemberSettlementPositions(client, householdId);
+  const current = positions.find((row) => row.debtor_member_id === schedule.data.payer_member_id && row.creditor_member_id === schedule.data.receiver_member_id);
+  const realizedOutstanding = Number(current?.realized_outstanding ?? 0);
+  if (!(realizedOutstanding > 0)) return null;
+  return {
+    payerMemberId: schedule.data.payer_member_id as string,
+    receiverMemberId: schedule.data.receiver_member_id as string,
+    amount: Math.min(Number(schedule.data.amount), realizedOutstanding),
+  };
+}
+
 export async function settleMemberPosition(client: SupabaseClient, input: {
   householdId: string;
   payerMemberId: string;
