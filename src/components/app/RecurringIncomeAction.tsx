@@ -30,27 +30,48 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
+  const clearLoadedContext = () => {
+    setCategories([]);
+    setResources([]);
+    setCategoryId('');
+    setPlannedDestinationAccountId('');
+  };
+
+  const load = async (isCurrent: () => boolean = () => true) => {
     if (!supabase || !household) return;
-    let active = true;
     setLoading(true);
-    Promise.all([
-      listHouseholdCategories(supabase, household.id),
-      listInvestmentReserveResources(supabase, household.id),
-    ]).then(([categoryRows, accountRows]) => {
-      if (!active) return;
+    setLoadError(null);
+    setError(null);
+    try {
+      const [categoryRows, accountRows] = await Promise.all([
+        listHouseholdCategories(supabase, household.id),
+        listInvestmentReserveResources(supabase, household.id),
+      ]);
+      if (!isCurrent()) return;
       setCategories(categoryRows.filter((category) => category.type === 'income'));
       setResources(accountRows.filter(isTransactionalResource));
-    }).catch(() => { if (active) setError('Não foi possível carregar os dados da recorrência.'); })
-      .finally(() => { if (active) setLoading(false); });
+    } catch {
+      if (!isCurrent()) return;
+      clearLoadedContext();
+      setLoadError('Não foi possível conferir categorias e recursos da Casa. Nenhuma série de renda será criada até uma nova leitura válida.');
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    void load(() => active);
     return () => { active = false; };
   }, [household?.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (loadError || loading) { setError('Recarregue categorias e recursos antes de criar a série.'); return; }
     if (!supabase || !household) return;
     const normalized = normalizeAmount(amount);
     if (!description.trim()) { setError('Informe de onde vem esta renda recorrente.'); return; }
@@ -83,7 +104,7 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
 
   return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
     <div className="flex items-start gap-3"><CalendarRange className="mt-0.5 h-5 w-5 text-emerald-300"/><div><h2 className="font-bold">Renda recorrente</h2><p className="mt-1 text-sm text-slate-400">Para salário, aluguel e outras rendas que se repetem. A regra cria ocorrências independentes; receber um mês não altera os próximos.</p></div></div>
-    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : <form onSubmit={submit} className="mt-4 grid gap-3">
+    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : loadError ? <div className="mt-4 rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={() => void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <form onSubmit={submit} className="mt-4 grid gap-3">
       <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Frequência<select value={frequency} onChange={(e) => setFrequency(e.target.value as RecurringIncomeFrequency)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm font-semibold">Natureza<select value={incomeNature} onChange={(e) => setIncomeNature(e.target.value as IncomeNature)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3">{Object.entries(incomeNatureLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
       <label className="text-sm font-semibold">De onde vem?<input value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3" placeholder="Ex.: Salário Itaú"/></label>
       <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Valor por ocorrência<input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3" placeholder="0,00"/></label><label className="text-sm font-semibold">Confiança<select value={economicState} onChange={(e) => setEconomicState(e.target.value as IncomeConfidence)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="confirmed">Confirmada — posso contar com ela</option><option value="forecast">Prevista — ainda pode mudar</option></select></label></div>
