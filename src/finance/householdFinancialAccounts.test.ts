@@ -29,7 +29,9 @@ test('cross-household member and payment-account links are rejected in the datab
 
 test('card ownership is not transaction responsibility', () => {
   assert.match(migrationSource, /owner_member_id e somente titularidade/);
-  assert.match(screenSource, /não define comprador, responsável econômico ou pagador/);
+  assert.match(screenSource, /Titular do cartão/);
+  assert.match(screenSource, /Quem compra, quem fica responsável pelo gasto e quem paga a fatura continuam sendo escolhas separadas/);
+  assert.match(screenSource, /O titular do cartão não define comprador, responsável pelo gasto ou pagador/);
   assert.doesNotMatch(serviceSource, /buyer_member_id|responsible_member_id|funder_member_id/);
 });
 
