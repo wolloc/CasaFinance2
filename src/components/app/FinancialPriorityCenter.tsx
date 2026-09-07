@@ -10,6 +10,7 @@ export type AttentionNavigationAction=
   | {kind:'projection-recurring-review';occurrenceId:string}
   | {kind:'overdue-commitment';commitmentKey:string}
   | {kind:'income-receipt';moneyMovementId:string}
+  | {kind:'projection-income-review';moneyMovementId:string}
   | {kind:'invoice-payment';invoiceId:string;amount:number}
   | {kind:'invoice-coverage-risk';invoiceId:string;amount:number}
   | {kind:'projection-invoice-review';invoiceId:string}
