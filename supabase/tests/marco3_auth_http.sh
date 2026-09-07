@@ -8,9 +8,7 @@ ANON_KEY="${ANON_KEY:?ANON_KEY is required}"
 PASSWORD='Marco3-http-only-42!'
 RUN_ID="${GITHUB_RUN_ID:-local}-$(date +%s)"
 
-json_field() {
-  jq -er "$1"
-}
+json_field() { jq -er "$1"; }
 
 sign_up() {
   local email="$1"
@@ -28,7 +26,7 @@ rpc_bootstrap() {
     -H "apikey: ${ANON_KEY}" \
     -H "Authorization: Bearer ${token}" \
     -H 'Content-Type: application/json' \
-    -d "{\"p_name\":\"${name}\"}"
+    -d "{\"household_name\":\"${name}\",\"base_currency\":\"BRL\",\"timezone_name\":\"America/Sao_Paulo\"}"
 }
 
 list_households() {
