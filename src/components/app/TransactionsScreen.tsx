@@ -26,9 +26,9 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   const projectionIncomeIntent = useMemo(() => mode === 'income' ? consumeProjectionIncomeReviewIntent() : null, [mode]);
   if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} />;
   return <div className="space-y-4">
-    {projectionExpenseIntent && <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent.commitmentKey} />}
+    {projectionExpenseIntent && <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent?.commitmentKey} />}
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
-    {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent.transactionId} />}
+    {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
     <HouseholdTransactionsSetup embedded mode={mode} />
 
