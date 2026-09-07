@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const center=await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx',import.meta.url),'utf8');
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const commitment=await readFile(new URL('../../src/components/app/RecurringExpenseCommitmentCenter.tsx',import.meta.url),'utf8');
+test('forecast recurring review preserves exact occurrence identity',()=>{assert.match(center,/item\.entity_type==='recurring_occurrence'\?\{kind:'projection-recurring-review',occurrenceId:item\.entity_id\}/);assert.match(priority,/kind:'projection-recurring-review';occurrenceId:string/);});
+test('projection recurring review opens canonical confirm mode, not payment mode',()=>{assert.match(app,/if\(action\.kind==='projection-recurring-review'\)\{setRecurringExpenseActionIntent\(\{occurrenceId:action\.occurrenceId,mode:'confirm'\}\);setScreen\('expenses'\);return;\}/);});
+test('destination rereads current occurrences before using contextual target',()=>{assert.match(commitment,/listRecurringExpenseCommitments/);assert.match(commitment,/items\.find\(\(item\)=>item\.occurrence_id===initialIntent\.occurrenceId\)/);assert.match(commitment,/Essa conta mudou ou já foi resolvida/);});
+test('confirming forecast changes projection without cash movement',()=>{assert.match(commitment,/if\(mode==='confirm'\)\{await confirmRecurringExpenseOccurrence/);assert.match(commitment,/nenhum saldo de conta foi movimentado/);assert.match(commitment,/mode==='pay'&&!accountId/);assert.match(commitment,/settleRecurringExpenseOccurrence/);});
