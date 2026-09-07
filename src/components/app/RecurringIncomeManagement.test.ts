@@ -6,11 +6,11 @@ const ui = await readFile(new URL('./RecurringIncomeManagement.tsx', import.meta
 const ledger = await readFile(new URL('./IncomeLedgerScreen.tsx', import.meta.url), 'utf8');
 const service = await readFile(new URL('../../finance/recurringIncome.ts', import.meta.url), 'utf8');
 
-test('series management is exposed inside Entradas', () => {
+test('recurring income management is exposed inside Entradas', () => {
   assert.match(ledger, /RecurringIncomeManagement/);
-  assert.match(ui, /Gerenciar rendas recorrentes/);
-  assert.match(ui, /Alterar futuro/);
-  assert.match(ui, /Encerrar/);
+  assert.match(ui, /Entradas que se repetem/);
+  assert.match(ui, /Mudar próximos meses/);
+  assert.match(ui, /Parar recorrência/);
 });
 
 test('future revision and closure use dedicated canonical RPCs', () => {
@@ -19,9 +19,8 @@ test('future revision and closure use dedicated canonical RPCs', () => {
   assert.doesNotMatch(service, /update_basic_transaction|create_financial_transaction/);
 });
 
-test('UX makes prospective-only semantics explicit and requires a reason', () => {
-  assert.match(ui, /Mudanças valem somente daqui para frente/);
-  assert.match(ui, /não reescreve meses anteriores nem recebimentos já realizados/);
-  assert.match(ui, /Conte por que a série está mudando\. Isso fica no histórico/);
-  assert.match(ui, /Só o futuro foi recalculado; ocorrências anteriores ficaram intactas/);
+test('UX makes future-only semantics explicit and requires a reason', () => {
+  assert.match(ui, /podem mudar daqui para frente sem alterar os meses que já passaram nem valores que você já recebeu/);
+  assert.match(ui, /Conte o motivo da mudança\. Assim você consegue entender depois o que aconteceu/);
+  assert.match(ui, /Entradas anteriores e valores já recebidos continuam como estavam/);
 });
