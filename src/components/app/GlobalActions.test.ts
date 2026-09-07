@@ -82,10 +82,9 @@ test('third-party settlement liquidates canonical obligations without creating i
   assert.match(thirdPartyService, /rpc\('settle_financial_obligation'/);
   assert.doesNotMatch(thirdPartyService, /from\('transactions'\).*insert|createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/s);
   assert.match(adjustmentSource, /selected === 'third-party'/);
-  assert.match(thirdPartySource, /Receber um valor a receber não vira renda/);
-  assert.match(thirdPartySource, /pagar um valor a pagar não vira nova despesa/);
+  assert.match(thirdPartySource, /não cria uma nova renda nem um novo gasto/);
   assert.match(thirdPartySource, /numericAmount > outstanding/);
-  assert.match(thirdPartySource, /quem efetivamente financiou/i);
+  assert.match(thirdPartySource, /Quem pagou com o próprio dinheiro/);
   assert.match(constitution, /caixa aumenta e o recebível diminui, mas renda continua zero/i);
 });
 
