@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Banknote, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
@@ -7,40 +7,70 @@ import { listDirectExpensePaymentCandidates, settleDirectExpense, type DirectExp
 
 const transactionalTypes = new Set(['cash', 'checking', 'savings', 'digital_wallet']);
 const money = (value: number | string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const localDateTime = () => { const now = new Date(); const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 16); };
+const localDateTime = () => {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
 
 export function DirectExpensePaymentAction({ onCompleted, initialTransactionId }: { onCompleted?: () => void; initialTransactionId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [expenses, setExpenses] = useState<DirectExpensePaymentCandidate[]>([]);
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [transactionId, setTransactionId] = useState('');
-  const [sourceAccountId, setSourceAccountId] = useState(''); const [funderMemberId, setFunderMemberId] = useState(''); const [amount, setAmount] = useState(''); const [paidAt, setPaidAt] = useState(localDateTime());
-  const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null);
+  const [sourceAccountId, setSourceAccountId] = useState('');
+  const [funderMemberId, setFunderMemberId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [paidAt, setPaidAt] = useState(localDateTime());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const contextualTargetHandled = useRef(false);
   const selected = useMemo(() => expenses.find((expense) => expense.id === transactionId) ?? null, [expenses, transactionId]);
 
   const load = async () => {
-    if (!supabase || !household) return; setLoading(true); setError(null);
+    if (!supabase || !household) return;
+    setLoading(true); setError(null);
     try {
-      const [expenseRows, financial] = await Promise.all([listDirectExpensePaymentCandidates(supabase, household.id), listHouseholdFinancialAccounts(supabase, household.id)]);
-      setExpenses(expenseRows); setAccounts(financial.accounts.filter((account) => transactionalTypes.has(account.type)));
-      if (initialTransactionId) {
+      const [expenseRows, financial] = await Promise.all([
+        listDirectExpensePaymentCandidates(supabase, household.id),
+        listHouseholdFinancialAccounts(supabase, household.id),
+      ]);
+      setExpenses(expenseRows);
+      setAccounts(financial.accounts.filter((account) => transactionalTypes.has(account.type)));
+      if (initialTransactionId && !contextualTargetHandled.current) {
+        contextualTargetHandled.current = true;
         const target = expenseRows.find((expense) => expense.id === initialTransactionId);
-        if (target) setTransactionId(target.id); else { setTransactionId(''); setError('Este gasto mudou ou já foi resolvido. A lista foi atualizada e nenhum pagamento foi registrado.'); }
+        if (target) setTransactionId(target.id);
+        else {
+          setTransactionId('');
+          setError('Este gasto mudou ou já foi resolvido. A lista foi atualizada e nenhum pagamento foi registrado.');
+        }
       }
     } catch { setError('Não foi possível carregar as despesas que ainda precisam de pagamento.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [household?.id, initialTransactionId]);
+  useEffect(() => { contextualTargetHandled.current = false; load(); }, [household?.id, initialTransactionId]);
   useEffect(() => { if (selected) setAmount(selected.remaining_amount.toFixed(2)); }, [selected?.id]);
 
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!supabase || !household || !selected) return; const parsed = Number(amount.replace(',', '.'));
+    event.preventDefault();
+    if (!supabase || !household || !selected) return;
+    const parsed = Number(amount.replace(',', '.'));
     if (!sourceAccountId) { setError('Informe de onde o dinheiro realmente saiu.'); return; }
     if (!funderMemberId) { setError('Informe quem efetivamente bancou este pagamento.'); return; }
     if (!Number.isFinite(parsed) || parsed <= 0 || parsed - selected.remaining_amount > 0.005) { setError(`O pagamento deve ser maior que zero e não pode ultrapassar ${money(selected.remaining_amount)}.`); return; }
     setSaving(true); setError(null); setSuccess(null);
-    try { await settleDirectExpense(supabase, { householdId: household.id, transactionId: selected.id, sourceAccountId, funderMemberId, amount: parsed.toFixed(2), paidAt: new Date(paidAt).toISOString() }); setSuccess('Pagamento registrado. O caixa saiu do recurso informado e o funding ficou vinculado à despesa original.'); setTransactionId(''); setAmount(''); await load(); onCompleted?.(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o pagamento.'); } finally { setSaving(false); }
+    try {
+      await settleDirectExpense(supabase, {
+        householdId: household.id, transactionId: selected.id, sourceAccountId, funderMemberId,
+        amount: parsed.toFixed(2), paidAt: new Date(paidAt).toISOString(),
+      });
+      setSuccess('Pagamento registrado. O caixa saiu do recurso informado e o funding ficou vinculado à despesa original.');
+      setTransactionId(''); setAmount(''); await load(); onCompleted?.();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o pagamento.'); }
+    finally { setSaving(false); }
   };
 
   return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
@@ -56,6 +86,7 @@ export function DirectExpensePaymentAction({ onCompleted, initialTransactionId }
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}{success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
       <button disabled={saving || !selected} className="min-h-11 rounded-xl bg-emerald-500 px-4 font-bold text-slate-950 disabled:opacity-50">{saving ? 'Registrando…' : 'Confirmar saída do caixa'}</button>
     </form>}
-    {!loading && expenses.length === 0 && error && <p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}{!loading && success && <p role="status" className="mt-3 text-sm text-emerald-300">{success}</p>}
+    {!loading && expenses.length === 0 && error && <p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}
+    {!loading && success && <p role="status" className="mt-3 text-sm text-emerald-300">{success}</p>}
   </section>;
 }
