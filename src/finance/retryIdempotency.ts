@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 const pendingRequestKeys = new Map<string, string>();
 
 function signature(operation: string, identity: readonly unknown[]) {
@@ -20,4 +22,18 @@ export function getRetryStableRequestKey(operation: string, identity: readonly u
 
 export function releaseRetryStableRequestKey(operation: string, identity: readonly unknown[]) {
   pendingRequestKeys.delete(signature(operation, identity));
+}
+
+export async function runRetryStableRpc(
+  client: SupabaseClient,
+  operation: string,
+  identity: readonly unknown[],
+  rpcName: string,
+  params: Record<string, unknown>,
+) {
+  const requestKey = getRetryStableRequestKey(operation, identity);
+  const result = await client.rpc(rpcName, { ...params, p_request_key: requestKey });
+  if (result.error) throw result.error;
+  releaseRetryStableRequestKey(operation, identity);
+  return result.data as string;
 }
