@@ -123,11 +123,14 @@ test('migration 010 oferece preview minimo e preserva os contratos de seguranca'
 
 test('onboarding prioriza convite, confirma membership e nao contem forms aninhados', async () => {
   const source = await readFile(new URL('../components/auth/PendingHouseholdScreen.tsx', import.meta.url), 'utf8');
-  assert.match(source, /Você recebeu um convite/);
+  assert.match(source, /Você tem um convite/);
   assert.match(source, /Entrar na \{invitePreview\?\.householdName\}/);
+  assert.match(source, /Criar uma nova Casa/);
+  assert.match(source, /Seu convite continua sem ser aceito/);
+  assert.match(source, /previewInvitation\(inviteToken\)/);
   assert.match(source, /Você agora faz parte da/);
   assert.match(source, /Seu papel:[\s\S]*'Membro'/);
-  assert.match(source, /if \(invitePreview \|\| previewLoading\) return/);
+  assert.match(source, /if \(\(invitePreview \|\| previewLoading\) && !createInsteadOfInvite\) return/);
   let formDepth = 0;
   let maximumFormDepth = 0;
   for (const tag of source.matchAll(/<\/?form\b/g)) {
