@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export async function payHouseholdInvoice(client: SupabaseClient, input: {
   householdId: string;
@@ -8,7 +9,8 @@ export async function payHouseholdInvoice(client: SupabaseClient, input: {
   amount: string;
   paidAt: string;
 }) {
-  const response = await client.rpc('pay_card_invoice', {
+  const identity = [input.householdId, input.invoiceId, input.sourceAccountId, input.funderMemberId, input.amount, input.paidAt] as const;
+  return runRetryStableRpc(client, 'pay-card-invoice', identity, 'pay_card_invoice_idempotent', {
     p_household_id: input.householdId,
     p_invoice_id: input.invoiceId,
     p_source_account_id: input.sourceAccountId,
@@ -16,6 +18,4 @@ export async function payHouseholdInvoice(client: SupabaseClient, input: {
     p_amount: input.amount,
     p_paid_at: input.paidAt,
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }
