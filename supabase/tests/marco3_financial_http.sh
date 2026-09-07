@@ -79,6 +79,7 @@ transaction_id="$(rpc "$wallace_token" create_and_settle_direct_expense "$expens
 
 stage 'verify economic fact'
 tx_json="$(rest_get "$wallace_token" "transactions?select=id,type,status,amount,buyer_member_id,economic_state,realized_amount&id=eq.${transaction_id}")"
+printf '[Marco 3.05] transaction result: %s\n' "$(printf '%s' "$tx_json" | jq -c '.')" >&2
 [[ "$(printf '%s' "$tx_json" | jq 'length')" -eq 1 ]]
 [[ "$(printf '%s' "$tx_json" | jq -r '.[0].type')" == 'expense' ]]
 [[ "$(printf '%s' "$tx_json" | jq -r '.[0].status')" == 'paid' ]]
@@ -87,15 +88,18 @@ tx_json="$(rest_get "$wallace_token" "transactions?select=id,type,status,amount,
 
 stage 'verify allocations, funding and single cash movement'
 allocations="$(rest_get "$wallace_token" "economic_allocations?select=responsible_member_id,percentage,amount&transaction_id=eq.${transaction_id}&order=allocation_order")"
+printf '[Marco 3.05] allocations: %s\n' "$(printf '%s' "$allocations" | jq -c '.')" >&2
 [[ "$(printf '%s' "$allocations" | jq 'length')" -eq 2 ]]
 [[ "$(printf '%s' "$allocations" | jq '[.[].amount|tonumber] | add')" == '120' ]]
 [[ "$(printf '%s' "$allocations" | jq '[.[].percentage|tonumber] | add')" == '100' ]]
 funding="$(rest_get "$wallace_token" "funding_events?select=funder_member_id,source_account_id,amount&financed_transaction_id=eq.${transaction_id}")"
+printf '[Marco 3.05] funding: %s\n' "$(printf '%s' "$funding" | jq -c '.')" >&2
 [[ "$(printf '%s' "$funding" | jq 'length')" -eq 1 ]]
 [[ "$(printf '%s' "$funding" | jq -r '.[0].funder_member_id')" == "$guilherme_member_id" ]]
 [[ "$(printf '%s' "$funding" | jq -r '.[0].source_account_id')" == "$account_id" ]]
 [[ "$(printf '%s' "$funding" | jq -r '.[0].amount|tonumber')" == '120' ]]
 movements="$(rest_get "$wallace_token" "money_movements?select=kind,state,amount,source_account_id&related_transaction_id=eq.${transaction_id}")"
+printf '[Marco 3.05] movements: %s\n' "$(printf '%s' "$movements" | jq -c '.')" >&2
 [[ "$(printf '%s' "$movements" | jq 'length')" -eq 1 ]]
 [[ "$(printf '%s' "$movements" | jq -r '.[0].kind')" == 'expense_payment' ]]
 [[ "$(printf '%s' "$movements" | jq -r '.[0].state')" == 'realized' ]]
