@@ -7,10 +7,12 @@ const screen=await readFile(new URL('../../src/components/app/TransactionsScreen
 const expenses=await readFile(new URL('../../src/components/auth/HouseholdTransactionsSetup.tsx',import.meta.url),'utf8');
 const income=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
 
-test('Nova despesa gera uma nova intenção mesmo se Gastos já estiver aberto',()=>{
+test('Nova despesa gera nova intenção mesmo em Gastos e exige escolha de natureza antes do formulário',()=>{
  assert.match(app,/setExpenseCreateRequestId\(value=>value\+1\);setScreen\('expenses'\)/);
  assert.match(app,/TransactionsScreen mode="expense" createRequestId=\{expenseCreateRequestId\}/);
- assert.match(screen,/HouseholdTransactionsSetup embedded mode=\{mode\} createRequestId=\{createRequestId\}/);
+ assert.match(screen,/createRequestId!==handledCreateRequestId[\s\S]*setShowNature\(true\)/);
+ assert.match(screen,/chooseExpense=.*setExpenseFormRequestId\(value=>value\+1\)/);
+ assert.match(screen,/HouseholdTransactionsSetup embedded mode=\{mode\} createRequestId=\{expenseFormRequestId\}/);
 });
 
 test('formulário principal abre a intenção somente após contexto válido',()=>{
