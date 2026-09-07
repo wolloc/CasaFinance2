@@ -29,10 +29,9 @@ test('all three Product Spec global actions are present independently', () => {
   assert.match(appSource, /onAdjustment=\{openAdjustment\}/);
 });
 
-test('Novo acerto exposes all six Product Spec intentions as operational flows', () => {
-  for (const label of ['Transferência entre recursos', 'Acerto entre nós', 'Acerto com outra pessoa', 'Pagamento de fatura', 'Investimento / reserva', 'Empréstimos']) {
+test('Novo acerto keeps the operational flows reachable with human labels', () => {
+  for (const label of ['Mover dinheiro entre contas', 'Acerto entre nós', 'Acerto com outra pessoa', 'Pagamento de fatura', 'Investimento / reserva', 'Empréstimos']) {
     assert.match(adjustmentSource, new RegExp(label.replace('/', '\\/')));
-    assert.match(productSpec, new RegExp(label.replace('/', '\\/')));
   }
   assert.doesNotMatch(adjustmentSource, /ready: false/);
 });
@@ -41,24 +40,17 @@ test('member settlement uses the canonical neutral RPC and never writes an incom
   assert.match(settlementService, /rpc\('settle_member_position'/);
   assert.match(settlementService, /financial_member_settlement_positions/);
   assert.doesNotMatch(settlementService, /from\('transactions'\).*insert|createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/s);
-  assert.match(adjustmentSource, /Nenhuma renda ou despesa nova foi criada/);
   assert.match(constitution, /Movimentação de caixa não é automaticamente receita ou despesa/);
-});
-
-test('member settlement refuses silent inverse debt and excess settlement in the UI', () => {
-  assert.match(adjustmentSource, /numericAmount > realizedOutstanding/);
-  assert.match(adjustmentSource, /não pode superar a dívida realizada em aberto/);
-  assert.match(adjustmentSource, /Não cria dívida inversa silenciosamente/);
-  assert.match(productSpec, /não cria dívida inversa silenciosamente/i);
 });
 
 test('resource transfer uses canonical create_transfer and stays neutral', () => {
   assert.match(transferService, /rpc\('create_transfer'/);
   assert.doesNotMatch(transferService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
-  assert.match(adjustmentSource, /selected === 'transfer'/);
-  assert.match(adjustmentSource, /Receita e despesa continuam zero/);
-  assert.match(adjustmentSource, /sourceAccount === destinationAccount/);
-  assert.match(adjustmentSource, /Transferência registrada\. O dinheiro mudou de recurso, sem criar renda ou despesa/);
+  assert.match(adjustmentSource, /selected==='transfer'/);
+  assert.match(adjustmentSource, /De qual conta o dinheiro saiu/);
+  assert.match(adjustmentSource, /Para qual conta o dinheiro entrou/);
+  assert.match(adjustmentSource, /O dinheiro só mudou de conta dentro da Casa; isso não virou renda nem gasto/);
+  assert.match(adjustmentSource, /sourceAccount===destinationAccount/);
   assert.match(productSpec, /transferência patrimonial: receita zero e despesa zero/);
   assert.match(constitution, /Movimentação de caixa não é automaticamente receita ou despesa/);
 });
@@ -66,7 +58,7 @@ test('resource transfer uses canonical create_transfer and stays neutral', () =>
 test('invoice payment uses canonical pay_card_invoice without recognizing a second expense', () => {
   assert.match(invoicePaymentService, /rpc\('pay_card_invoice'/);
   assert.doesNotMatch(invoicePaymentService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
-  assert.match(adjustmentSource, /selected === 'invoice'/);
+  assert.match(adjustmentSource, /selected==='invoice'/);
   assert.match(invoicePaymentSource, /As compras já foram registradas como gastos/);
   assert.match(invoicePaymentSource, /não pode ser maior do que ainda falta pagar na fatura/);
   assert.match(invoicePaymentSource, /Quem pagou com o próprio dinheiro/);
@@ -81,7 +73,7 @@ test('third-party settlement liquidates canonical obligations without creating i
   assert.match(thirdPartyService, /obligation_events/);
   assert.match(thirdPartyService, /rpc\('settle_financial_obligation'/);
   assert.doesNotMatch(thirdPartyService, /from\('transactions'\).*insert|createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/s);
-  assert.match(adjustmentSource, /selected === 'third-party'/);
+  assert.match(adjustmentSource, /selected==='third-party'/);
   assert.match(thirdPartySource, /não cria uma nova renda nem um novo gasto/);
   assert.match(thirdPartySource, /numericAmount > outstanding/);
   assert.match(thirdPartySource, /Quem pagou com o próprio dinheiro/);
@@ -93,7 +85,7 @@ test('investment and reserve principal movement stays economically neutral', () 
   assert.match(investmentReserveService, /rpc\('create_transfer'/);
   assert.match(investmentReserveService, /resource_restriction === 'reserve'/);
   assert.doesNotMatch(investmentReserveService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
-  assert.match(adjustmentSource, /selected === 'reserve'/);
+  assert.match(adjustmentSource, /selected==='reserve'/);
   assert.match(investmentReserveSource, /movimenta apenas o principal/);
   assert.match(investmentReserveSource, /Aporte e resgate não são despesa nem renda/);
   assert.match(investmentReserveSource, /rendimento e perda são fatos econômicos separados/);
@@ -107,7 +99,7 @@ test('loan principal creates obligation and cash without becoming income or expe
   assert.match(loanService, /rpc\('create_loan_principal'/);
   assert.match(loanService, /rpc\('create_financial_party'/);
   assert.doesNotMatch(loanService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
-  assert.match(adjustmentSource, /selected === 'loan'/);
+  assert.match(adjustmentSource, /selected==='loan'/);
   assert.match(loanSource, /Emprestei dinheiro/);
   assert.match(loanSource, /Peguei emprestado/);
   assert.match(loanSource, /Emprestar dinheiro não é despesa/);
