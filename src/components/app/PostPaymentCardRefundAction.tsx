@@ -23,12 +23,16 @@ export function PostPaymentCardRefundAction() {
   const [reason, setReason] = useState('Estorno pós-pagamento');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const clearLoadedContext = () => {
+    setRows([]); setAccounts([]); setSelectedId(''); setTargetInvoiceId(''); setDestinationAccountId(''); setBenefits([]); setAmount('');
+  };
   const load = async () => {
     if (!supabase || !household) return;
-    setLoading(true);
+    setLoading(true); setLoadError(null); setError(null);
     try {
       const [refundRows, financial] = await Promise.all([
         listPostPaymentCardRefundPositions(supabase, household.id),
@@ -37,10 +41,11 @@ export function PostPaymentCardRefundAction() {
       setRows(refundRows);
       setAccounts(financial.accounts);
     } catch {
-      setError('Não foi possível carregar compras, membros e contas elegíveis para estorno pós-pagamento.');
+      clearLoadedContext();
+      setLoadError('Não foi possível conferir compras e contas elegíveis para estorno pós-pagamento. Nenhum crédito, redução de despesa ou retorno de caixa será registrado até uma nova leitura válida.');
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [household?.id]);
+  useEffect(() => { void load(); }, [household?.id]);
 
   const selected = useMemo(() => rows.find((row) => row.transaction_id === selectedId) ?? null, [rows, selectedId]);
   const target = selected?.future_invoice_targets.find((invoice) => invoice.invoice_id === targetInvoiceId) ?? null;
@@ -67,6 +72,7 @@ export function PostPaymentCardRefundAction() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (loadError || loading) { setError('Recarregue compras e contas elegíveis antes de registrar o estorno.'); return; }
     if (!supabase || !household || !selected) return;
     const normalizedAmount = normalize(amount); const numeric = Number(normalizedAmount);
     const max = outcome === 'future_invoice_credit' && target ? Math.min(Number(selected.remaining_refundable_amount), Number(target.outstanding)) : Number(selected.remaining_refundable_amount);
@@ -92,7 +98,7 @@ export function PostPaymentCardRefundAction() {
 
   return <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
     <div className="flex items-start gap-3"><CreditCard className="mt-0.5 h-5 w-5 text-fuchsia-300"/><div><h2 className="font-bold">Estorno depois de pagar a fatura</h2><p className="mt-1 text-sm text-slate-400">Agora o Casa também aceita compras compartilhadas, outra conta de devolução e beneficiário diferente de quem pagou. Nada é inferido pelo titular do cartão ou da conta.</p></div></div>
-    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : <form onSubmit={submit} className="mt-4 space-y-3">
+    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : loadError ? <div className="mt-4 rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={() => void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <form onSubmit={submit} className="mt-4 space-y-3">
       <label className="block text-sm">Qual compra foi estornada?<select value={selectedId} onChange={(event) => choosePurchase(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{rows.map((row) => <option key={row.transaction_id} value={row.transaction_id}>{row.description} · {money(row.remaining_refundable_amount)} ainda estornável</option>)}</select></label>
       {selected && <div className="rounded-xl bg-slate-950 p-3 text-xs text-slate-400"><p>Responsabilidade atual: {selected.responsibility_allocations.map((allocation) => `${memberName(allocation.member_id)} ${money(allocation.amount)}`).join(' · ')}</p><p>Funding histórico preservado: {selected.original_funding_routes.map((route) => `${memberName(route.funder_member_id)} ${money(route.amount)}`).join(' · ')}</p><p>Ainda estornável: <strong className="text-slate-200">{money(selected.remaining_refundable_amount)}</strong></p></div>}
       <fieldset className="space-y-2"><legend className="text-sm">Como o banco devolveu?</legend><label className="flex gap-2 text-sm"><input type="radio" checked={outcome === 'future_invoice_credit'} onChange={() => setOutcome('future_invoice_credit')}/>Crédito em uma fatura futura</label><label className="flex gap-2 text-sm"><input type="radio" checked={outcome === 'cash_return'} onChange={() => setOutcome('cash_return')}/>Dinheiro voltou para uma conta</label></fieldset>
