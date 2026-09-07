@@ -11,9 +11,23 @@ RUN_ID="${GITHUB_RUN_ID:-local}-$(date +%s)"
 
 json_field() { jq -er "$1"; }
 
+request_json() {
+  local label="$1"
+  shift
+  local response body status
+  response="$(curl --silent --show-error -w $'\n%{http_code}' "$@")"
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+    echo "${label} failed with HTTP ${status}: ${body}" >&2
+    return 1
+  fi
+  printf '%s' "$body"
+}
+
 sign_up() {
   local email="$1"
-  curl --fail-with-body --silent --show-error \
+  request_json 'Auth signup' \
     -X POST "${API_URL}/auth/v1/signup" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${SUPABASE_KEY}" \
@@ -23,7 +37,7 @@ sign_up() {
 
 rpc_bootstrap() {
   local token="$1" name="$2"
-  curl --fail-with-body --silent --show-error \
+  request_json 'Household bootstrap' \
     -X POST "${API_URL}/rest/v1/rpc/bootstrap_household" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${token}" \
@@ -33,7 +47,7 @@ rpc_bootstrap() {
 
 list_households() {
   local token="$1"
-  curl --fail-with-body --silent --show-error \
+  request_json 'Household list' \
     "${API_URL}/rest/v1/households?select=id,name&order=name" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${token}"
@@ -61,14 +75,14 @@ third_houses="$(list_households "$third_token")"
 
 # Prove cross-household isolation through PostgREST, not direct SQL role switching.
 third_id="$(printf '%s' "$third_houses" | jq -r '.[0].id')"
-wallace_cross="$(curl --fail-with-body --silent --show-error \
+wallace_cross="$(request_json 'Cross-household read' \
   "${API_URL}/rest/v1/households?select=id&id=eq.${third_id}" \
   -H "apikey: ${SUPABASE_KEY}" \
   -H "Authorization: Bearer ${wallace_token}")"
 [[ "$(printf '%s' "$wallace_cross" | jq 'length')" -eq 0 ]]
 
 # Anonymous access must not expose household rows.
-anon_houses="$(curl --fail-with-body --silent --show-error \
+anon_houses="$(request_json 'Anonymous household read' \
   "${API_URL}/rest/v1/households?select=id" \
   -H "apikey: ${SUPABASE_KEY}" \
   -H "Authorization: Bearer ${SUPABASE_KEY}")"
