@@ -6,7 +6,7 @@ import type { AttentionNavigationAction } from './FinancialPriorityCenter.js';
 
 type ProjectionReviewItem={review_key:string;review_type:string;amount:number;reference_date:string|null;entity_type:string;entity_id:string;title:string;review_reason:string;recommended_action:'expenses'|'invoices'|'income';action_label:string;urgency_score:number;};
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
-const actionFor=(item:ProjectionReviewItem):AttentionNavigationAction=>item.entity_type==='invoice'?{kind:'projection-invoice-review',invoiceId:item.entity_id}:{kind:'navigate',destination:item.recommended_action};
+const actionFor=(item:ProjectionReviewItem):AttentionNavigationAction=>item.entity_type==='invoice'?{kind:'projection-invoice-review',invoiceId:item.entity_id}:item.entity_type==='recurring_occurrence'?{kind:'projection-recurring-review',occurrenceId:item.entity_id}:{kind:'navigate',destination:item.recommended_action};
 
 export function ProjectionReviewCenter({onNavigate}:{onNavigate?:(action:AttentionNavigationAction)=>void}){
   const{household}=useSupabaseAuth();const[items,setItems]=useState<ProjectionReviewItem[]>([]);const[loading,setLoading]=useState(true);const[failed,setFailed]=useState(false);
