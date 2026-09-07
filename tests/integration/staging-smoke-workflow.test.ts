@@ -24,12 +24,15 @@ test('staging smoke is manual, bound to staging and requires an exact release SH
   assert.match(workflow, /git rev-parse HEAD/);
 });
 
-test('staging smoke uses only public browser credentials and checks anonymous isolation', () => {
+test('staging smoke uses only public browser credentials and accepts safe anonymous isolation outcomes', () => {
   assert.doesNotMatch(workflow, /SERVICE_ROLE|SECRET_KEY|DATABASE_URL|DB_PASSWORD/);
   assert.match(workflow, /validate-release-env\.mjs/);
   assert.match(workflow, /auth\/v1\/settings/);
   assert.match(workflow, /rest\/v1\/households\?select=id&limit=1/);
+  assert.match(workflow, /--write-out '%\{http_code\}'/);
+  assert.match(workflow, /401\|403/);
   assert.match(workflow, /x\.length!==0/);
+  assert.match(workflow, /unexpected anonymous household response/);
 });
 
 test('staging artifact records and retains the exact candidate SHA', () => {
