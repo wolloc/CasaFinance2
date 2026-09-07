@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const center=await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx',import.meta.url),'utf8');
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const intent=await readFile(new URL('../../src/finance/projectionInvoiceReviewIntent.ts',import.meta.url),'utf8');
+const invoices=await readFile(new URL('../../src/components/app/InvoicesScreen.tsx',import.meta.url),'utf8');
+test('forecast invoice review preserves exact invoice identity',()=>{assert.match(center,/item\.entity_type==='invoice'\?\{kind:'projection-invoice-review',invoiceId:item\.entity_id\}/);assert.match(priority,/kind:'projection-invoice-review';invoiceId:string/);});
+test('opening projection invoice review creates only transient context',()=>{assert.match(app,/if\(action\.kind==='projection-invoice-review'\)\{setProjectionInvoiceReviewIntent\(\{invoiceId:action\.invoiceId\}\);setScreen\('invoices'\);return;\}/);assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete|settle|pay|transfer/i);});
+test('invoice destination rereads current invoices before highlighting exact target',()=>{assert.match(invoices,/listFinancialInvoices/);assert.match(invoices,/rows\.some\(row=>row\.invoice_id===projectionReviewIntent\.invoiceId\)/);assert.match(invoices,/projectionReviewIntent\?\.invoiceId===row\.invoice_id/);assert.match(invoices,/Revisar projeção/);assert.match(invoices,/não está mais entre as faturas abertas/);});
+test('projection review remains distinct from payment',()=>{assert.match(invoices,/Revisar não registra pagamento nem dá baixa na previsão/);assert.match(invoices,/onPay\?\.\(row\)/);assert.doesNotMatch(intent,/payment|pay|settle|supabase|rpc/i);});
