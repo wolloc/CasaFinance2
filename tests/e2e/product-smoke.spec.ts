@@ -4,6 +4,9 @@ const apiBase = 'http://127.0.0.1:54321';
 const userId = '11111111-1111-4111-8111-111111111111';
 const householdId = '22222222-2222-4222-8222-222222222222';
 const now = new Date().toISOString();
+const expiresAt = 4102444800;
+const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+const accessToken = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: userId, aud: 'authenticated', role: 'authenticated', email: 'wallace@example.com', iat: 1700000000, exp: expiresAt })}.e2e`;
 
 function user() {
   return {
@@ -11,9 +14,16 @@ function user() {
     aud: 'authenticated',
     role: 'authenticated',
     email: 'wallace@example.com',
+    email_confirmed_at: now,
+    phone: '',
+    confirmed_at: now,
+    last_sign_in_at: now,
     app_metadata: { provider: 'email', providers: ['email'] },
     user_metadata: {},
+    identities: [],
     created_at: now,
+    updated_at: now,
+    is_anonymous: false,
   };
 }
 
@@ -31,7 +41,7 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
 
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     if (url.pathname === '/auth/v1/token') {
-      return fulfill({ access_token: 'e2e-access', token_type: 'bearer', expires_in: 3600, refresh_token: 'e2e-refresh', user: user() });
+      return fulfill({ access_token: accessToken, token_type: 'bearer', expires_in: 3600, expires_at: expiresAt, refresh_token: 'e2e-refresh', user: user() });
     }
     if (url.pathname === '/auth/v1/user') return fulfill(user());
 
@@ -47,12 +57,12 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
 
     if (url.pathname.startsWith('/rest/v1/')) {
       const table = url.pathname.replace('/rest/v1/', '');
-      const select = decodeURIComponent(url.searchParams.get('select') ?? '');
+      const select = decodeURIComponent(url.searchParams.get('select') ?? '').replace(/\s+/g, '');
       const wantsObject = (request.headers()['accept'] ?? '').includes('application/vnd.pgrst.object');
       if (table === 'household_members') {
-        if (select.includes('household_id, profile_id') || select.includes('household_id,profile_id')) return fulfill({ household_id: householdId, profile_id: userId });
-        if (select.includes('id, household_id') || select.includes('id,household_id')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } });
-        if (options.failMemberList && select.includes('profiles(display_name)')) return fulfill({ message: 'forced member list failure' }, 500);
+        if (select.includes('household_id,profile_id') && !select.includes('id,household_id')) return fulfill({ household_id: householdId, profile_id: userId });
+        if (select.includes('id,household_id,profile_id,role,status')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', status: 'active', profiles: { display_name: 'Wallace' } });
+        if (options.failMemberList && select.includes('profiles(display_name)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
         return fulfill([
           { id: 'm1', profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } },
           { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', profiles: { display_name: 'Guilherme' } },
