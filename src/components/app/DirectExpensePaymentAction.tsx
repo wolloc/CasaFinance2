@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Banknote, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
@@ -13,7 +13,7 @@ const localDateTime = () => {
   return local.toISOString().slice(0, 16);
 };
 
-export function DirectExpensePaymentAction({ onCompleted }: { onCompleted?: () => void }) {
+export function DirectExpensePaymentAction({ onCompleted, initialTransactionId }: { onCompleted?: () => void; initialTransactionId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [expenses, setExpenses] = useState<DirectExpensePaymentCandidate[]>([]);
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
@@ -26,6 +26,7 @@ export function DirectExpensePaymentAction({ onCompleted }: { onCompleted?: () =
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const contextualTargetHandled = useRef(false);
   const selected = useMemo(() => expenses.find((expense) => expense.id === transactionId) ?? null, [expenses, transactionId]);
 
   const load = async () => {
@@ -38,10 +39,19 @@ export function DirectExpensePaymentAction({ onCompleted }: { onCompleted?: () =
       ]);
       setExpenses(expenseRows);
       setAccounts(financial.accounts.filter((account) => transactionalTypes.has(account.type)));
+      if (initialTransactionId && !contextualTargetHandled.current) {
+        contextualTargetHandled.current = true;
+        const target = expenseRows.find((expense) => expense.id === initialTransactionId);
+        if (target) setTransactionId(target.id);
+        else {
+          setTransactionId('');
+          setError('Este gasto mudou ou já foi resolvido. A lista foi atualizada e nenhum pagamento foi registrado.');
+        }
+      }
     } catch { setError('Não foi possível carregar as despesas que ainda precisam de pagamento.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [household?.id]);
+  useEffect(() => { contextualTargetHandled.current = false; load(); }, [household?.id, initialTransactionId]);
   useEffect(() => { if (selected) setAmount(selected.remaining_amount.toFixed(2)); }, [selected?.id]);
 
   const submit = async (event: FormEvent) => {
@@ -65,6 +75,7 @@ export function DirectExpensePaymentAction({ onCompleted }: { onCompleted?: () =
 
   return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
     <div className="flex items-start gap-3"><Banknote className="mt-0.5 h-5 w-5 text-emerald-300"/><div><h2 className="font-bold">Registrar pagamento de gasto</h2><p className="mt-1 text-sm text-slate-400">Use quando o dinheiro realmente saiu de uma conta ou do dinheiro da Casa. Quem comprou, quem é responsável pelo gasto e quem pagou são papéis diferentes.</p></div></div>
+    {initialTransactionId&&<p className="mt-3 rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3 text-xs text-emerald-200">Você veio de um gasto vencido da Home. O Casa releu a situação atual antes de selecionar; nada foi pago automaticamente.</p>}
     <p className="mt-3 rounded-xl border border-blue-900/60 bg-blue-950/30 p-3 text-xs text-blue-200">Compra no cartão não aparece aqui: o caixa sai quando a fatura é paga. Este fluxo também não cria uma nova despesa — ele registra Funding + Caixa do gasto que já existe.</p>
     {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : expenses.length === 0 ? <p className="mt-4 text-sm text-slate-400">Nenhum gasto direto aguardando pagamento.</p> : <form onSubmit={submit} className="mt-4 grid gap-3">
       <label className="text-sm font-semibold">Qual gasto foi pago?<select value={transactionId} onChange={(e) => setTransactionId(e.target.value)} required className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione</option>{expenses.map((expense) => <option key={expense.id} value={expense.id}>{expense.description} · falta {money(expense.remaining_amount)}</option>)}</select></label>
