@@ -16,7 +16,7 @@ export default defineConfig({
     { name: 'mobile-chromium', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
   ],
   webServer: {
-    command: 'APP_ENV=development PORT=4173 SUPABASE_URL=https://e2e.supabase.co SUPABASE_PUBLISHABLE_KEY=e2e-public-key npm run dev',
+    command: 'VITE_SUPABASE_URL=https://e2e.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=e2e-public-key npm run dev -- --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
