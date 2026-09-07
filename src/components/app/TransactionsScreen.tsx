@@ -36,7 +36,7 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer list-none font-semibold text-slate-200">
         Precisa ajustar algo?
-        <span className="mt-1 block text-xs font-normal text-slate-500">PIX no cartão, estornos, pagamentos por terceiros, correções e recorrências ficam aqui para não atrapalhar o uso do dia a dia.</span>
+        <span className="mt-1 block text-xs font-normal text-slate-500">Estornos, pagamentos por terceiros, correções e recorrências ficam aqui para não atrapalhar o uso do dia a dia. PIX no cartão também fica nesta área especial.</span>
       </summary>
       <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
         <CardPixExpenseAction />
