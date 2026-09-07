@@ -41,7 +41,7 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
     setPlannedDestinationAccountId('');
   };
 
-  const load = async () => {
+  const load = async (isCurrent: () => boolean = () => true) => {
     if (!supabase || !household) return;
     setLoading(true);
     setLoadError(null);
@@ -51,17 +51,23 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
         listHouseholdCategories(supabase, household.id),
         listInvestmentReserveResources(supabase, household.id),
       ]);
+      if (!isCurrent()) return;
       setCategories(categoryRows.filter((category) => category.type === 'income'));
       setResources(accountRows.filter(isTransactionalResource));
     } catch {
+      if (!isCurrent()) return;
       clearLoadedContext();
       setLoadError('Não foi possível conferir categorias e recursos da Casa. Nenhuma série de renda será criada até uma nova leitura válida.');
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); }, [household?.id]);
+  useEffect(() => {
+    let active = true;
+    void load(() => active);
+    return () => { active = false; };
+  }, [household?.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
