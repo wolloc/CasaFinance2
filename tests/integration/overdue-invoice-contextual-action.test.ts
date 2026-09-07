@@ -19,7 +19,7 @@ test('invoice attention becomes transient payment intent only',()=>{
   const source=compact(appSource);
   assert.match(source,/if\(action\.kind==='invoice-payment'\)\{openInvoicePaymentIntent\(action\.invoiceId,action\.amount\);return;\}/);
   assert.match(source,/setInvoicePaymentIntent\(\{invoiceId,suggestedAmount\}\)/);
-  assert.doesNotMatch(appSource,/action\.kind==='invoice-payment'[^\n]*supabase/);
+  assert.doesNotMatch(source,/if\(action\.kind==='invoice-payment'\)\{[^}]*supabase[^}]*\}/);
 });
 
 test('canonical payment flow rereads and settles the current invoice state',()=>{
