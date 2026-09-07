@@ -24,13 +24,22 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { o
   const [receivedDate, setReceivedDate] = useState(localDate());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const handledIntent = useRef(false);
 
+  const clearLoadedContext = () => {
+    setIncomes([]);
+    setAccounts([]);
+    setTransactionId('');
+    setDestinationAccountId('');
+    setAmount('');
+  };
+
   const load = async () => {
     if (!supabase || !household) return;
-    setLoading(true); setError(null);
+    setLoading(true); setLoadError(null); setError(null);
     try {
       const [transactions, resources] = await Promise.all([
         listHouseholdTransactions(supabase, household.id),
@@ -52,7 +61,8 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { o
         }
       }
     } catch {
-      setError('Não foi possível carregar as entradas pendentes e os recursos da Casa.');
+      clearLoadedContext();
+      setLoadError('Não foi possível conferir as entradas pendentes e os recursos da Casa. Nenhum recebimento pode ser registrado até uma nova leitura válida.');
     } finally {
       setLoading(false);
     }
@@ -72,6 +82,7 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { o
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (loadError) { setError('Recarregue os dados antes de registrar um recebimento.'); return; }
     if (!supabase || !household || !selected) { setError('Escolha qual renda entrou.'); return; }
     const numericAmount = Number(amount.replace(',', '.'));
     if (!destinationAccountId) { setError('Informe onde o dinheiro realmente entrou.'); return; }
@@ -100,7 +111,7 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { o
   return <section className="rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-4">
     <div className="flex items-start gap-3"><WalletCards className="mt-0.5 h-5 w-5 text-emerald-300" /><div><h2 className="font-bold">Uma renda prevista realmente entrou?</h2><p className="mt-1 text-sm text-slate-400">Criar a entrada registra o fato econômico. Só esta confirmação movimenta o caixa e define explicitamente <strong>de quem é a renda</strong> e <strong>onde o dinheiro entrou</strong>.</p></div></div>
     {initialMoneyMovementId&&<p className="mt-3 rounded-xl border border-cyan-900 bg-cyan-950/20 p-3 text-xs text-cyan-200">Você veio de uma entrada atrasada da Home. O Casa localizou o fato econômico ligado à previsão e releu o saldo pendente. Nada entra no caixa até sua confirmação.</p>}
-    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin" /> : incomes.length === 0 ? <p className="mt-4 text-sm text-slate-400">Não há renda pendente para confirmar.</p> : <form onSubmit={submit} className="mt-4 grid gap-3">
+    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin" /> : loadError ? <div className="mt-4 rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : incomes.length === 0 ? <p className="mt-4 text-sm text-slate-400">Não há renda pendente para confirmar.</p> : <form onSubmit={submit} className="mt-4 grid gap-3">
       <label className="text-sm font-semibold">Qual renda entrou?<select value={transactionId} onChange={(e) => chooseIncome(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"><option value="">Selecione</option>{incomes.map((income) => <option key={income.id} value={income.id}>{income.description} · falta {money(Number(income.amount) - Number(income.realized_amount))}</option>)}</select></label>
       <label className="text-sm font-semibold">De quem é esta renda?<select value={beneficiaryMemberId} onChange={(e) => setBeneficiaryMemberId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
       <label className="text-sm font-semibold">Onde o dinheiro realmente entrou?<select value={destinationAccountId} onChange={(e) => setDestinationAccountId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
