@@ -3,6 +3,7 @@ import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.j
 import type { TransactionKind } from '../../finance/householdTransactions.js';
 import { consumeRecurringExpenseActionIntent } from '../../finance/recurringExpenseIntent.js';
 import { consumeIncomeReceiptIntent } from '../../finance/incomeReceiptIntent.js';
+import { consumeDirectExpensePaymentIntent } from '../../finance/directExpensePaymentIntent.js';
 import { IncomeLedgerScreen } from './IncomeLedgerScreen.js';
 import { RecurringExpenseAction } from './RecurringExpenseAction.js';
 import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
@@ -16,11 +17,12 @@ import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 
 export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
+  const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
   const incomeIntent = useMemo(() => mode === 'income' ? consumeIncomeReceiptIntent() : null, [mode]);
   if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} />;
   return <div className="space-y-4">
     <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />
-    <DirectExpensePaymentAction />
+    <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />
     <ExternalExpensePaymentAction />
     <PartialDirectRefundAction />
     <CardRefundAction />
