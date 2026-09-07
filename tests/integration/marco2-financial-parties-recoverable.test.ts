@@ -13,7 +13,7 @@ test('external people use human language and a useful empty state',()=>{
 test('failed read blocks creation until a valid reread',()=>{
   assert.match(source,/if\(loadError\|\|loading\)/);
   assert.match(source,/!loading&&!loadError&&<form/);
-  assert.match(source,/não permitir um novo cadastro até conferir novamente/);
+  assert.match(source,/nem permitir um novo cadastro até conferir novamente/);
   assert.match(source,/Tentar novamente/);
 });
 
