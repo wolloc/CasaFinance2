@@ -44,20 +44,45 @@ export function TransactionsScreen({ mode, createRequestId = 0, onGrantLoan }: {
 
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer list-none font-semibold text-slate-200">
-        Precisa ajustar algo?
-        <span className="mt-1 block text-xs font-normal text-slate-500">Estornos, pagamentos por terceiros, correções e recorrências ficam aqui para não atrapalhar o uso do dia a dia. PIX no cartão também fica nesta área especial.</span>
+        Precisa fazer algo diferente?
+        <span className="mt-1 block text-xs font-normal text-slate-500">As situações menos comuns ficam organizadas por tipo para não atrapalhar o registro normal de gastos.</span>
       </summary>
-      <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
-        <CardPixExpenseAction />
-        {!recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={null} />}
-        {!directExpenseIntent && <DirectExpensePaymentAction />}
-        <ExternalExpensePaymentAction />
-        <PartialDirectRefundAction />
-        <CardRefundAction />
-        <PostPaymentCardRefundAction />
-        <ExpenseRoleCorrectionAction />
-        <RecurringExpenseAction />
-        <RecurringExpenseManagement />
+      <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
+        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <summary className="cursor-pointer font-semibold text-slate-200">Formas especiais de pagar</summary>
+          <p className="mt-1 text-xs text-slate-500">PIX usando cartão, pagamento de gasto já registrado ou quando outra pessoa pagou.</p>
+          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
+            <CardPixExpenseAction />
+            {!directExpenseIntent && <DirectExpensePaymentAction />}
+            <ExternalExpensePaymentAction />
+          </div>
+        </details>
+
+        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <summary className="cursor-pointer font-semibold text-slate-200">Recebeu dinheiro de volta?</summary>
+          <p className="mt-1 text-xs text-slate-500">Use quando houve devolução ou estorno de uma compra já registrada.</p>
+          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
+            <PartialDirectRefundAction />
+            <CardRefundAction />
+            <PostPaymentCardRefundAction />
+          </div>
+        </details>
+
+        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <summary className="cursor-pointer font-semibold text-slate-200">Corrigir quem participou do gasto</summary>
+          <p className="mt-1 text-xs text-slate-500">Corrija papéis do lançamento sem apagar o histórico financeiro que já aconteceu.</p>
+          <div className="mt-3 border-t border-slate-800 pt-3"><ExpenseRoleCorrectionAction /></div>
+        </details>
+
+        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+          <summary className="cursor-pointer font-semibold text-slate-200">Gastos que se repetem</summary>
+          <p className="mt-1 text-xs text-slate-500">Crie, acompanhe ou ajuste contas e gastos recorrentes.</p>
+          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
+            {!recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={null} />}
+            <RecurringExpenseAction />
+            <RecurringExpenseManagement />
+          </div>
+        </details>
       </div>
     </details>
   </div>;
