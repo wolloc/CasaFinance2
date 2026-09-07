@@ -34,11 +34,11 @@ export async function bootstrapHousehold(
   const existingHousehold = await findExistingHousehold(client, session);
   if (existingHousehold) return { householdId: existingHousehold.id, householdName: existingHousehold.name, alreadyExisted: true };
 
-  const profileResponse = await client.from('profiles').update({ display_name: displayName.trim() }).eq('id', session.user.id);
-  if (profileResponse.error) throw profileResponse.error;
-
-  const rpcResponse = await client.rpc('bootstrap_household', {
-    household_name: householdName.trim(), household_currency: 'BRL', household_timezone: 'America/Sao_Paulo',
+  const rpcResponse = await client.rpc('bootstrap_household_with_profile', {
+    household_name: householdName.trim(),
+    display_name: displayName.trim(),
+    household_currency: 'BRL',
+    household_timezone: 'America/Sao_Paulo',
   }) as { data: HouseholdRow | HouseholdRow[] | null; error: Error | null };
 
   if (rpcResponse.error) {

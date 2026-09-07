@@ -17,6 +17,7 @@ export function PendingHouseholdScreen() {
   const [invitePreview, setInvitePreview] = useState<HouseholdInvitationPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(() => Boolean(invitationTokenFromSearch(window.location.search)));
   const [showManualInvitation, setShowManualInvitation] = useState(false);
+  const [createInsteadOfInvite, setCreateInsteadOfInvite] = useState(false);
   const [acceptedHouseholdName, setAcceptedHouseholdName] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeArea, setActiveArea] = useState<'household' | 'financial' | 'categories' | 'transactions'>('household');
@@ -43,7 +44,10 @@ export function PendingHouseholdScreen() {
     submissionLock.current = true;
     setSuccess(null);
     const result = await createHousehold(householdName, displayName);
-    if (result) setSuccess(result.alreadyExisted ? `Você já pertence à Casa “${result.householdName}”.` : `Casa “${result.householdName}” criada com sucesso.`);
+    if (result) {
+      setSuccess(result.alreadyExisted ? `Você já pertence à Casa “${result.householdName}”.` : `Casa “${result.householdName}” criada com sucesso.`);
+      if (!result.alreadyExisted) window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
+    }
     submissionLock.current = false;
   };
 
@@ -54,6 +58,21 @@ export function PendingHouseholdScreen() {
     setSuccess(null);
     const result = await createInvitation(invitedEmail);
     if (result) setInvitation({ token: result.token, expiresAt: result.expiresAt });
+    submissionLock.current = false;
+  };
+
+  const inspectManualInvitation = async (event: FormEvent) => {
+    event.preventDefault();
+    if (submissionLock.current || !inviteToken.trim()) return;
+    submissionLock.current = true;
+    setSuccess(null);
+    setPreviewLoading(true);
+    const preview = await previewInvitation(inviteToken);
+    if (preview) {
+      setInvitePreview(preview);
+      setCreateInsteadOfInvite(false);
+    }
+    setPreviewLoading(false);
     submissionLock.current = false;
   };
 
@@ -100,40 +119,43 @@ export function PendingHouseholdScreen() {
     </main>
   );
 
-  if (invitePreview || previewLoading) return (
+  if ((invitePreview || previewLoading) && !createInsteadOfInvite) return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-4 text-slate-100">
       <section className="w-full max-w-md rounded-3xl border border-emerald-800 bg-slate-900 p-6 text-center shadow-2xl">
         <Users className="mx-auto mb-5 h-12 w-12 text-emerald-400" />
-        <h1 className="text-2xl font-bold">Você recebeu um convite</h1>
+        <h1 className="text-2xl font-bold">Você tem um convite</h1>
         {previewLoading ? <p className="mt-3 text-sm text-slate-400">Verificando o convite…</p> : <>
           <p className="mt-3 text-sm text-slate-300">Você foi convidado para participar da <strong className="text-white">{invitePreview?.householdName}</strong>.</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Escolha se quer entrar nesta Casa ou começar uma Casa separada.</p>
           <form onSubmit={acceptInvitationCode} className="mt-6">
             <button type="submit" disabled={isSubmitting} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">{isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Users className="h-5 w-5" />}Entrar na {invitePreview?.householdName}</button>
           </form>
+          <button type="button" onClick={() => setCreateInsteadOfInvite(true)} disabled={isSubmitting} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-60"><Home className="h-5 w-5" />Criar uma nova Casa</button>
         </>}
         {error && <p role="alert" className="mt-4 text-sm text-rose-300">{error}</p>}
         <button type="button" onClick={signOut} className="mt-6 text-sm text-slate-400 hover:text-white">Sair</button>
       </section>
     </main>
   );
+
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-4 text-slate-100">
       <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl">
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/20 text-blue-400"><Home className="h-7 w-7" /></div>
         <p className="mb-2 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400"><ShieldCheck className="h-4 w-4" /> Sessão autenticada</p>
-        <h1 className="text-xl font-bold">Bem-vindo ao Casa Finance</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-400">Vamos configurar sua Casa para <strong className="text-slate-200">{user?.email}</strong>.</p>
+        <h1 className="text-xl font-bold">{createInsteadOfInvite ? 'Crie uma Casa separada' : 'Crie sua Casa'}</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-400">{createInsteadOfInvite ? 'Seu convite continua sem ser aceito. Preencha abaixo para começar outra Casa.' : <>Você ainda não pertence a uma Casa. Vamos configurar uma para <strong className="text-slate-200">{user?.email}</strong>.</>}</p>
+        {createInsteadOfInvite && invitePreview && <button type="button" onClick={() => setCreateInsteadOfInvite(false)} className="mt-4 text-sm font-semibold text-emerald-300">Voltar para o convite da {invitePreview.householdName}</button>}
         <form onSubmit={submit} className="mt-6 space-y-4 text-left">
           <label className="block text-sm font-medium text-slate-300">Nome da Casa<input required maxLength={80} value={householdName} onChange={(event) => setHouseholdName(event.target.value)} placeholder="Nossa Casa" className="mt-2 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none focus:border-blue-500" /></label>
           <label className="block text-sm font-medium text-slate-300">Seu nome<input required maxLength={120} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Wallace" className="mt-2 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none focus:border-blue-500" /></label>
-          <p className="rounded-xl bg-slate-950 p-3 text-xs leading-5 text-slate-500">Seus dados financeiros em memória não serão vinculados a esta identidade.</p>
           {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
           {success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
           <button type="submit" disabled={isSubmitting} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-semibold text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Home className="h-5 w-5" />}{isSubmitting ? 'Criando sua Casa…' : 'Criar minha Casa'}</button>
         </form>
-        <div className="mt-5 border-t border-slate-800 pt-5 text-left">
-          {!showManualInvitation ? <button type="button" onClick={() => setShowManualInvitation(true)} className="w-full text-center text-sm font-semibold text-emerald-300">Tenho um convite</button> : <form onSubmit={acceptInvitationCode} className="space-y-3"><label className="block text-sm font-medium text-slate-300">Código ou link do convite<input value={inviteToken} onChange={(event) => setInviteToken(event.target.value)} placeholder="Cole o código ou link" className="mt-2 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none focus:border-emerald-500" /></label><button type="submit" disabled={isSubmitting || !inviteToken.trim()} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-emerald-700 font-semibold text-emerald-300 hover:bg-emerald-950/50 disabled:opacity-60"><Link className="h-5 w-5" />Entrar na Casa</button></form>}
-        </div>
+        {!createInsteadOfInvite && <div className="mt-5 border-t border-slate-800 pt-5 text-left">
+          {!showManualInvitation ? <button type="button" onClick={() => setShowManualInvitation(true)} className="w-full text-center text-sm font-semibold text-emerald-300">Tenho um convite</button> : <form onSubmit={inspectManualInvitation} className="space-y-3"><label className="block text-sm font-medium text-slate-300">Código ou link do convite<input value={inviteToken} onChange={(event) => setInviteToken(event.target.value)} placeholder="Cole o código ou link" className="mt-2 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base outline-none focus:border-emerald-500" /></label><button type="submit" disabled={isSubmitting || previewLoading || !inviteToken.trim()} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-emerald-700 font-semibold text-emerald-300 hover:bg-emerald-950/50 disabled:opacity-60">{previewLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Link className="h-5 w-5" />}Ver convite</button></form>}
+        </div>}
         <button type="button" onClick={signOut} disabled={isSubmitting} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-60">
           {isSubmitting ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
           Sair

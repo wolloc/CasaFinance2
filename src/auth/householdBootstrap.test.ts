@@ -10,7 +10,7 @@ function createClient(options: {
   household?: { id: string; name: string } | null;
   rpcData?: { id: string; name: string } | null;
   rpcError?: Error | null;
-  onRpc?: (args: Record<string, string>) => void;
+  onRpc?: (name: string, args: Record<string, string>) => void;
 }) {
   let membership = options.membership ?? null;
   const calls: Array<{ table: string; operation: string; value?: string }> = [];
@@ -27,16 +27,14 @@ function createClient(options: {
         data: table === 'household_members' ? membership : options.household,
         error: null,
       }),
-      update: () => builder,
-      then: (resolve: (value: { error: null }) => unknown) => Promise.resolve(resolve({ error: null })),
     };
     return builder;
   };
 
   const client = {
     from: query,
-    rpc: async (_name: string, args: Record<string, string>) => {
-      options.onRpc?.(args);
+    rpc: async (name: string, args: Record<string, string>) => {
+      options.onRpc?.(name, args);
       if (options.rpcError) {
         membership = options.membership ?? null;
         return { data: null, error: options.rpcError };
@@ -51,23 +49,25 @@ function createClient(options: {
 }
 
 test('cria Casa usando a identidade da sessão e confirma a associação', async () => {
+  let rpcName = '';
   let rpcArgs: Record<string, string> | undefined;
   const { client, calls } = createClient({
     rpcData: { id: 'household-123', name: 'Nossa Casa' },
-    onRpc: (args) => { rpcArgs = args; },
+    onRpc: (name, args) => { rpcName = name; rpcArgs = args; },
   });
 
-  const result = await bootstrapHousehold(client, session, ' Nossa Casa ', 'Wallace');
+  const result = await bootstrapHousehold(client, session, ' Nossa Casa ', ' Wallace ');
 
   assert.deepEqual(result, { householdId: 'household-123', householdName: 'Nossa Casa', alreadyExisted: false });
+  assert.equal(rpcName, 'bootstrap_household_with_profile');
   assert.deepEqual(rpcArgs, {
     household_name: 'Nossa Casa',
+    display_name: 'Wallace',
     household_currency: 'BRL',
     household_timezone: 'America/Sao_Paulo',
   });
-  assert.ok(calls.some((call) => call.table === 'profiles' && call.value === session.user.id));
   assert.ok(calls.some((call) => call.table === 'household_members' && call.value === session.user.id));
-  assert.equal(Object.values(rpcArgs ?? {}).includes('usr-wallace-001'), false);
+  assert.equal(calls.some((call) => call.table === 'profiles'), false);
 });
 
 test('não chama RPC quando o usuário já tem Casa', async () => {
