@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const intent=await readFile(new URL('../../src/finance/invoiceReviewIntent.ts',import.meta.url),'utf8');
+const invoices=await readFile(new URL('../../src/components/app/InvoicesScreen.tsx',import.meta.url),'utf8');
+test('coverage risk preserves the exact canonical invoice identity',()=>{assert.match(priority,/attention_type==='card_coverage_risk'/);assert.match(priority,/entity_type==='invoice'/);assert.match(priority,/kind:'invoice-coverage-risk',invoiceId:item\.entity_id/);assert.match(priority,/Revisar cobertura desta fatura/);});
+test('Home navigation only creates transient review context',()=>{assert.match(app,/setInvoiceReviewIntent\(\{invoiceId:action\.invoiceId\}\)/);assert.match(app,/setScreen\('invoices'\)/);assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete/i);});
+test('invoice screen rereads current invoices before highlighting the target',()=>{assert.match(invoices,/listFinancialInvoices/);assert.match(invoices,/rows\.some\(row=>row\.invoice_id===reviewIntent\.invoiceId\)/);assert.match(invoices,/A fatura sinalizada pela Home não está mais entre as faturas abertas/);assert.match(invoices,/Revisar cobertura/);});
+test('coverage review does not automatically pay or move resources',()=>{assert.doesNotMatch(priority,/payFinancialInvoice|createResourceTransfer|settle/i);assert.doesNotMatch(intent,/payFinancialInvoice|createResourceTransfer|settle/i);assert.match(invoices,/onPay\?\.\(row\)/);});
