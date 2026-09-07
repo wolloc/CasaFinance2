@@ -8,6 +8,7 @@ export type AttentionNavigationAction=
   | {kind:'navigate';destination:'expenses'|'invoices'|'income'}
   | {kind:'recurring-expense';occurrenceId:string}
   | {kind:'projection-recurring-review';occurrenceId:string}
+  | {kind:'projection-expense-review';commitmentKey:string}
   | {kind:'overdue-commitment';commitmentKey:string}
   | {kind:'income-receipt';moneyMovementId:string}
   | {kind:'projection-income-review';moneyMovementId:string}
