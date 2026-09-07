@@ -89,6 +89,16 @@ begin
   perform public.financial_command_store(p_household_id,op,p_request_key,result); return result;
 end $$;
 
+create or replace function public.confirm_recurring_expense_occurrence_idempotent(
+  p_household_id uuid,p_occurrence_id uuid,p_confirmed_amount numeric,p_request_key text
+) returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
+declare result uuid; existing uuid; op constant text:='confirm_recurring_expense_occurrence';
+begin
+  existing:=public.financial_command_existing_or_lock(p_household_id,op,p_request_key); if existing is not null then return existing; end if;
+  result:=public.confirm_recurring_expense_occurrence(p_household_id,p_occurrence_id,p_confirmed_amount);
+  perform public.financial_command_store(p_household_id,op,p_request_key,result); return result;
+end $$;
+
 revoke all on function public.create_income_fact_idempotent(uuid,text,numeric,date,uuid,uuid,uuid,public.income_nature,public.economic_state,text,text) from public,anon;
 revoke all on function public.create_financial_transaction_idempotent(uuid,public.transaction_kind,text,numeric,date,uuid,uuid,public.payment_instrument_kind,uuid,uuid,jsonb,integer,text,text) from public,anon;
 revoke all on function public.create_recurring_income_rule_idempotent(uuid,text,numeric,date,date,text,uuid,uuid,uuid,public.income_nature,public.economic_state,text,text) from public,anon;
@@ -97,6 +107,7 @@ revoke all on function public.close_recurring_income_rule_idempotent(uuid,uuid,d
 revoke all on function public.create_recurring_expense_rule_from_transaction_idempotent(uuid,uuid,text,integer,date,date,text) from public,anon;
 revoke all on function public.revise_recurring_expense_rule_idempotent(uuid,uuid,date,numeric,text,integer,date,text,text) from public,anon;
 revoke all on function public.close_recurring_expense_rule_idempotent(uuid,uuid,date,text,text) from public,anon;
+revoke all on function public.confirm_recurring_expense_occurrence_idempotent(uuid,uuid,numeric,text) from public,anon;
 
 grant execute on function public.create_income_fact_idempotent(uuid,text,numeric,date,uuid,uuid,uuid,public.income_nature,public.economic_state,text,text) to authenticated;
 grant execute on function public.create_financial_transaction_idempotent(uuid,public.transaction_kind,text,numeric,date,uuid,uuid,public.payment_instrument_kind,uuid,uuid,jsonb,integer,text,text) to authenticated;
@@ -106,3 +117,4 @@ grant execute on function public.close_recurring_income_rule_idempotent(uuid,uui
 grant execute on function public.create_recurring_expense_rule_from_transaction_idempotent(uuid,uuid,text,integer,date,date,text) to authenticated;
 grant execute on function public.revise_recurring_expense_rule_idempotent(uuid,uuid,date,numeric,text,integer,date,text,text) to authenticated;
 grant execute on function public.close_recurring_expense_rule_idempotent(uuid,uuid,date,text,text) to authenticated;
+grant execute on function public.confirm_recurring_expense_occurrence_idempotent(uuid,uuid,numeric,text) to authenticated;
