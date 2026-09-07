@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const center=await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx',import.meta.url),'utf8');
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const transactions=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const ledger=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
+const intent=await readFile(new URL('../../src/finance/projectionIncomeReviewIntent.ts',import.meta.url),'utf8');
+test('future projected income stays a neutral review while delayed income may open receipt confirmation',()=>{assert.match(center,/item\.review_type==='delayed_expected_income'\?\{kind:'income-receipt',moneyMovementId:item\.entity_id\}:\{kind:'projection-income-review',moneyMovementId:item\.entity_id\}/);assert.match(priority,/kind:'projection-income-review';moneyMovementId:string/);});
+test('future income review uses separate transient intent from receipt',()=>{assert.match(app,/if\(action\.kind==='projection-income-review'\)\{setProjectionIncomeReviewIntent\(\{moneyMovementId:action\.moneyMovementId\}\);setScreen\('income'\);return;\}/);assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete|settle|receive|receipt/i);assert.match(transactions,/initialReviewMoneyMovementId=\{projectionIncomeIntent\?\.moneyMovementId\}/);});
+test('income ledger rereads movement and current transaction before highlighting',()=>{assert.match(ledger,/from\('money_movements'\).*eq\('household_id',household\.id\).*eq\('id',initialReviewMoneyMovementId\)/);assert.match(ledger,/listHouseholdTransactions/);assert.match(ledger,/incomeRows\.find\(row=>row\.id===movement\.data\?\.related_transaction_id\)/);assert.match(ledger,/A entrada sinalizada pela revisão da projeção mudou ou já foi resolvida/);});
+test('neutral projected income review does not preselect receipt form',()=>{assert.match(ledger,/IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\}/);assert.doesNotMatch(ledger,/IncomeReceiptAction initialMoneyMovementId=\{initialReviewMoneyMovementId\}/);assert.match(ledger,/nenhum recebimento foi registrado/);assert.match(ledger,/row\.id===reviewTransactionId/);});

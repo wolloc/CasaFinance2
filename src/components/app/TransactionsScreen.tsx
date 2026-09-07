@@ -3,6 +3,7 @@ import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.j
 import type { TransactionKind } from '../../finance/householdTransactions.js';
 import { consumeRecurringExpenseActionIntent } from '../../finance/recurringExpenseIntent.js';
 import { consumeIncomeReceiptIntent } from '../../finance/incomeReceiptIntent.js';
+import { consumeProjectionIncomeReviewIntent } from '../../finance/projectionIncomeReviewIntent.js';
 import { consumeDirectExpensePaymentIntent } from '../../finance/directExpensePaymentIntent.js';
 import { IncomeLedgerScreen } from './IncomeLedgerScreen.js';
 import { RecurringExpenseAction } from './RecurringExpenseAction.js';
@@ -19,7 +20,8 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
   const incomeIntent = useMemo(() => mode === 'income' ? consumeIncomeReceiptIntent() : null, [mode]);
-  if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} />;
+  const projectionIncomeIntent = useMemo(() => mode === 'income' ? consumeProjectionIncomeReviewIntent() : null, [mode]);
+  if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} />;
   return <div className="space-y-4">
     <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />
     <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />
