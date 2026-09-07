@@ -16,6 +16,7 @@ sign_up() {
   curl --fail-with-body --silent --show-error \
     -X POST "${API_URL}/auth/v1/signup" \
     -H "apikey: ${SUPABASE_KEY}" \
+    -H "Authorization: Bearer ${SUPABASE_KEY}" \
     -H 'Content-Type: application/json' \
     -d "{\"email\":\"${email}\",\"password\":\"${PASSWORD}\"}"
 }
@@ -69,7 +70,8 @@ wallace_cross="$(curl --fail-with-body --silent --show-error \
 # Anonymous access must not expose household rows.
 anon_houses="$(curl --fail-with-body --silent --show-error \
   "${API_URL}/rest/v1/households?select=id" \
-  -H "apikey: ${SUPABASE_KEY}")"
+  -H "apikey: ${SUPABASE_KEY}" \
+  -H "Authorization: Bearer ${SUPABASE_KEY}")"
 [[ "$(printf '%s' "$anon_houses" | jq 'length')" -eq 0 ]]
 
 echo 'Marco 3.02 Auth/JWT/PostgREST gate passed.'
