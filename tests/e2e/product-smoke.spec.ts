@@ -61,8 +61,8 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
       const select = decodeURIComponent(url.searchParams.get('select') ?? '').replace(/\s+/g, '');
       const wantsObject = (request.headers()['accept'] ?? '').includes('application/vnd.pgrst.object');
       if (table === 'household_members') {
-        if (select.includes('household_id,profile_id') && !select.includes('id,household_id')) return fulfill({ household_id: householdId, profile_id: userId });
-        if (select.includes('id,household_id,profile_id,role,status')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', status: 'active', profiles: { display_name: 'Wallace' } });
+        if (select === 'household_id,profile_id') return fulfill({ household_id: householdId, profile_id: userId });
+        if (select.includes('id,household_id,profile_id,role,profiles(display_name)')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } });
         if (options.failMemberList && select.includes('profiles(display_name)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
         return fulfill([
           { id: 'm1', profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } },
