@@ -79,7 +79,7 @@ jobs:
           supabase status -o env > /tmp/supabase.env
           while IFS='=' read -r key value; do
             case "$key" in
-              API_URL|ANON_KEY)
+              API_URL|PUBLISHABLE_KEY|ANON_KEY)
                 value="${value#\"}"
                 value="${value%\"}"
                 printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
