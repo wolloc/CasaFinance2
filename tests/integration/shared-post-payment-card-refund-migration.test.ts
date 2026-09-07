@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const sql = await readFile(new URL('../../supabase/migrations/202609060063_shared_post_payment_card_refunds.sql', import.meta.url), 'utf8');
+const sql = await readFile(new URL('../../supabase/migrations/202609060064_shared_post_payment_card_refunds.sql', import.meta.url), 'utf8');
 
 test('shared refund stores explicit benefit recovery without rewriting original funding', () => {
   assert.match(sql, /create table if not exists public\.funding_recovery_events/);

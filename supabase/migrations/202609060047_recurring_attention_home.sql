@@ -43,7 +43,7 @@ as $$
      where i.household_id=p_household_id and i.state<>'cancelled' and not i.is_overdue and i.remaining_amount>0
        and i.due_date between current_date and current_date+7 and i.remaining_amount>greatest(coalesce(h.projected_ending_cash,0)+i.remaining_amount,0)
     union all
-    select p_household_id,'projection:'||date_trunc('month',current_date)::date::text,'negative_projection','red',abs(h.projected_ending_cash)::numeric(19,2),(date_trunc('month',current_date)+interval '1 month-1 day')::date,'household',p_household_id,'Projeção do mês ficou negativa'
+    select p_household_id,'projection:'||date_trunc('month',current_date)::date::text,'negative_projection','red',abs(h.projected_ending_cash)::numeric(19,2),(date_trunc('month',current_date)+interval '1 month'-interval '1 day')::date,'household',p_household_id,'Projeção do mês ficou negativa'
       from public.financial_household_health_position(p_household_id) h where coalesce(h.projected_ending_cash,0)<0
   ), recurring_due as (
     select r.household_id,'recurring-due:'||r.occurrence_id::text,'recurring_expense_due',

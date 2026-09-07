@@ -50,3 +50,26 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  database-security:
+    name: Supabase RLS and database contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Initialize local Supabase config
+        run: test -f supabase/config.toml || supabase init
+
+      - name: Start isolated Supabase and replay every migration from zero
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Run Marco 3 dynamic RLS security gate
+        run: supabase test db supabase/tests/marco3_rls_security.test.sql
