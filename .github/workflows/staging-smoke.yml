@@ -1,0 +1,46 @@
+name: Staging smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-smoke:
+    name: Validate real staging boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    env:
+      VITE_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate staging public configuration
+        run: node scripts/validate-release-env.mjs
+
+      - name: Probe Supabase Auth boundary
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -H "apikey: ${VITE_SUPABASE_PUBLISHABLE_KEY}" \
+            "${VITE_SUPABASE_URL%/}/auth/v1/settings" \
+            | node -e "let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{const x=JSON.parse(s); if(!x || typeof x!=='object') process.exit(1); console.log('[staging-smoke] Auth boundary responded with valid JSON');});"
+
+      - name: Probe protected PostgREST boundary as anonymous
+        run: |
+          body="$(curl --fail-with-body --silent --show-error \
+            -H "apikey: ${VITE_SUPABASE_PUBLISHABLE_KEY}" \
+            "${VITE_SUPABASE_URL%/}/rest/v1/households?select=id&limit=1")"
+          printf '%s' "$body" | node -e "let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{const x=JSON.parse(s); if(!Array.isArray(x) || x.length!==0){console.error('[staging-smoke] anonymous request unexpectedly saw household data'); process.exit(1);} console.log('[staging-smoke] anonymous household read is fail-closed');});"
+
+      - name: Build release artifact for staging configuration
+        run: npm install --no-audit --no-fund && npm run build
