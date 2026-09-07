@@ -11,23 +11,9 @@ RUN_ID="${GITHUB_RUN_ID:-local}-$(date +%s)"
 
 json_field() { jq -er "$1"; }
 
-request_json() {
-  local label="$1"
-  shift
-  local response body status
-  response="$(curl --silent --show-error -w $'\n%{http_code}' "$@")"
-  status="${response##*$'\n'}"
-  body="${response%$'\n'*}"
-  if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
-    echo "${label} failed with HTTP ${status}: ${body}" >&2
-    return 1
-  fi
-  printf '%s' "$body"
-}
-
 sign_up() {
   local email="$1"
-  request_json 'Auth signup' \
+  curl --fail-with-body --silent --show-error \
     -X POST "${API_URL}/auth/v1/signup" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${SUPABASE_KEY}" \
@@ -37,7 +23,7 @@ sign_up() {
 
 rpc_bootstrap() {
   local token="$1" name="$2"
-  request_json 'Household bootstrap' \
+  curl --fail-with-body --silent --show-error \
     -X POST "${API_URL}/rest/v1/rpc/bootstrap_household" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${token}" \
@@ -47,7 +33,7 @@ rpc_bootstrap() {
 
 list_households() {
   local token="$1"
-  request_json 'Household list' \
+  curl --fail-with-body --silent --show-error \
     "${API_URL}/rest/v1/households?select=id,name&order=name" \
     -H "apikey: ${SUPABASE_KEY}" \
     -H "Authorization: Bearer ${token}"
@@ -75,17 +61,32 @@ third_houses="$(list_households "$third_token")"
 
 # Prove cross-household isolation through PostgREST, not direct SQL role switching.
 third_id="$(printf '%s' "$third_houses" | jq -r '.[0].id')"
-wallace_cross="$(request_json 'Cross-household read' \
+wallace_cross="$(curl --fail-with-body --silent --show-error \
   "${API_URL}/rest/v1/households?select=id&id=eq.${third_id}" \
   -H "apikey: ${SUPABASE_KEY}" \
   -H "Authorization: Bearer ${wallace_token}")"
 [[ "$(printf '%s' "$wallace_cross" | jq 'length')" -eq 0 ]]
 
-# Anonymous access must not expose household rows.
-anon_houses="$(request_json 'Anonymous household read' \
+# Anonymous access must not expose household rows. A 401/403 is stronger isolation
+# than an empty 200 response and is the expected contract while anon has no SELECT grant.
+anon_body="$(mktemp)"
+anon_status="$(curl --silent --show-error -o "$anon_body" -w '%{http_code}' \
   "${API_URL}/rest/v1/households?select=id" \
   -H "apikey: ${SUPABASE_KEY}" \
   -H "Authorization: Bearer ${SUPABASE_KEY}")"
-[[ "$(printf '%s' "$anon_houses" | jq 'length')" -eq 0 ]]
+case "$anon_status" in
+  200)
+    [[ "$(jq 'length' "$anon_body")" -eq 0 ]]
+    ;;
+  401|403)
+    # Access denied before RLS can return rows is also a valid fail-closed outcome.
+    ;;
+  *)
+    echo "Unexpected anonymous household response: HTTP ${anon_status}" >&2
+    cat "$anon_body" >&2
+    exit 1
+    ;;
+esac
+rm -f "$anon_body"
 
 echo 'Marco 3.02 Auth/JWT/PostgREST gate passed.'
