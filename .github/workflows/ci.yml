@@ -50,3 +50,29 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  database-security:
+    name: Supabase RLS and database contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Initialize local Supabase config
+        run: test -f supabase/config.toml || supabase init
+
+      - name: Start isolated local Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Apply every migration from zero
+        run: supabase db reset
+
+      - name: Run pgTAP security and financial database tests
+        run: supabase test db
