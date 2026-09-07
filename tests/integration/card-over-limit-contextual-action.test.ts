@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const intent=await readFile(new URL('../../src/finance/cardReviewIntent.ts',import.meta.url),'utf8');
+const invoices=await readFile(new URL('../../src/components/app/InvoicesScreen.tsx',import.meta.url),'utf8');
+test('over-limit attention preserves the canonical card identity',()=>{assert.match(priority,/attention_type==='card_over_limit'/);assert.match(priority,/entity_type==='card'/);assert.match(priority,/kind:'card-over-limit',cardId:item\.entity_id/);assert.match(priority,/Revisar este cartão/);});
+test('Home only creates transient card review context',()=>{assert.match(app,/if\(action\.kind==='card-over-limit'\)\{setCardReviewIntent\(\{cardId:action\.cardId\}\);setScreen\('invoices'\);return;\}/);assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete|settle|transfer/i);});
+test('invoice screen rereads current invoices and highlights only that card',()=>{assert.match(invoices,/listFinancialInvoices/);assert.match(invoices,/rows\.some\(row=>row\.card_id===cardReviewIntent\.cardId\)/);assert.match(invoices,/cardReviewIntent\?\.cardId===row\.card_id/);assert.match(invoices,/Cartão acima do limite/);assert.match(invoices,/não tem mais faturas abertas nesta leitura/);});
+test('review does not automatically pay, transfer, or change limit',()=>{assert.doesNotMatch(intent,/pay|transfer|limit|supabase|rpc/i);assert.match(invoices,/Nenhum pagamento ou ajuste de limite foi feito/);assert.match(invoices,/onPay\?\.\(row\)/);});
