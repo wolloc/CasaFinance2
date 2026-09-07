@@ -36,6 +36,12 @@ jobs:
       - name: Unit and integration tests
         run: npm test
 
+      - name: Validate release public config contract
+        env:
+          VITE_SUPABASE_URL: https://release-contract.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
+        run: npm run check:release-config
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
