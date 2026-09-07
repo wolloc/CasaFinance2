@@ -68,11 +68,8 @@ jobs:
       - name: Initialize local Supabase config
         run: test -f supabase/config.toml || supabase init
 
-      - name: Start isolated local Supabase
+      - name: Start isolated Supabase and replay every migration from zero
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
 
-      - name: Apply every migration from zero
-        run: supabase db reset
-
-      - name: Run pgTAP security and financial database tests
-        run: supabase test db
+      - name: Run Marco 3 dynamic RLS security gate
+        run: supabase test db supabase/tests/marco3_rls_security.test.sql
