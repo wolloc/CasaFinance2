@@ -30,7 +30,7 @@ test('categories RLS isolates active household members', () => {
 test('category deactivation is a soft delete and never classifies financial roles', () => {
   assert.match(serviceSource, /deactivated_at: new Date\(\)\.toISOString\(\)/);
   assert.match(serviceSource, /is\('deactivated_at', null\)/);
-  assert.match(screenSource, /O registro foi preservado/);
+  assert.match(screenSource, /Categoria retirada de uso\. Os lançamentos antigos continuam preservados/);
   assert.match(migrationSource, /soft delete/);
   assert.doesNotMatch(serviceSource, /buyer|payer|funder|card|account/);
 });
