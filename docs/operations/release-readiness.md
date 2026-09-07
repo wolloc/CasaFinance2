@@ -2,42 +2,85 @@
 
 ## Promoção de ambientes
 
-Cada ambiente usa um projeto Supabase e credenciais próprios. `development` roda localmente; `staging` recebe migrations e o artefato aprovado pela CI; `production` recebe exatamente o mesmo artefato após aceite de Wallace e Guilherme. A aplicação valida `APP_ENV`, `PORT`, `DATABASE_URL` e `SUPABASE_URL` na inicialização. Gemini é opcional: sem a chave, apenas OCR fica indisponível.
+Cada ambiente deve usar projeto Supabase e credenciais próprios. `development` pode rodar localmente; `staging` recebe migrations e o artefato aprovado pela CI; `production` só recebe o mesmo artefato após homologação de Wallace e Guilherme e evidência de backup/restore.
 
-## Deploy e migrations
+## O que a CI já prova
 
-1. Criar backup verificável antes da mudança (`supabase db dump --project-ref "$PROJECT_REF" -f backup.sql`).
-2. Restaurar o dump em staging e executar `supabase db reset`, `supabase db lint` e os testes de RLS.
-3. Aplicar migrations versionadas com `supabase migration up --linked` antes de promover a aplicação.
-4. Executar smoke test em `/api/health` e os dez cenários E2E.
-5. Em falha, interromper writers, reverter a aplicação e restaurar o dump em projeto isolado. Migrations financeiras são aditivas; não executar `DROP CASCADE` nem rollback destrutivo em produção.
+O Marco 3 elevou significativamente o gate automático. Hoje a CI executa, em runner descartável:
 
-**Objetivos:** RPO de 24 horas e RTO de 4 horas. Manter backup diário por 30 dias, com cópia semanal por 90 dias. Simular restauração mensalmente, registrar duração, contagens por tabela e reconciliação de saldos/faturas.
+- replay de todas as migrations desde banco vazio;
+- pgTAP dinâmico de RLS;
+- Auth real, JWT e PostgREST;
+- convite/aceite e Casa compartilhada;
+- relogin/continuidade de sessão cobertos pelo fluxo de produto;
+- despesa direta real pela API do Supabase;
+- comprador, responsabilidade econômica e funder independentes;
+- um único movimento de caixa para a liquidação direta testada;
+- isolamento financeiro de uma pessoa externa em outra Casa;
+- TypeScript, testes, Playwright, scan de segredos, `npm audit` e build.
 
-## Roteiro funcional obrigatório
+Essas evidências eliminam os antigos bloqueadores que diziam que RLS era apenas estática, que não havia JWT real ou que o app principal ainda dependia de Maps/identidade simulada.
 
-- [ ] Criar casa e convidar o segundo membro.
-- [ ] Cadastrar conta e cartão.
+## Roteiro funcional obrigatório de staging
+
+- [ ] Criar projeto Supabase de staging separado de produção.
+- [ ] Aplicar todas as migrations desde zero e comparar com a CI.
+- [ ] Criar Casa e convidar o segundo membro.
+- [ ] Sair e entrar novamente com os dois usuários.
+- [ ] Cadastrar contas e cartões reais de homologação.
 - [ ] Registrar salário recebido.
-- [ ] Transferir entre contas e confirmar resultado inalterado.
-- [ ] Registrar compra no cartão em 12 parcelas, sem débito bancário imediato.
-- [ ] Registrar conta fixa com responsabilidade 50/50.
-- [ ] Pagar fatura e confirmar que a despesa não foi duplicada.
+- [ ] Registrar despesa direta compartilhada e conferir comprador, responsável e pagador.
+- [ ] Transferir entre contas e confirmar resultado econômico inalterado.
+- [ ] Registrar compra no cartão parcelada sem débito bancário imediato.
+- [ ] Pagar fatura e confirmar ausência de despesa duplicada.
+- [ ] Reconhecer juros/tarifas/multa de empréstimo sem caixa e depois efetuar pagamento composto único.
 - [ ] Conferir acerto realizado e projetado do casal.
-- [ ] Tentar acessar a casa com membro externo e receber bloqueio.
-- [ ] Sair, entrar novamente e conferir persistência.
+- [ ] Validar investimento/aporte/resgate sem classificar transferência de patrimônio como renda/despesa.
+- [ ] Tentar acessar a Casa com pessoa externa e confirmar bloqueio.
+- [ ] Conferir comportamento em iPhone real de Wallace e Guilherme.
 
-## Gate e relatório de bloqueadores
+## Backup e recuperação
 
-**Decisão atual: NÃO PUBLICAR.**
+Antes de qualquer produção, staging deve provar o procedimento completo de backup e restore. Não basta ter o comando documentado.
 
-| Severidade | Bloqueador | Saída exigida |
+Fluxo mínimo:
+
+1. gerar dump verificável do banco de staging;
+2. restaurar em projeto isolado;
+3. aplicar migrations pendentes de forma controlada;
+4. comparar contagens e posições financeiras relevantes;
+5. executar os gates de RLS/Auth/financeiro contra a restauração;
+6. registrar duração, artefatos e responsável pela validação.
+
+Migrations financeiras devem continuar preferencialmente aditivas/forward-only. Evitar rollback destrutivo e `DROP CASCADE` em produção.
+
+## Gate atual de publicação
+
+**Decisão atual: NÃO PUBLICAR AINDA.**
+
+A razão agora não é mais falta de persistência real ou de autenticação/RLS dinâmica. Esses pontos já têm cobertura no Marco 3. O bloqueio restante é operacional e de homologação.
+
+| Severidade | Pendência | Saída exigida |
 |---|---|---|
-| Crítico | A API ainda usa armazenamento em memória; reinício perde dados. | Implementar adaptador PostgreSQL/Supabase transacional e executar o fluxo de relogin. |
-| Alto | Os dez fluxos não têm automação E2E em navegador. | Adicionar Playwright contra staging e evidências mobile/iPhone. |
-| Alto | RLS foi validada estaticamente, não contra Supabase local nesta execução. | Rodar migrations e testes com dois JWTs reais no CI. |
-| Médio | Health check informa configuração, mas ainda não consulta PostgreSQL/Gemini. | Adicionar probes com timeout e estados `ready/degraded`. |
-| Médio | `npm audit` depende da disponibilidade do registry e deve permanecer como gate da CI. | Corrigir ou aceitar formalmente cada vulnerabilidade. |
-| Baixo | OCR é opcional fora de produção e não tem probe ativo. | Exercitar OCR apenas em staging com documento sintético. |
+| Alto | Ainda não há evidência registrada de staging separado com a configuração real de release. | Criar/configurar staging e executar o roteiro funcional completo. |
+| Alto | Backup/restore ainda não foi comprovado em ambiente de staging. | Restaurar dump em projeto isolado e reconciliar posições financeiras. |
+| Alto | Wallace e Guilherme ainda não homologaram juntos o ciclo mensal em dispositivos reais. | Executar roteiro de aceite nos dois logins e registrar bloqueadores. |
+| Médio | `server/` e OCR legados continuam no repositório. | Garantir que não entrem no caminho de produção; remover ou isolar explicitamente. |
+| Médio | Distribuição iOS/App Store ainda não foi preparada. | Definir wrapper/build/distribuição somente após staging aprovado. |
 
-Nenhuma promoção é autorizada enquanto houver item crítico ou alto. O responsável pelo release deve anexar evidências dos comandos, do restore e do roteiro funcional ao change record.
+Nenhuma publicação é autorizada enquanto houver item **Alto** aberto.
+
+## Critério para liberar beta
+
+Um beta privado pode ser preparado quando:
+
+- staging estiver configurado e estável;
+- backup/restore tiver evidência reproduzível;
+- os dois usuários conseguirem operar a mesma Casa sem intervenção manual em Supabase/Codespaces;
+- nenhum fluxo financeiro crítico produzir duplicidade de despesa/receita/caixa;
+- isolamento entre Casas permanecer verde;
+- CI do head exato do release estiver totalmente verde.
+
+## Depois do beta
+
+Somente após o beta funcional devem entrar em prioridade: empacotamento iOS, assinatura, distribuição, App Store/TestFlight e polimento específico de publicação. Isso evita gastar energia de release sobre uma base que ainda não foi homologada operacionalmente.
