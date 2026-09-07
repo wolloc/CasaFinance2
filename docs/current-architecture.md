@@ -1,116 +1,130 @@
-# Arquitetura atual e auditoria técnica
+# Arquitetura atual do Casa Finance
 
-Auditoria da revisão `80641cc` (PR localmente registrada como `#1`) em 3 de setembro de 2026. A inspeção do histórico remoto ficou limitada pelo bloqueio de rede do ambiente; o histórico Git disponível contém a inicialização e a entrega de contas fixas/comprador.
+Atualizado no Marco 3 após a validação do fluxo real com Supabase local, Auth/JWT/PostgREST, RLS e comandos financeiros canônicos.
 
 ## Visão geral
 
-O repositório é um monólito TypeScript executado por Node.js:
-
 ```text
-React 19 + Motion + Lucide + Tailwind 4
-                │ HTTP / JSON
-                ▼
-       Express (`server/index.ts`)
-                │ chamadas diretas
-                ▼
- In-memory DB (`server/db.ts`, Maps + seeds)
-
-Contrato SQL futuro/paralelo: `schema.sql` (PostgreSQL/Supabase)
-OCR: `server/geminiOcr.ts` → Gemini, com fallback demonstrativo
+React 19 / TypeScript / Vite
+            │
+            ▼
+SupabaseAuthProvider + CasaFinanceApp
+            │ JWT real
+            ▼
+Supabase Auth + PostgREST
+            │
+            ▼
+PostgreSQL / RLS / RPCs canônicos
+            │
+            ├─ migrations versionadas
+            ├─ read models financeiros
+            └─ fatos econômicos, obrigações, funding e caixa
 ```
 
-- **Bootstrap:** `src/main.tsx` monta `App`; `src/App.tsx` mantém navegação, filtros globais e carregamento das coleções.
-- **Interface:** componentes organizados por sprint/área (`dashboard`, `income`, `common`, `sprint1`…`sprint8`). A navegação ativa expõe Dashboard, Lançamentos, Entradas e Ajustes.
-- **Cliente HTTP:** `src/services/api.ts` concentra chamadas e cabeçalhos de usuário/casa, mas também contém respostas fallback fixas.
-- **API:** `server/index.ts` agrega middleware, handlers, validação parcial, suíte de segurança e integração OCR.
-- **Negócio e persistência:** `server/db.ts` concentra seeds, Maps, mutações, auditoria e cálculos; não persiste reinícios.
-- **Domínio puro:** `src/domain/ledger.ts` é o motor canônico de eventos/postings; `src/domain/finance.ts` mantém a API legada e delega saldos e resultado ao ledger.
-- **Banco alvo:** `schema.sql` descreve enums, tabelas, RLS, funções e views de Supabase, porém não é utilizado pelo servidor em execução.
+O `src/App.tsx` monta exclusivamente o fluxo Supabase. O shell legado baseado em `AuthProvider`, `ApiService` e identidade demo foi removido do root no Marco 3.07.
 
-## Rotas e responsabilidades
+O diretório `server/` permanece como legado histórico/experimental e **não é a fonte de verdade do app real**. Nenhum caminho de produção deve depender de Maps, headers simulados ou usuários fixos desse servidor.
 
-| Grupo | Rotas |
-| --- | --- |
-| Saúde/autenticação | `GET /api/health`, `GET /api/auth/users`, `POST /api/auth/login` |
-| Casa | `GET /api/households/:householdId`, `POST .../members` |
-| Contas | `GET/POST .../accounts`, `PUT/DELETE .../accounts/:accountId` |
-| Cartões | `GET/POST .../cards`, `PUT/DELETE .../cards/:cardId`, `GET .../calculate-dates` |
-| Categorias | `GET/POST .../categories`, `PUT .../categories/:categoryId` |
-| Lançamentos | `GET/POST .../transactions`, `PUT/DELETE .../transactions/:transactionId`, `POST .../refund`, `POST .../check-duplicates`, `POST .../bulk-import` |
-| Acerto | `GET .../settlement`, `GET .../couple-settlement`, `POST .../couple-settlement/record` |
-| Fixas/projeção | `GET/POST .../recurring-bills`, `PATCH .../toggle-active`, `DELETE .../:billId`, `GET .../bill-occurrences`, `PUT .../occurrences/:id`, `POST .../pay`, `GET .../commitments-projection` |
-| Dashboard/reservas | `GET .../dashboard`, `GET .../protected-funds`, `GET .../reserve-drainages`, `POST .../protected-funds/drain` |
-| OCR/reconciliação | `POST .../ocr/receipt`, `POST .../ocr/invoice-pdf`, `GET/POST/DELETE .../merchant-rules`, `GET .../document-imports` |
-| Diagnóstico | `POST /api/tests/run-security-suite` |
+## Autenticação e Casa
 
-Todas as rotas de Casa usam `requireHouseholdAccess`; autenticação é simulada por `x-user-id` e `x-household-id`, com defaults fixos, e não por sessão/JWT verificado.
+- Supabase Auth emite a sessão/JWT real.
+- `SupabaseAuthProvider` recupera a sessão e a Casa do usuário.
+- O primeiro usuário cria a Casa pelo RPC `bootstrap_household`.
+- Convites e aceite unem Wallace e Guilherme à mesma Casa real.
+- `household_id` é a fronteira multi-tenant.
+- RLS usa a identidade autenticada e membership ativa; uma pessoa externa não enxerga fatos de outra Casa.
+- Helpers internos como `require_active_member` não são executáveis diretamente pelo cliente.
 
-## Componentes e fluxos
+## Persistência e segurança
 
-- **Shell:** `App`, `AuthContext`, `Header`, `DraggableFloatingActions`, `IOSBottomSheet`, `QuickAddModal`.
-- **Dashboard:** `HomeDashboard` orquestra `MainMetricsCard`, cartões/contas, categorias, compromissos, projeções, patrimônio, fundos e acerto.
-- **Lançamentos:** `TransactionsTimeline`, `NewTransactionModal` e `EditOccurrenceModal` consultam e mutam transações/ocorrências.
-- **Entradas:** `IncomeManager` delega a interface extensa de receitas e reservas para `Entradas`.
-- **Configuração:** `SettingsAndHouseholdManager` reúne `AccountsManager`, `CardsManager` e `CategoriesManager`.
-- **Módulos fora da navegação principal:** gerenciadores de recorrência/OCR, acerto detalhado e telas de auditoria/segurança permanecem no código, mas não são montados diretamente pelo `App` atual.
+A fonte de verdade é PostgreSQL/Supabase. O histórico de migrations é reproduzido do zero na CI em um Supabase local descartável.
 
-## Entidades e fonte de persistência
+A escrita financeira sensível acontece por comandos/RPCs canônicos. Tabelas que representam fatos compostos ou auditáveis podem permanecer legíveis por RLS, mas sem escrita direta do cliente quando a criação deve passar pelo comando de domínio. Exemplo já endurecido: `external_payment_events`.
 
-O processo atual mantém em `Map`: `User`, `Household`, `HouseholdMember`, `Account`, `Card`, `PaymentMethod`, `Category`, `ProtectedFund`, `ReserveDrainage`, `Transaction`, `TransactionSplit`, `InstallmentPlan`, `Installment`, `Invoice`, `Settlement`, `RecurringBill`, `BillOccurrence`, `DocumentImport` e `MerchantCategoryRule`; logs ficam em array limitado a 500 itens.
+Funções `SECURITY DEFINER` expostas ao cliente usam `search_path` fixo e continuam validando explicitamente a Casa/membership antes da mutação.
 
-O SQL cobre contas, cartões, categorias, recorrências, ocorrências, acertos, documentos e regras de lojista, além de views de dashboard. Há divergência entre o modelo de execução em memória e o modelo SQL: o servidor não cria cliente PostgreSQL/Supabase.
+## Modelo financeiro
 
-## Fonte de verdade de saldos e projeções
+As dimensões abaixo são independentes e não podem ser inferidas umas das outras:
 
-| Indicador | Fonte atual | Regra observada / risco |
-| --- | --- | --- |
-| Saldo de conta | `Account.current_balance` mutado em `server/db.ts` | É um snapshot em memória e pode divergir do histórico de transações. |
-| Fatura de cartão | `Invoice` e agregações de parcelas/transações em `server/db.ts` | Há mais de um caminho de agregação; exige reconciliação por IDs. |
-| Resultado mensal | transações `completed` de receita/despesa filtradas pela data | Deve excluir transferência e pagamento de fatura; contrato formalizado no módulo puro. |
-| Saldo real consolidado | soma de contas ativas no dashboard | Não deve aplicar ocorrências `pending`/previstas. Fundos protegidos são exibidos separadamente. |
-| Patrimônio líquido | saldo das contas menos faturas abertas | Não inclui ainda passivos de empréstimos nem integração real com investimentos. |
-| Projeção mensal | `getFutureCommitmentsProjection`: ocorrências fixas pendentes + parcelas agendadas | Risco de duplicar regra, ocorrência e transação; deduplicação por ID/competência agora tem contrato puro. |
-| Saldo projetado | `projectDashboardFromLedger` aplica receitas previstas e compromissos aos postings | O DTO `accounting` é calculado no domínio/servidor; o componente principal somente formata os valores. |
-| Acerto do casal | postings e responsabilidades do ledger | Despesa direta deriva o financiador do titular da origem; compra no cartão permanece obrigação projetada até a liquidação, sem inferir financiamento do titular do cartão. |
+- **Comprador:** quem originou/atuou na compra.
+- **Responsabilidade econômica:** quem efetivamente recebe a despesa/receita.
+- **Titularidade do cartão/conta:** propriedade do instrumento.
+- **Pagador / funder:** quem financiou ou pagou.
+- **Caixa:** conta/recurso em que ocorreu o movimento real.
 
-## Valores fixos e dados de demonstração
+Regras centrais:
 
-- IDs centrais: `usr-wallace-001`, `usr-guilherme-002`, `hh-wallace-gui-001`; contas, cartões e categorias usam IDs semeados em `server/db.ts`.
-- Nomes, e-mails, PIX, instituições, saldos, limites, transações, contas fixas, fundos e regras de lojista são seeds no construtor do banco em memória.
-- `AuthContext` inicia Wallace; o middleware também assume Wallace e a Casa quando os headers não existem.
-- `App` inicia a competência na data local da Casa; alguns fallbacks legados da API e do acerto ainda repetem `2026-05`.
-- Filtros e tipos codificam `wallace | guilherme`; não derivam membros da Casa.
-- A suíte HTTP de segurança usa IDs, nomes, datas de maio/junho de 2026 e o casal fixo.
-- O fallback de OCR retorna itens demonstrativos e inclui valor preparado para demonstrar detecção de duplicidade.
+- compra gera despesa; pagamento de fatura não gera nova despesa;
+- receber um direito já reconhecido não gera nova receita;
+- pagar uma obrigação já reconhecida não gera nova despesa;
+- empréstimo concedido/tomado não é despesa/receita;
+- juros, tarifas e multas são reconhecidos como custo econômico antes do pagamento;
+- pagamento composto do empréstimo movimenta caixa uma única vez;
+- aporte/resgate de investimento é movimento de caixa, não receita/despesa;
+- projeções não reescrevem fatos realizados;
+- criação de PIX no cartão não movimenta caixa bancário naquele instante.
 
-## Dívidas técnicas priorizadas
+## Fluxo de aplicação atual
 
-### P0 — integridade financeira e segurança
+1. `src/main.tsx` monta `App`.
+2. `App` monta `SupabaseAuthProvider`.
+3. Sem sessão, aparece `AuthScreen`.
+4. Com sessão e sem Casa, aparece `HouseholdOnboarding`.
+5. Com sessão e Casa, monta `CasaFinanceApp`.
+6. A UI consulta read models e executa operações canônicas via Supabase.
 
-1. **Vínculo de faturas legadas:** o ledger já separa obrigação projetada de financiamento realizado, mas os registros antigos ainda precisam de vínculo persistido entre pagamento de fatura e responsabilidades das compras liquidadas.
-2. **Persistência não durável:** produção usa Maps e seeds; conectar repositórios PostgreSQL/Supabase, transações ACID e migrations antes de dados reais.
-3. **Autenticação permissiva:** headers ausentes assumem Wallace; validar token/sessão e derivar Casa autorizada no servidor, sem confiar em headers do cliente.
-4. **Duas fontes de verdade:** snapshots de saldo e histórico são mutados juntos sem ledger/reconciliação transacional.
+A interface não deve recriar regra financeira por conta própria. Regra financeira pertence ao domínio/RPC; a UI apenas coleta intenção, apresenta contexto e chama o comando correto.
 
-### P1 — arquitetura e consistência
+## Gates de CI atuais
 
-5. Integrar gradualmente `src/domain/finance.ts` aos casos de uso do servidor, mantendo handlers, negócio e repositórios separados.
-6. Substituir IDs e união fixa de dois nomes por membros consultados da Casa; acerto deve aceitar N membros mesmo que a UI continue voltada ao casal.
-7. Versionar o DTO contábil do dashboard e migrar os cartões secundários legados para o mesmo read model já usado pelos indicadores principais.
-8. Garantir idempotência persistida em ocorrências, parcelas, importações e pagamento de fatura (constraints/chaves de negócio).
-9. Alinhar `schema.sql`, interfaces TypeScript e Maps; hoje entidades/campos não têm uma migration executável única.
+### Frontend / aplicação
 
-### P2 — manutenção e qualidade
+- TypeScript/lint;
+- testes unitários e de integração;
+- Playwright Chromium com smoke E2E;
+- scan de segredos;
+- `npm audit` em severidade alta;
+- build de produção.
 
-10. Decompor `server/db.ts`, `server/index.ts` e componentes com centenas/milhares de linhas.
-11. Eliminar usos existentes de `any` em handlers, API e componentes, adicionando schemas de validação na fronteira HTTP/OCR.
-12. Criar testes de integração da API e PostgreSQL, testes de contrato do OCR e testes E2E mobile/iPhone.
-13. Trocar mês inicial fixo pela competência local da Casa (`America/Sao_Paulo`) e injetar relógio nos testes.
-14. Remover ou expor conscientemente telas de sprint não alcançáveis pela navegação, reduzindo código morto e contratos paralelos.
+### Banco / segurança
 
-## Próxima integração recomendada
+- Supabase local isolado em runner novo;
+- replay de todas as migrations desde zero;
+- pgTAP dinâmico de RLS com múltiplas identidades e `anon`;
+- Auth real + JWT + PostgREST;
+- convite e Casa compartilhada reais;
+- despesa direta real com comprador, responsabilidade e funder independentes;
+- isolamento financeiro entre Casas.
 
-1. Criar casos de uso TypeScript (`CreateTransaction`, `PayInvoice`, `TransferFunds`) que chamem as funções puras.
-2. Definir interfaces de repositório e duas implementações temporárias: memória para testes e Supabase/PostgreSQL para execução.
-3. Migrar primeiro transferência e cartão em transação atômica, com chave de idempotência.
-4. Recalcular e comparar saldos históricos em modo sombra; bloquear divergências antes de remover os cálculos legados.
+## Estado das validações do Marco 3
+
+Já existe evidência automatizada de:
+
+- migration replay completo em banco vazio;
+- RLS dinâmica;
+- login/sessão/JWT reais;
+- convite e aceite entre duas pessoas;
+- relogin e continuidade da Casa;
+- despesa real pela fronteira HTTP do Supabase;
+- uma única saída de caixa para a liquidação direta testada;
+- isolamento de transações, alocações, funding e movimentos para pessoa externa.
+
+## Dívidas técnicas ainda relevantes
+
+1. Manter `server/` e OCR legados explicitamente fora do caminho de produção ou removê-los quando não forem mais úteis.
+2. Atualizar continuamente read models e testes HTTP conforme novos fluxos financeiros forem promovidos para homologação real.
+3. Criar/validar ambiente de staging com projeto Supabase separado antes de qualquer produção.
+4. Executar backup/restore de verdade em staging e registrar evidências.
+5. Rodar homologação funcional completa com Wallace e Guilherme em dispositivos reais.
+6. Depois disso, preparar empacotamento/distribuição iOS e processo de publicação.
+
+## Regra de arquitetura
+
+Qualquer nova funcionalidade deve responder a duas perguntas antes do merge:
+
+> Wallace e Guilherme conseguiriam usar isso sem conhecer como o Casa Finance foi programado?
+
+> A operação preserva economia, obrigação, funding e caixa sem inferências ou duplicidade?
+
+Se qualquer resposta for “não”, a funcionalidade ainda não está pronta para ser promovida.
