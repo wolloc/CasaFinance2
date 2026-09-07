@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../../src/components/app/TransactionsScreen.tsx', import.meta.url), 'utf8');
 
 test('daily expense flow appears before advanced adjustment tools', () => {
-  const daily = source.indexOf('<HouseholdTransactionsSetup embedded mode={mode} />');
+  const daily = source.indexOf('<HouseholdTransactionsSetup');
   const advanced = source.indexOf('<details');
   assert.ok(daily >= 0, 'daily expense flow must be present');
   assert.ok(advanced > daily, 'advanced tools must come after the daily flow');

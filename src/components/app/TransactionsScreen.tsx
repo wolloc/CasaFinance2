@@ -19,7 +19,7 @@ import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
 import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { CardPixExpenseAction } from './CardPixExpenseAction.js';
 
-export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
+export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: TransactionKind; createRequestId?: number }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   const projectionExpenseIntent = useMemo(() => mode === 'expense' ? consumeProjectionExpenseReviewIntent() : null, [mode]);
   const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
@@ -31,7 +31,7 @@ export function TransactionsScreen({ mode }: { mode: TransactionKind }) {
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
-    <HouseholdTransactionsSetup embedded mode={mode} />
+    <HouseholdTransactionsSetup embedded mode={mode} createRequestId={createRequestId} />
 
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer list-none font-semibold text-slate-200">

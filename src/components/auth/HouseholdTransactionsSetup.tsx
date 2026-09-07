@@ -17,7 +17,7 @@ const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { 
 const formatWhen = (value: string) => new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 const localDateTime = () => { const now = new Date(); return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 
-export function HouseholdTransactionsSetup({ onBack, embedded = false, mode }: { onBack?: () => void; embedded?: boolean; mode?: TransactionKind }) {
+export function HouseholdTransactionsSetup({ onBack, embedded = false, mode, createRequestId = 0 }: { onBack?: () => void; embedded?: boolean; mode?: TransactionKind; createRequestId?: number }) {
   const { user, household, householdMembers } = useSupabaseAuth();
   const [transactions, setTransactions] = useState<HouseholdTransaction[]>([]);
   const [categories, setCategories] = useState<HouseholdCategory[]>([]);
@@ -26,7 +26,7 @@ export function HouseholdTransactionsSetup({ onBack, embedded = false, mode }: {
   const [parties, setParties] = useState<FinancialParty[]>([]);
   const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null);
-  const [editing, setEditing] = useState<HouseholdTransaction | null>(null); const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<HouseholdTransaction | null>(null); const [formOpen, setFormOpen] = useState(false); const [handledCreateRequestId,setHandledCreateRequestId]=useState(0);
   const [historyTransaction, setHistoryTransaction] = useState<HouseholdTransaction | null>(null); const [historyEvents, setHistoryEvents] = useState<TransactionAdjustmentEvent[]>([]); const [historyLoading, setHistoryLoading] = useState(false);
   const [kind, setKind] = useState<TransactionKind>(mode ?? 'expense'); const [description, setDescription] = useState(''); const [amount, setAmount] = useState(''); const [date, setDate] = useState(new Date().toISOString().slice(0, 10)); const [categoryId, setCategoryId] = useState('');
   const [buyerMemberId, setBuyerMemberId] = useState(''); const [instrumentKind, setInstrumentKind] = useState<InstrumentKind>('account'); const [accountId, setAccountId] = useState(''); const [cardId, setCardId] = useState(''); const [notes, setNotes] = useState('');
@@ -52,6 +52,7 @@ export function HouseholdTransactionsSetup({ onBack, embedded = false, mode }: {
     setEditing(transaction ?? null); setKind(transactionKind); setDescription(transaction?.description ?? ''); setAmount(transaction?.amount ?? ''); setDate(transaction?.transaction_date ?? new Date().toISOString().slice(0, 10)); setCategoryId(transaction?.category_id ?? ''); setBuyerMemberId(transaction?.buyer_member_id ?? currentMemberId); setNotes(transaction?.notes ?? '');
     const instrument = transaction?.payment_instrument; setInstrumentKind(instrument?.kind ?? 'account'); setAccountId(instrument?.account_id ?? ''); setCardId(instrument?.card_id ?? ''); setResponsibility('buyer'); setInstallmentCount(1); setCustomAmounts({}); setHasThirdParty(false); setPartyId(''); setFunderMemberId(currentMemberId); setReceivableDueDate(''); setPaidAt(localDateTime()); setFormOpen(true); setError(null);
   };
+  useEffect(()=>{if(createRequestId>0&&createRequestId!==handledCreateRequestId&&!loading&&!loadError){setHandledCreateRequestId(createRequestId);resetForm();}},[createRequestId,handledCreateRequestId,loading,loadError]);
   const availableCategories = categories.filter((category) => category.type === kind); const visibleTransactions = mode ? transactions.filter((transaction) => transaction.type === mode) : transactions;
   const sectionTitle = mode === 'expense' ? 'Gastos' : mode === 'income' ? 'Entradas' : 'Lançamentos'; const addLabel = mode === 'expense' ? 'Novo gasto' : mode === 'income' ? 'Nova entrada' : 'Adicionar'; const emptyLabel = mode === 'expense' ? 'Nenhum gasto cadastrado.' : mode === 'income' ? 'Nenhuma entrada cadastrada.' : 'Nenhum lançamento cadastrado.';
   const sectionDescription = mode === 'expense' ? 'Compras e compromissos da Casa, preservando comprador, responsabilidade, financiamento e pagador como papéis independentes.' : mode === 'income' ? 'Renda verdadeira e entradas previstas ou realizadas, sem misturar transferências, acertos ou empréstimos com renda.' : 'O Casa preserva a história do dinheiro: previsto, realizado, corrigido, cancelado ou estornado.';
