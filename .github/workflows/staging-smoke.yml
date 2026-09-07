@@ -55,10 +55,26 @@ jobs:
 
       - name: Probe protected PostgREST boundary as anonymous
         run: |
-          body="$(curl --fail-with-body --silent --show-error \
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status="$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
             -H "apikey: ${VITE_SUPABASE_PUBLISHABLE_KEY}" \
             "${VITE_SUPABASE_URL%/}/rest/v1/households?select=id&limit=1")"
-          printf '%s' "$body" | node -e "let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{const x=JSON.parse(s); if(!Array.isArray(x) || x.length!==0){console.error('[staging-smoke] anonymous request unexpectedly saw household data'); process.exit(1);} console.log('[staging-smoke] anonymous household read is fail-closed');});"
+
+          case "$status" in
+            401|403)
+              echo "[staging-smoke] anonymous household read is fail-closed with HTTP $status"
+              ;;
+            200)
+              node -e "const fs=require('node:fs'); const x=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(!Array.isArray(x) || x.length!==0){console.error('[staging-smoke] anonymous request unexpectedly saw household data'); process.exit(1);} console.log('[staging-smoke] anonymous household read is fail-closed with empty HTTP 200 response');" "$response_file"
+              ;;
+            *)
+              echo "[staging-smoke] unexpected anonymous household response: HTTP $status" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Build exact release artifact for staging configuration
         run: npm install --no-audit --no-fund && npm run build
