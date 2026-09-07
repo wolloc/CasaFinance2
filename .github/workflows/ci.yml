@@ -77,7 +77,15 @@ jobs:
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
-          grep -E '^(API_URL|ANON_KEY)=' /tmp/supabase.env >> "$GITHUB_ENV"
+          while IFS='=' read -r key value; do
+            case "$key" in
+              API_URL|ANON_KEY)
+                value="${value#\"}"
+                value="${value%\"}"
+                printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+                ;;
+            esac
+          done < /tmp/supabase.env
 
       - name: Run Marco 3 Auth JWT and PostgREST gate
         run: bash supabase/tests/marco3_auth_http.sh
