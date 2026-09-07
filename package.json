@@ -16,6 +16,7 @@
     "test:unit": "APP_ENV=test tsx --test src/domain/*.test.ts server/config/*.test.ts server/observability/*.test.ts",
     "test:integration": "APP_ENV=test tsx --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
+    "check:release-config": "node scripts/validate-release-env.mjs",
     "check:secrets": "! git grep -nEI '(AIza[0-9A-Za-z_-]{30,}|(api|secret)[_-]?key[[:space:]]*=[[:space:]]*[^$[:space:]]{12,})' -- ':!bun.lock' ':!package-lock.json'",
     "audit:dependencies": "npm audit --audit-level=high"
   },
