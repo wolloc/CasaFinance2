@@ -38,6 +38,7 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
       'access-control-allow-headers': '*',
     };
     const fulfill = (body: unknown, status = 200) => route.fulfill({ status, headers, body: JSON.stringify(body) });
+    console.log('[E2E Supabase]', request.method(), url.pathname, url.searchParams.get('select') ?? '');
 
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     if (url.pathname === '/auth/v1/token') {
@@ -82,11 +83,17 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
   return rpcCalls;
 }
 
-async function login(page: Page) {
+async function submitLogin(page: Page) {
   await page.goto('/');
   await page.getByLabel('E-mail').fill('wallace@example.com');
   await page.getByLabel('Senha').fill('senha123');
   await page.getByRole('button', { name: 'Entrar com segurança' }).click();
+  await page.waitForTimeout(750);
+  console.log('[E2E screen after login]', (await page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 800));
+}
+
+async function login(page: Page) {
+  await submitLogin(page);
   await expect(page.getByText('Casa Teste')).toBeVisible();
 }
 
@@ -104,10 +111,7 @@ test('login real do frontend entra na Casa e navega pelas áreas principais', as
 
 test('falha ao reler membros bloqueia o produto financeiro e oferece retry', async ({ page }) => {
   await installSupabaseMock(page, { failMemberList: true });
-  await page.goto('/');
-  await page.getByLabel('E-mail').fill('wallace@example.com');
-  await page.getByLabel('Senha').fill('senha123');
-  await page.getByRole('button', { name: 'Entrar com segurança' }).click();
+  await submitLogin(page);
   await expect(page.getByText('Não foi possível conferir as pessoas da Casa')).toBeVisible();
   await expect(page.getByText(/não libera registros financeiros/i)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
