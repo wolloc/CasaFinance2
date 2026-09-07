@@ -20,7 +20,8 @@ export type RecurringExpenseCommitment = {
 export async function listRecurringExpenseCommitments(client: SupabaseClient, householdId: string) {
   const response = await client.from('financial_recurring_expense_attention_positions')
     .select('household_id, occurrence_id, transaction_id, recurring_rule_id, description, expected_amount, remaining_amount, due_date, economic_state, commitment_state, planned_account_id, planned_account_name, attention_state')
-    .eq('household_id', householdId).order('due_date', { ascending: true });
+    .eq('household_id', householdId)
+    .order('due_date', { ascending: true });
   if (response.error) throw response.error;
   return (response.data ?? []) as RecurringExpenseCommitment[];
 }
@@ -31,7 +32,14 @@ export async function confirmRecurringExpenseOccurrence(client: SupabaseClient, 
   return response.data as string;
 }
 
-export async function settleRecurringExpenseOccurrence(client: SupabaseClient, input: { householdId:string;occurrenceId:string;accountId:string;funderMemberId:string;amount:string;paidAt:string }) {
-  const identity=[input.householdId,input.occurrenceId,input.accountId,input.funderMemberId,input.amount,input.paidAt]as const;
-  return runRetryStableRpc(client,'settle-recurring-expense',identity,'settle_recurring_expense_occurrence_idempotent',{p_household_id:input.householdId,p_occurrence_id:input.occurrenceId,p_source_account_id:input.accountId,p_funder_member_id:input.funderMemberId,p_amount:input.amount,p_paid_at:input.paidAt});
+export async function settleRecurringExpenseOccurrence(client: SupabaseClient, input: { householdId: string; occurrenceId: string; accountId: string; funderMemberId: string; amount: string; paidAt: string }) {
+  const identity = [input.householdId, input.occurrenceId, input.accountId, input.funderMemberId, input.amount, input.paidAt] as const;
+  return runRetryStableRpc(client, 'settle-recurring-expense', identity, 'settle_recurring_expense_occurrence_idempotent', {
+    p_household_id: input.householdId,
+    p_occurrence_id: input.occurrenceId,
+    p_source_account_id: input.accountId,
+    p_funder_member_id: input.funderMemberId,
+    p_amount: input.amount,
+    p_paid_at: input.paidAt,
+  });
 }
