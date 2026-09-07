@@ -67,11 +67,11 @@ test('invoice payment uses canonical pay_card_invoice without recognizing a seco
   assert.match(invoicePaymentService, /rpc\('pay_card_invoice'/);
   assert.doesNotMatch(invoicePaymentService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
   assert.match(adjustmentSource, /selected === 'invoice'/);
-  assert.match(invoicePaymentSource, /A despesa já nasceu nas compras do cartão/);
-  assert.match(invoicePaymentSource, /não pode superar o valor em aberto da fatura/);
-  assert.match(invoicePaymentSource, /quem efetivamente financiou/i);
-  assert.match(invoicePaymentSource, /Conta prevista:.*só uma previsão/s);
-  assert.match(invoicePaymentSource, /sem criar uma segunda despesa/);
+  assert.match(invoicePaymentSource, /As compras já foram registradas como gastos/);
+  assert.match(invoicePaymentSource, /não pode ser maior do que ainda falta pagar na fatura/);
+  assert.match(invoicePaymentSource, /Quem pagou com o próprio dinheiro/);
+  assert.match(invoicePaymentSource, /Conta que estava planejada:.*conta realmente usada/s);
+  assert.match(invoicePaymentSource, /As compras não viraram despesa de novo/);
   assert.match(productSpec, /pagamento da fatura.*não cria nova despesa/i);
   assert.match(constitution, /fatura.*não cria uma segunda despesa/i);
 });
