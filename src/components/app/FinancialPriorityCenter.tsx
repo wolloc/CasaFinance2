@@ -11,6 +11,7 @@ export type AttentionNavigationAction=
   | {kind:'income-receipt';moneyMovementId:string}
   | {kind:'invoice-payment';invoiceId:string;amount:number}
   | {kind:'invoice-coverage-risk';invoiceId:string;amount:number}
+  | {kind:'projection-invoice-review';invoiceId:string}
   | {kind:'card-over-limit';cardId:string;amount:number}
   | {kind:'overdraft-account';accountId:string;amount:number}
   | {kind:'negative-projection';amount:number}
