@@ -8,11 +8,11 @@ const service = await readFile(new URL('../../finance/directExpensePayments.ts',
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 const spec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 
-test('Gastos exposes explicit Funding + Caixa for direct expenses', () => {
+test('Gastos asks explicitly where the money came from and who paid', () => {
   assert.match(screen, /DirectExpensePaymentAction/);
-  assert.match(ui, /De onde o dinheiro realmente saiu\?/);
-  assert.match(ui, /Quem efetivamente bancou\?/);
-  assert.match(ui, /não cria uma nova despesa/i);
+  assert.match(ui, /De qual conta o dinheiro saiu\?/);
+  assert.match(ui, /Quem pagou com o próprio dinheiro\?/);
+  assert.match(ui, /não cria um novo gasto/i);
 });
 
 test('direct expense settlement uses the canonical atomic RPC', () => {
@@ -28,8 +28,8 @@ test('card purchases are excluded because invoice payment owns their cash event'
   assert.match(spec, /O pagamento posterior da fatura realiza funding/);
 });
 
-test('buyer, instrument holder, responsibility and funder stay independent', () => {
-  assert.match(ui, /Quem comprou, quem é responsável pelo gasto e quem pagou são papéis diferentes/);
-  assert.match(ui, /Não é preenchido pelo comprador nem pelo titular da conta/);
+test('buyer, instrument holder, responsibility and payer stay independent', () => {
+  assert.match(ui, /Quem comprou, quem é responsável pelo gasto e quem pagou podem ser pessoas diferentes/);
+  assert.match(ui, /Não é preenchido automaticamente pelo comprador nem pelo titular da conta/);
   assert.match(constitution, /Comprador, titular do instrumento, responsável econômico e pagador\/funder são independentes/);
 });
