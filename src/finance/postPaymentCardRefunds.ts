@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getRetryStableRequestKey, releaseRetryStableRequestKey } from './retryIdempotency.js';
 
 export type FutureInvoiceTarget = { invoice_id: string; invoice_month: string; due_date: string; outstanding: number | string };
 export type RefundResponsibilityAllocation = { member_id: string; amount: number | string; percentage: number | string };
@@ -65,6 +66,8 @@ export async function recordPostPaymentCardRefund(client: SupabaseClient, input:
   reason: string;
 }) {
   const benefitAllocations = buildRefundBenefitAllocations(input.amount, input.benefitAllocations);
+  const identity=[input.householdId,input.transactionId,input.outcome,input.amount,benefitAllocations,input.targetInvoiceId??null,input.destinationAccountId??null,input.occurredAt,input.reason.trim()] as const;
+  const requestKey=getRetryStableRequestKey('post-payment-card-refund',identity);
   const result = await client.rpc('record_shared_post_payment_card_refund', {
     p_household_id: input.householdId,
     p_transaction_id: input.transactionId,
@@ -75,8 +78,9 @@ export async function recordPostPaymentCardRefund(client: SupabaseClient, input:
     p_destination_account_id: input.destinationAccountId ?? null,
     p_occurred_at: input.occurredAt,
     p_reason: input.reason,
-    p_request_key: crypto.randomUUID(),
+    p_request_key: requestKey,
   });
   if (result.error) throw result.error;
+  releaseRetryStableRequestKey('post-payment-card-refund',identity);
   return result.data as string;
 }
