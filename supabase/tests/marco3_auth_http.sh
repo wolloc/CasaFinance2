@@ -26,7 +26,7 @@ rpc_bootstrap() {
     -H "apikey: ${ANON_KEY}" \
     -H "Authorization: Bearer ${token}" \
     -H 'Content-Type: application/json' \
-    -d "{\"household_name\":\"${name}\",\"base_currency\":\"BRL\",\"timezone_name\":\"America/Sao_Paulo\"}"
+    -d "{\"household_name\":\"${name}\",\"household_currency\":\"BRL\",\"household_timezone\":\"America/Sao_Paulo\"}"
 }
 
 list_households() {
