@@ -65,6 +65,14 @@ jobs:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
         run: npm run release:manifest
 
+      - name: Retain exact release candidate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: casa-finance-release-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
   database-security:
     name: Supabase RLS and database contracts
     runs-on: ubuntu-latest
