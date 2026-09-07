@@ -27,9 +27,8 @@ export async function listRecurringExpenseCommitments(client: SupabaseClient, ho
 }
 
 export async function confirmRecurringExpenseOccurrence(client: SupabaseClient, householdId: string, occurrenceId: string, amount: string) {
-  const response = await client.rpc('confirm_recurring_expense_occurrence', { p_household_id: householdId, p_occurrence_id: occurrenceId, p_confirmed_amount: amount });
-  if (response.error) throw response.error;
-  return response.data as string;
+  const identity=[householdId,occurrenceId,amount] as const;
+  return runRetryStableRpc(client,'confirm-recurring-expense',identity,'confirm_recurring_expense_occurrence_idempotent',{p_household_id:householdId,p_occurrence_id:occurrenceId,p_confirmed_amount:amount});
 }
 
 export async function settleRecurringExpenseOccurrence(client: SupabaseClient, input: { householdId: string; occurrenceId: string; accountId: string; funderMemberId: string; amount: string; paidAt: string }) {
