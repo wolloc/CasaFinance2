@@ -25,20 +25,25 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const clearLoadedContext = () => {
+    setParties([]); setAccounts([]); setCounterpartyId(''); setAccountId('');
+  };
   const load = async () => {
     if (!supabase || !household) return;
-    setLoading(true); setError(null);
+    setLoading(true); setLoadError(null); setError(null);
     try { const [people, resources] = await Promise.all([listFinancialParties(supabase, household.id), listInvestmentReserveResources(supabase, household.id)]); setParties(people); setAccounts(resources.filter(isTransactionalResource)); }
-    catch { setError('Não foi possível carregar pessoas e recursos da Casa.'); }
+    catch { clearLoadedContext(); setLoadError('Não foi possível conferir pessoas e recursos da Casa. O principal do empréstimo não pode ser registrado até uma nova leitura válida.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [household?.id]);
   const selectedParty = useMemo(() => parties.find((party) => party.id === counterpartyId), [parties, counterpartyId]);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!supabase || !household) return;
+    if (loadError) { setError('Recarregue pessoas e recursos antes de registrar o empréstimo.'); return; }
     const normalizedAmount = normalizeAmount(amount); const numericAmount = Number(normalizedAmount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setError('Informe um valor maior que zero.'); return; }
     if (!accountId) { setError(direction === 'granted' ? 'Informe de qual recurso o dinheiro saiu.' : 'Informe em qual recurso o dinheiro entrou.'); return; }
@@ -56,7 +61,7 @@ export function LoanAdjustment({ onBack }: { onBack: () => void }) {
 
   return <div className="space-y-4">
     <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar às intenções</button>
-    {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+    {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : loadError ? <div className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
       <div><h2 className="font-bold">Empréstimos</h2><p className="mt-1 text-sm text-slate-400">Aqui o Casa registra somente o principal. Emprestar dinheiro não é despesa; pegar dinheiro emprestado não é renda. Juros, tarifas e multas são fatos econômicos separados.</p></div>
       <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setDirection('granted')} className={`rounded-xl border p-3 text-sm font-semibold ${direction === 'granted' ? 'border-blue-500 bg-blue-950/50 text-blue-200' : 'border-slate-700 text-slate-400'}`}>Emprestei dinheiro</button><button type="button" onClick={() => setDirection('taken')} className={`rounded-xl border p-3 text-sm font-semibold ${direction === 'taken' ? 'border-blue-500 bg-blue-950/50 text-blue-200' : 'border-slate-700 text-slate-400'}`}>Peguei emprestado</button></div>
       <div className="rounded-xl bg-slate-950 p-3 text-xs text-slate-400">{direction === 'granted' ? 'O dinheiro sai da Casa e nasce um recebível contra a outra pessoa.' : 'O dinheiro entra na Casa e nasce um pagável para a outra pessoa.'} O principal permanece neutro no resultado econômico.</div>
