@@ -5,15 +5,15 @@ import test from 'node:test';
 const ui = await readFile(new URL('./PostPaymentCardRefundAction.tsx', import.meta.url), 'utf8');
 const service = await readFile(new URL('../../finance/postPaymentCardRefunds.ts', import.meta.url), 'utf8');
 
-test('refund UX separates cash destination from economic beneficiary', () => {
+test('refund UX separates where money returned from who benefited', () => {
   assert.match(ui, /Em qual conta o dinheiro realmente voltou/);
-  assert.match(ui, /Quem ficou com o benefício desse estorno/);
-  assert.match(ui, /A conta define onde o caixa entrou\. Ela não define quem ficou com o benefício/);
+  assert.match(ui, /Para quem ficou esse valor devolvido/);
+  assert.match(ui, /Esta escolha diz somente onde o dinheiro entrou/);
 });
 
-test('refund UX does not infer beneficiary from buyer, card holder or funder', () => {
-  assert.match(ui, /independente de comprador, titular do cartão, conta de destino e de quem financiou/);
-  assert.match(ui, /O funding antigo não é apagado/);
+test('refund UX does not infer beneficiary from buyer, card holder or payer', () => {
+  assert.match(ui, /Não precisa ser a pessoa que comprou, o titular do cartão ou quem pagou a fatura/);
+  assert.match(ui, /O pagamento antigo continua registrado como realmente aconteceu/);
 });
 
 test('service uses shared read model and explicit benefit allocations', () => {
