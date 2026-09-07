@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const sql=await readFile(new URL('../../supabase/migrations/202609060060_manual_third_party_obligations.sql',import.meta.url),'utf8');
+const sql=await readFile(new URL('../../supabase/migrations/202609060061_manual_third_party_obligations.sql',import.meta.url),'utf8');
 
 test('manual third-party obligation creates an auditable authenticated command',()=>{
   assert.match(sql,/create table if not exists public\.manual_obligation_events/);

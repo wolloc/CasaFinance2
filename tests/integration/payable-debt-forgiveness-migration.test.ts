@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const sql=await readFile(new URL('../../supabase/migrations/202609060061_payable_debt_forgiveness.sql',import.meta.url),'utf8');
+const sql=await readFile(new URL('../../supabase/migrations/202609060062_payable_debt_forgiveness.sql',import.meta.url),'utf8');
 
 test('payable forgiveness reduces a real payable and creates one economic gain',()=>{
   assert.match(sql,/function public\.forgive_payable_obligation/);

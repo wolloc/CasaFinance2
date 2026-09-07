@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const sql=await readFile(new URL('../../supabase/migrations/202609060062_manual_obligation_management.sql',import.meta.url),'utf8');
+const sql=await readFile(new URL('../../supabase/migrations/202609060063_manual_obligation_management.sql',import.meta.url),'utf8');
 
 test('manual obligation management keeps immutable before and after history',()=>{
   assert.match(sql,/create table if not exists public\.manual_obligation_adjustment_events/);
