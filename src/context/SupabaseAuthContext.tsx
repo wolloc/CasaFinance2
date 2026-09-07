@@ -7,6 +7,7 @@ import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitatio
 
 type Credentials = { email: string; password: string };
 type AuthResult = { success: boolean; confirmationRequired?: boolean };
+type HouseholdMember = { id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string };
 
 type SupabaseAuthValue = {
   session: Session | null;
@@ -15,8 +16,11 @@ type SupabaseAuthValue = {
   isSubmitting: boolean;
   error: string | null;
   household: { id: string; name: string } | null;
-  householdMembers: Array<{ id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string }>;
+  householdMembers: HouseholdMember[];
   householdLoading: boolean;
+  householdMembersLoading: boolean;
+  householdMembersError: string | null;
+  retryHouseholdMembers: () => void;
   createHousehold: (householdName: string, displayName: string) => Promise<BootstrapHouseholdResult | null>;
   createInvitation: (invitedEmail?: string) => Promise<HouseholdInvitation | null>;
   acceptInvitation: (token: string) => Promise<AcceptInvitationResult | null>;
@@ -34,9 +38,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [household, setHousehold] = useState<{ id: string; name: string } | null>(null);
-  const [householdMembers, setHouseholdMembers] = useState<Array<{ id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string }>>([]);
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
   const [householdRefreshVersion, setHouseholdRefreshVersion] = useState(0);
+  const [householdMembersRefreshVersion, setHouseholdMembersRefreshVersion] = useState(0);
   const [householdLoading, setHouseholdLoading] = useState(false);
+  const [householdMembersLoading, setHouseholdMembersLoading] = useState(false);
+  const [householdMembersError, setHouseholdMembersError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(supabaseConfigurationError);
 
   useEffect(() => {
@@ -71,38 +78,58 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setHousehold(null);
       setHouseholdMembers([]);
       setHouseholdLoading(false);
+      setHouseholdMembersLoading(false);
+      setHouseholdMembersError(null);
       return;
     }
     let mounted = true;
     setHouseholdLoading(true);
+    setHouseholdMembersLoading(true);
+    setHouseholdMembersError(null);
+    setHouseholdMembers([]);
     findExistingHousehold(supabase, session)
       .then((existingHousehold) => { if (mounted) setHousehold(existingHousehold); })
-      .catch((householdError) => { if (mounted) setError('Não foi possível verificar sua Casa. Tente novamente.'); })
+      .catch(() => { if (mounted) setError('Não foi possível verificar sua Casa. Tente novamente.'); })
       .finally(() => { if (mounted) setHouseholdLoading(false); });
+
     supabase.from('household_members')
       .select('id, household_id, profile_id, role, profiles(display_name)')
       .eq('profile_id', session.user.id)
       .is('deactivated_at', null)
       .maybeSingle()
-      .then(async ({ data }) => {
-        if (!mounted || !data) return;
+      .then(async ({ data, error: membershipError }) => {
+        if (!mounted) return;
+        if (membershipError) throw membershipError;
+        if (!data) {
+          setHouseholdMembers([]);
+          setHouseholdMembersError(null);
+          return;
+        }
         const membership = data as { household_id: string };
         const response = await supabase.from('household_members')
           .select('id, profile_id, role, profiles(display_name)')
           .eq('household_id', membership.household_id)
           .is('deactivated_at', null)
           .order('joined_at');
-        if (!mounted || response.error) return;
+        if (!mounted) return;
+        if (response.error) throw response.error;
         setHouseholdMembers((response.data ?? []).map((member) => ({
           id: member.id,
           profile_id: member.profile_id,
           role: member.role as 'owner' | 'member' | 'viewer',
           display_name: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name ?? 'Membro',
         })));
+        setHouseholdMembersError(null);
       })
-      ;
+      .catch(() => {
+        if (!mounted) return;
+        setHouseholdMembers([]);
+        setHouseholdMembersError('Não foi possível conferir quem faz parte da Casa. Tente novamente antes de registrar qualquer coisa.');
+      })
+      .finally(() => { if (mounted) setHouseholdMembersLoading(false); });
+
     return () => { mounted = false; };
-  }, [session, householdRefreshVersion]);
+  }, [session, householdRefreshVersion, householdMembersRefreshVersion]);
 
   const run = async (operation: 'signIn' | 'signUp', credentials: Credentials): Promise<AuthResult> => {
     if (!supabase) return { success: false };
@@ -131,6 +158,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     household,
     householdLoading,
     householdMembers,
+    householdMembersLoading,
+    householdMembersError,
+    retryHouseholdMembers: () => setHouseholdMembersRefreshVersion((version) => version + 1),
     createHousehold: async (householdName, displayName) => {
       if (!supabase || !session) {
         setError('Sessão expirada. Entre novamente para continuar.');
@@ -208,7 +238,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setIsSubmitting(false);
     },
     clearError: () => setError(null),
-  }), [session, isLoading, isSubmitting, error, household, householdMembers, householdLoading]);
+  }), [session, isLoading, isSubmitting, error, household, householdMembers, householdLoading, householdMembersLoading, householdMembersError]);
 
   return <SupabaseAuthContext.Provider value={value}>{children}</SupabaseAuthContext.Provider>;
 }
