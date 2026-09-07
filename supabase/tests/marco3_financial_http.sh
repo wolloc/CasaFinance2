@@ -80,32 +80,43 @@ transaction_id="$(rpc "$wallace_token" create_and_settle_direct_expense "$expens
 stage 'verify economic fact'
 tx_json="$(rest_get "$wallace_token" "transactions?select=id,type,status,amount,buyer_member_id,economic_state,realized_amount&id=eq.${transaction_id}")"
 printf '[Marco 3.05] transaction result: %s\n' "$(printf '%s' "$tx_json" | jq -c '.')" >&2
-[[ "$(printf '%s' "$tx_json" | jq 'length')" -eq 1 ]]
-[[ "$(printf '%s' "$tx_json" | jq -r '.[0].type')" == 'expense' ]]
-[[ "$(printf '%s' "$tx_json" | jq -r '.[0].status')" == 'paid' ]]
-[[ "$(printf '%s' "$tx_json" | jq -r '.[0].amount|tonumber')" == '120' ]]
-[[ "$(printf '%s' "$tx_json" | jq -r '.[0].buyer_member_id')" == "$wallace_member_id" ]]
+printf '%s' "$tx_json" | jq -e --arg buyer "$wallace_member_id" '
+  length == 1 and
+  .[0].type == "expense" and
+  .[0].status == "paid" and
+  .[0].economic_state == "realized" and
+  (.[0].amount|tonumber) == 120 and
+  (.[0].realized_amount|tonumber) == 120 and
+  .[0].buyer_member_id == $buyer
+' >/dev/null
 
 stage 'verify allocations, funding and single cash movement'
 allocations="$(rest_get "$wallace_token" "economic_allocations?select=responsible_member_id,percentage,amount&transaction_id=eq.${transaction_id}&order=allocation_order")"
 printf '[Marco 3.05] allocations: %s\n' "$(printf '%s' "$allocations" | jq -c '.')" >&2
-[[ "$(printf '%s' "$allocations" | jq 'length')" -eq 2 ]]
-[[ "$(printf '%s' "$allocations" | jq '[.[].amount|tonumber] | add')" == '120' ]]
-[[ "$(printf '%s' "$allocations" | jq '[.[].percentage|tonumber] | add')" == '100' ]]
+printf '%s' "$allocations" | jq -e '
+  length == 2 and
+  ([.[].amount|tonumber] | add) == 120 and
+  ([.[].percentage|tonumber] | add) == 100
+' >/dev/null
 funding="$(rest_get "$wallace_token" "funding_events?select=funder_member_id,source_account_id,amount&financed_transaction_id=eq.${transaction_id}")"
 printf '[Marco 3.05] funding: %s\n' "$(printf '%s' "$funding" | jq -c '.')" >&2
-[[ "$(printf '%s' "$funding" | jq 'length')" -eq 1 ]]
-[[ "$(printf '%s' "$funding" | jq -r '.[0].funder_member_id')" == "$guilherme_member_id" ]]
-[[ "$(printf '%s' "$funding" | jq -r '.[0].source_account_id')" == "$account_id" ]]
-[[ "$(printf '%s' "$funding" | jq -r '.[0].amount|tonumber')" == '120' ]]
+printf '%s' "$funding" | jq -e --arg funder "$guilherme_member_id" --arg account "$account_id" '
+  length == 1 and
+  .[0].funder_member_id == $funder and
+  .[0].source_account_id == $account and
+  (.[0].amount|tonumber) == 120
+' >/dev/null
 movements="$(rest_get "$wallace_token" "money_movements?select=kind,state,amount,source_account_id&related_transaction_id=eq.${transaction_id}")"
 printf '[Marco 3.05] movements: %s\n' "$(printf '%s' "$movements" | jq -c '.')" >&2
-[[ "$(printf '%s' "$movements" | jq 'length')" -eq 1 ]]
-[[ "$(printf '%s' "$movements" | jq -r '.[0].kind')" == 'expense_payment' ]]
-[[ "$(printf '%s' "$movements" | jq -r '.[0].state')" == 'realized' ]]
-[[ "$(printf '%s' "$movements" | jq -r '.[0].amount|tonumber')" == '120' ]]
+printf '%s' "$movements" | jq -e --arg account "$account_id" '
+  length == 1 and
+  .[0].kind == "expense_payment" and
+  .[0].state == "realized" and
+  .[0].source_account_id == $account and
+  (.[0].amount|tonumber) == 120
+' >/dev/null
 
 guilherme_tx="$(rest_get "$guilherme_token" "transactions?select=id,amount&id=eq.${transaction_id}")"
-[[ "$(printf '%s' "$guilherme_tx" | jq 'length')" -eq 1 ]]
+printf '%s' "$guilherme_tx" | jq -e --arg id "$transaction_id" 'length == 1 and .[0].id == $id and (.[0].amount|tonumber) == 120' >/dev/null
 
 echo 'Marco 3.05 real direct-expense gate passed.'
