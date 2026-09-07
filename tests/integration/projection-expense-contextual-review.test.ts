@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const center=await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx',import.meta.url),'utf8');
+const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
+const transactions=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const review=await readFile(new URL('../../src/components/app/ForecastExpenseReviewCard.tsx',import.meta.url),'utf8');
+const intent=await readFile(new URL('../../src/finance/projectionExpenseReviewIntent.ts',import.meta.url),'utf8');
+test('generic forecast commitment review preserves canonical commitment key',()=>{assert.match(center,/item\.entity_type==='commitment'&&item\.review_key\.startsWith\('commitment-review:'\)/);assert.match(center,/commitmentKey:item\.review_key\.slice\('commitment-review:'\.length\)/);assert.match(priority,/kind:'projection-expense-review';commitmentKey:string/);});
+test('opening forecast expense review only creates transient context',()=>{assert.match(app,/if\(action\.kind==='projection-expense-review'\)\{setProjectionExpenseReviewIntent\(\{commitmentKey:action\.commitmentKey\}\);setScreen\('expenses'\);return;\}/);assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete|settle|pay|transfer/i);});
+test('destination rereads exact canonical commitment and only accepts direct forecast expense',()=>{assert.match(review,/from\('financial_commitment_positions'\)/);assert.match(review,/eq\('household_id',household\.id\)\.eq\('commitment_key',commitmentKey\)/);assert.match(review,/current\.source_type==='direct_expense'/);assert.match(review,/current\.commitment_state==='forecast'/);assert.match(review,/!current\.source_invoice_id&&!current\.source_obligation_id&&!current\.source_recurring_occurrence_id/);assert.match(transactions,/ForecastExpenseReviewCard commitmentKey=\{projectionExpenseIntent\?\.commitmentKey\}/);});
+test('forecast expense review does not become payment',()=>{assert.match(review,/Revisar este gasto não registra pagamento nem movimenta caixa/);assert.doesNotMatch(review,/settle|payment|payHousehold|funding_events|\.insert\(|\.update\(|\.delete\(/i);});
