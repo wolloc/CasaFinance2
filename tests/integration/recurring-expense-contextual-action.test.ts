@@ -21,9 +21,9 @@ test('opening the contextual action is navigation-only and revalidates current r
   assert.match(center,/Essa conta mudou ou já foi resolvida/);
 });
 
-test('payment still requires explicit cash resource and funder',()=>{
-  assert.match(center,/De onde o dinheiro realmente saiu\?/);
-  assert.match(center,/Quem efetivamente bancou\?/);
+test('payment still requires explicit cash account and person who paid',()=>{
+  assert.match(center,/De qual conta o dinheiro saiu\?/);
+  assert.match(center,/Quem pagou com o próprio dinheiro\?/);
   assert.match(center,/settleRecurringExpenseOccurrence/);
   assert.match(center,/parsed>Number\(selected\.remaining_amount\)/);
 });

@@ -11,20 +11,20 @@ test('Gastos surfaces actionable recurring commitments before generic payment to
   assert.match(screen,/RecurringExpenseCommitmentCenter/);
   assert.ok(screen.indexOf('<RecurringExpenseCommitmentCenter')<screen.indexOf('<DirectExpensePaymentAction'));
   assert.match(ui,/Contas previstas para pagar/);
-  assert.match(ui,/já reduzem o que o Casa considera livre na projeção/i);
+  assert.match(ui,/já entram na previsão do mês/i);
 });
 
-test('forecast route is context and payment can use another real account',()=>{
-  assert.match(ui,/rota planejada, não uma saída de caixa/i);
-  assert.match(ui,/De onde o dinheiro realmente saiu\?/);
-  assert.match(ui,/Quem efetivamente bancou\?/);
-  assert.match(ui,/pagar de outra forma/i);
+test('planned account is context and payment can use another real account',()=>{
+  assert.match(ui,/é a que você imaginava usar/i);
+  assert.match(ui,/De qual conta o dinheiro saiu\?/);
+  assert.match(ui,/Quem pagou com o próprio dinheiro\?/);
+  assert.match(ui,/pagar por outra conta/i);
   assert.match(constitution,/Previsto não é realizado/);
 });
 
-test('occurrence value edit is separate from future series edit',()=>{
-  assert.match(ui,/Editar\/confirmar valor/);
-  assert.match(ui,/altera somente esta ocorrência, não a série futura/i);
+test('this month value edit is separate from future months',()=>{
+  assert.match(ui,/Conferir valor/);
+  assert.match(ui,/vale só para esta conta deste mês; os próximos meses não mudam/i);
   assert.match(service,/rpc\('confirm_recurring_expense_occurrence'/);
 });
 
