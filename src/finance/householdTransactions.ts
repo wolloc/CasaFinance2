@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getRetryStableRequestKey, releaseRetryStableRequestKey, runRetryStableRpc } from './retryIdempotency.js';
 
 export type TransactionKind = 'expense' | 'income';
 export type InstrumentKind = 'account' | 'card';
@@ -29,7 +30,6 @@ export type TransactionAdjustmentEvent = {
 };
 
 const transactionColumns = 'id, household_id, created_by_member_id, buyer_member_id, category_id, invoice_id, type, status, economic_state, description, amount, realized_amount, transaction_date, competence_date, due_date, settled_at, notes, deleted_at, category:categories(name, type), buyer:household_members!transactions_buyer_member_id_fkey(profiles(display_name)), payment_instrument:transaction_payment_instruments(kind, account_id, card_id)';
-const requestKey = (operation: string, transactionId: string) => `ui-${operation}:${transactionId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 
 export async function listHouseholdTransactions(client: SupabaseClient, householdId: string) {
   const response = await client.from('transactions').select(transactionColumns).eq('household_id', householdId).is('deleted_at', null).in('type', ['expense', 'income']).order('transaction_date', { ascending: false }).order('created_at', { ascending: false });
@@ -87,20 +87,41 @@ export async function listTransactionAdjustmentEvents(client: SupabaseClient, ho
 }
 
 export async function createHouseholdTransaction(client: SupabaseClient, householdId: string, type: TransactionKind, input: TransactionInput) {
-  const response = await client.rpc('create_financial_transaction', { p_household_id: householdId, p_type: type, p_description: input.description.trim(), p_amount: input.amount, p_transaction_date: input.transactionDate, p_category_id: input.categoryId, p_buyer_member_id: type === 'expense' ? input.buyerMemberId : null, p_notes: input.notes?.trim() || null, p_instrument_kind: type === 'expense' ? input.instrumentKind : null, p_account_id: type === 'expense' && input.instrumentKind === 'account' ? input.accountId : null, p_card_id: type === 'expense' && input.instrumentKind === 'card' ? input.cardId : null, p_splits: type === 'expense' ? (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage })) : [], p_installment_count: type === 'expense' ? input.installmentCount ?? 1 : 1 });
-  if (response.error) throw response.error; return response.data as string;
+  const description = input.description.trim();
+  const notes = input.notes?.trim() || null;
+  const buyerMemberId = type === 'expense' ? input.buyerMemberId : null;
+  const instrumentKind = type === 'expense' ? input.instrumentKind ?? null : null;
+  const accountId = type === 'expense' && input.instrumentKind === 'account' ? input.accountId ?? null : null;
+  const cardId = type === 'expense' && input.instrumentKind === 'card' ? input.cardId ?? null : null;
+  const splits = type === 'expense' ? (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage })) : [];
+  const installmentCount = type === 'expense' ? input.installmentCount ?? 1 : 1;
+  const identity = [householdId, type, description, input.amount, input.transactionDate, input.categoryId, buyerMemberId, instrumentKind, accountId, cardId, splits, installmentCount, notes] as const;
+  return runRetryStableRpc(client, 'create-financial-transaction', identity, 'create_financial_transaction_idempotent', {
+    p_household_id: householdId, p_type: type, p_description: description, p_amount: input.amount, p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId, p_buyer_member_id: buyerMemberId, p_instrument_kind: instrumentKind, p_account_id: accountId,
+    p_card_id: cardId, p_splits: splits, p_installment_count: installmentCount, p_notes: notes,
+  });
 }
 
 export async function updateHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string, input: TransactionInput) {
   const existing = await client.from('transactions').select('due_date').eq('household_id', householdId).eq('id', transactionId).is('deleted_at', null).single();
   if (existing.error) throw existing.error;
-  const response = await client.rpc('correct_unrealized_transaction', { p_household_id: householdId, p_transaction_id: transactionId, p_description: input.description.trim(), p_amount: input.amount, p_transaction_date: input.transactionDate, p_due_date: existing.data.due_date, p_category_id: input.categoryId, p_reason: 'Editado pelo usuário', p_request_key: requestKey('correction', transactionId) });
+  const description = input.description.trim();
+  const reason = 'Editado pelo usuário';
+  const identity = [householdId, transactionId, description, input.amount, input.transactionDate, existing.data.due_date, input.categoryId, reason] as const;
+  const key = getRetryStableRequestKey('transaction-correction', identity);
+  const response = await client.rpc('correct_unrealized_transaction', { p_household_id: householdId, p_transaction_id: transactionId, p_description: description, p_amount: input.amount, p_transaction_date: input.transactionDate, p_due_date: existing.data.due_date, p_category_id: input.categoryId, p_reason: reason, p_request_key: key });
   if (response.error) throw response.error;
+  releaseRetryStableRequestKey('transaction-correction', identity);
 }
 
 export async function cancelHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string) {
-  const response = await client.rpc('cancel_unrealized_transaction', { p_household_id: householdId, p_transaction_id: transactionId, p_reason: 'Cancelado pelo usuário', p_request_key: requestKey('cancel', transactionId) });
+  const reason = 'Cancelado pelo usuário';
+  const identity = [householdId, transactionId, reason] as const;
+  const key = getRetryStableRequestKey('transaction-cancel', identity);
+  const response = await client.rpc('cancel_unrealized_transaction', { p_household_id: householdId, p_transaction_id: transactionId, p_reason: reason, p_request_key: key });
   if (response.error) throw response.error;
+  releaseRetryStableRequestKey('transaction-cancel', identity);
 }
 
 export async function refundHouseholdDirectExpense(client: SupabaseClient, householdId: string, transaction: HouseholdTransaction) {
@@ -109,8 +130,12 @@ export async function refundHouseholdDirectExpense(client: SupabaseClient, house
   const refunded = (refunds.data ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const remaining = Math.max(0, Number(transaction.realized_amount) - refunded);
   if (remaining <= 0) return;
-  const response = await client.rpc('refund_direct_expense_partial', { p_household_id: householdId, p_transaction_id: transaction.id, p_amount: remaining, p_refunded_at: new Date().toISOString(), p_reason: 'Estorno integral do saldo restante registrado pelo usuário', p_request_key: requestKey('refund', transaction.id) });
+  const reason = 'Estorno integral do saldo restante registrado pelo usuário';
+  const identity = [householdId, transaction.id, remaining, reason] as const;
+  const key = getRetryStableRequestKey('transaction-refund', identity);
+  const response = await client.rpc('refund_direct_expense_partial', { p_household_id: householdId, p_transaction_id: transaction.id, p_amount: remaining, p_refunded_at: new Date().toISOString(), p_reason: reason, p_request_key: key });
   if (response.error) throw response.error;
+  releaseRetryStableRequestKey('transaction-refund', identity);
 }
 
 export function transactionAvailableActions(transaction: HouseholdTransaction) {
@@ -122,6 +147,13 @@ export function transactionAvailableActions(transaction: HouseholdTransaction) {
 }
 
 export async function createAndSettleSharedExpense(client: SupabaseClient, householdId: string, input: TransactionInput, funderMemberId: string, partyDueDate: string | null) {
-  const response = await client.rpc('create_and_settle_shared_expense', { p_household_id: householdId, p_description: input.description.trim(), p_gross_amount: input.amount, p_transaction_date: input.transactionDate, p_category_id: input.categoryId, p_buyer_member_id: input.buyerMemberId, p_source_account_id: input.accountId, p_funder_member_id: funderMemberId, p_splits: (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage })), p_receivable_due_date: partyDueDate, p_notes: input.notes?.trim() || null });
-  if (response.error) throw response.error; return response.data as string;
+  const description = input.description.trim();
+  const notes = input.notes?.trim() || null;
+  const splits = (input.splits ?? []).map((split) => ({ ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }), amount: split.amount, percentage: split.percentage }));
+  const identity = [householdId, description, input.amount, input.transactionDate, input.categoryId, input.buyerMemberId, input.accountId, funderMemberId, splits, partyDueDate, notes] as const;
+  return runRetryStableRpc(client, 'create-settle-shared-expense', identity, 'create_and_settle_shared_expense_idempotent', {
+    p_household_id: householdId, p_description: description, p_gross_amount: input.amount, p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId, p_buyer_member_id: input.buyerMemberId, p_source_account_id: input.accountId,
+    p_funder_member_id: funderMemberId, p_splits: splits, p_receivable_due_date: partyDueDate, p_notes: notes,
+  });
 }
