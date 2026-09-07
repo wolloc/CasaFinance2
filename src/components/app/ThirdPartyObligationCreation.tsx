@@ -19,52 +19,55 @@ export function ThirdPartyObligationCreation({ onBack }: { onBack: () => void })
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
+  const clearLoadedContext=()=>{setParties([]);setPartyId('');};
+  const load=async()=>{
     if (!supabase || !household) return;
-    setLoading(true);
-    listFinancialPartyOptions(supabase, household.id)
-      .then(setParties)
-      .catch(() => setError('Não foi possível carregar as pessoas cadastradas.'))
-      .finally(() => setLoading(false));
-  }, [household?.id]);
+    setLoading(true); setLoadError(null); setError(null);
+    try { setParties(await listFinancialPartyOptions(supabase, household.id)); }
+    catch { clearLoadedContext(); setLoadError('Não foi possível conferir as pessoas cadastradas. Nenhum valor será criado até uma nova leitura válida.'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, [household?.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if(loadError||loading){setError('Confira novamente as pessoas antes de criar este valor.');return;}
     if (!supabase || !household) return;
     const normalized = normalizeAmount(amount);
     if (!partyId || !description.trim() || !Number.isFinite(Number(normalized)) || Number(normalized) <= 0) {
-      setError('Informe pessoa, descrição e um valor maior que zero.'); return;
+      setError('Informe pessoa, motivo e um valor maior que zero.'); return;
     }
-    if (dueDate && dueDate < obligationDate) { setError('O vencimento não pode ser anterior à data da obrigação.'); return; }
+    if (dueDate && dueDate < obligationDate) { setError('A data combinada para pagar não pode ser anterior à data em que esse valor surgiu.'); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
       await createManualThirdPartyObligation(supabase, { householdId: household.id, kind, counterpartyId: partyId, amount: normalized, obligationDate, dueDate, description, notes });
       setSuccess(kind === 'receivable'
-        ? 'Valor a receber criado. Nenhuma renda entrou e nenhum saldo aumentou; o caixa só muda quando o dinheiro realmente for recebido.'
-        : 'Valor a pagar criado. Nenhuma despesa nova nem saída de caixa foi inventada; o caixa só muda quando o pagamento realmente acontecer.');
+        ? 'Valor registrado. O Casa guardou que essa pessoa deve à Casa, mas nenhum dinheiro entrou e nenhuma renda nova foi criada.'
+        : 'Valor registrado. O Casa guardou que a Casa deve a essa pessoa, mas nenhum dinheiro saiu e nenhum novo gasto foi criado.');
       setAmount(''); setDescription(''); setNotes(''); setDueDate('');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível criar esta obrigação.'); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível criar este valor.'); }
     finally { setSaving(false); }
   };
 
   return <div className="space-y-4">
-    <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar às intenções</button>
-    {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-      <div><h2 className="font-bold">Criar valor com outra pessoa</h2><p className="mt-1 text-sm text-slate-400">Use quando já existe um valor a receber ou a pagar, mas ele não nasceu de uma compra, renda, empréstimo ou outro fato já registrado no Casa. Criar a obrigação não movimenta dinheiro.</p></div>
-      <label className="block text-sm">O que existe?<select value={kind} onChange={(event) => setKind(event.target.value as 'receivable' | 'payable')} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="receivable">Alguém deve para a Casa</option><option value="payable">A Casa deve para alguém</option></select></label>
+    <button type="button" onClick={onBack} className="text-sm font-semibold text-blue-300">← Voltar aos ajustes</button>
+    {loading ? <LoaderCircle className="mx-auto h-6 w-6 animate-spin"/> : loadError ? <div className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+      <div><h2 className="font-bold">Criar valor com outra pessoa</h2><p className="mt-1 text-sm text-slate-400">Use quando alguém já deve para a Casa ou a Casa já deve para alguém, mas esse valor ainda não existe no app. Só cadastrar não movimenta dinheiro.</p></div>
+      <label className="block text-sm">Quem deve para quem?<select value={kind} onChange={(event) => setKind(event.target.value as 'receivable' | 'payable')} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="receivable">Alguém deve para a Casa</option><option value="payable">A Casa deve para alguém</option></select></label>
       <label className="block text-sm">Com quem?<select value={partyId} onChange={(event) => setPartyId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
-      {parties.length === 0 && <p className="rounded-xl border border-amber-900 bg-amber-950/20 p-3 text-xs text-amber-200">Cadastre a pessoa em Configurações → Pessoas antes de criar este valor. O Casa não cria um terceiro implícito.</p>}
+      {parties.length === 0 && <p className="rounded-xl border border-amber-900 bg-amber-950/20 p-3 text-xs text-amber-200">Cadastre essa pessoa em Configurações → Outras pessoas antes de continuar.</p>}
       <label className="block text-sm">Por que esse valor existe?<input value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: valor que emprestei antes de usar o Casa" /></label>
-      <label className="block text-sm">Valor<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
-      <label className="block text-sm">Data em que a obrigação nasceu<input type="date" value={obligationDate} onChange={(event) => setObligationDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
-      <label className="block text-sm">Vencimento (opcional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
+      <label className="block text-sm">Quanto?<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
+      <label className="block text-sm">Quando esse valor surgiu?<input type="date" value={obligationDate} onChange={(event) => setObligationDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
+      <label className="block text-sm">Quando deve ser pago? (opcional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <label className="block text-sm">Observação (opcional)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
-      <p className="rounded-xl border border-blue-900 bg-blue-950/30 p-3 text-xs text-blue-200"><strong>Regra do Casa:</strong> obrigação não é automaticamente renda ou despesa. Esta ação só registra o compromisso. Quando houver recebimento ou pagamento real, use “Acerto com outra pessoa”.</p>
+      <p className="rounded-xl border border-blue-900 bg-blue-950/30 p-3 text-xs text-blue-200">Este cadastro só guarda que existe um valor a receber ou a pagar. O dinheiro só muda quando um pagamento ou recebimento for registrado.</p>
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}{success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
-      <button type="submit" disabled={saving || parties.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><HandCoins className="h-4 w-4"/>{saving ? 'Criando…' : 'Criar obrigação sem movimentar caixa'}</button>
+      <button type="submit" disabled={saving || parties.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><HandCoins className="h-4 w-4"/>{saving ? 'Criando…' : 'Criar valor sem movimentar dinheiro'}</button>
     </form>}
   </div>;
 }
