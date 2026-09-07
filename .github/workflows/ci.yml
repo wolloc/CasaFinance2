@@ -92,3 +92,6 @@ jobs:
 
       - name: Run Marco 3 real financial HTTP gate
         run: bash supabase/tests/marco3_financial_http.sh
+
+      - name: Run Marco 3 financial isolation HTTP gate
+        run: bash supabase/tests/marco3_financial_isolation_http.sh
