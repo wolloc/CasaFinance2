@@ -4,71 +4,37 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { closeRecurringIncomeRule, listRecurringIncomeRules, reviseRecurringIncomeRule, type RecurringIncomeFrequency, type RecurringIncomeRule } from '../../finance/recurringIncome.js';
 
-const localDate = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-};
+const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
 const money = (value: string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 
 export function RecurringIncomeManagement({ refreshKey, onChanged }: { refreshKey: number; onChanged?: () => void }) {
   const { household } = useSupabaseAuth();
-  const [rules, setRules] = useState<RecurringIncomeRule[]>([]);
-  const [selected, setSelected] = useState<RecurringIncomeRule | null>(null);
-  const [mode, setMode] = useState<'revise' | 'close' | null>(null);
-  const [effectiveFrom, setEffectiveFrom] = useState(localDate());
-  const [amount, setAmount] = useState('');
-  const [frequency, setFrequency] = useState<RecurringIncomeFrequency>('monthly');
-  const [endDate, setEndDate] = useState('');
-  const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!supabase || !household) return;
-    let active = true;
-    setLoading(true); setError(null);
-    listRecurringIncomeRules(supabase, household.id)
-      .then((rows) => { if (active) setRules(rows); })
-      .catch(() => { if (active) setError('Não foi possível carregar as séries de renda.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [household?.id, refreshKey]);
-
-  const open = (rule: RecurringIncomeRule, nextMode: 'revise' | 'close') => {
-    setSelected(rule); setMode(nextMode); setEffectiveFrom(localDate()); setAmount(rule.estimated_amount);
-    setFrequency(rule.frequency); setEndDate(rule.end_date ?? ''); setReason(''); setError(null); setSuccess(null);
-  };
-
+  const [rules, setRules] = useState<RecurringIncomeRule[]>([]); const [selected, setSelected] = useState<RecurringIncomeRule | null>(null); const [mode, setMode] = useState<'revise' | 'close' | null>(null);
+  const [effectiveFrom, setEffectiveFrom] = useState(localDate()); const [amount, setAmount] = useState(''); const [frequency, setFrequency] = useState<RecurringIncomeFrequency>('monthly'); const [endDate, setEndDate] = useState(''); const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [loadError, setLoadError] = useState<string | null>(null); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null);
+  const clearLoadedContext=()=>{setRules([]);setSelected(null);setMode(null);};
+  const load=async()=>{if(!supabase||!household)return;setLoading(true);setLoadError(null);setError(null);try{setRules(await listRecurringIncomeRules(supabase,household.id));}catch{clearLoadedContext();setLoadError('Não foi possível conferir as séries de renda ativas. Nenhuma série pode ser alterada ou encerrada até uma nova leitura válida.');}finally{setLoading(false);}};
+  useEffect(() => { void load(); }, [household?.id, refreshKey]);
+  const open = (rule: RecurringIncomeRule, nextMode: 'revise' | 'close') => { setSelected(rule); setMode(nextMode); setEffectiveFrom(localDate()); setAmount(rule.estimated_amount); setFrequency(rule.frequency); setEndDate(rule.end_date ?? ''); setReason(''); setError(null); setSuccess(null); };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if(loadError){setError('Recarregue as séries de renda antes de alterar o futuro.');return;}
     if (!supabase || !household || !selected || !mode) return;
     if (effectiveFrom < localDate()) { setError('A mudança precisa valer de hoje em diante.'); return; }
     if (!reason.trim()) { setError('Conte por que a série está mudando. Isso fica no histórico.'); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
-      if (mode === 'close') {
-        await closeRecurringIncomeRule(supabase, household.id, selected.id, effectiveFrom, reason);
-        setSuccess('Série encerrada daqui para frente. O passado e os recebimentos já realizados foram preservados.');
-      } else {
-        const normalized = normalizeAmount(amount);
-        if (!Number.isFinite(Number(normalized)) || Number(normalized) <= 0) throw new Error('Informe um valor maior que zero.');
-        if (endDate && endDate < effectiveFrom) throw new Error('A data final não pode ser anterior ao início da nova versão.');
-        await reviseRecurringIncomeRule(supabase, household.id, selected, { effectiveFrom, amount: normalized, frequency, endDate, reason });
-        setSuccess('Nova versão da série criada. Só o futuro foi recalculado; ocorrências anteriores ficaram intactas.');
-      }
+      if (mode === 'close') { await closeRecurringIncomeRule(supabase, household.id, selected.id, effectiveFrom, reason); setSuccess('Série encerrada daqui para frente. O passado e os recebimentos já realizados foram preservados.'); }
+      else { const normalized = normalizeAmount(amount); if (!Number.isFinite(Number(normalized)) || Number(normalized) <= 0) throw new Error('Informe um valor maior que zero.'); if (endDate && endDate < effectiveFrom) throw new Error('A data final não pode ser anterior ao início da nova versão.'); await reviseRecurringIncomeRule(supabase, household.id, selected, { effectiveFrom, amount: normalized, frequency, endDate, reason }); setSuccess('Nova versão da série criada. Só o futuro foi recalculado; ocorrências anteriores ficaram intactas.'); }
       setSelected(null); setMode(null); onChanged?.();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível alterar a série.'); }
     finally { setSaving(false); }
   };
-
   return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
     <div className="flex items-start gap-3"><CalendarClock className="mt-0.5 h-5 w-5 text-emerald-300"/><div><h2 className="font-bold">Gerenciar rendas recorrentes</h2><p className="mt-1 text-sm text-slate-400">Mudanças valem somente daqui para frente. O Casa não reescreve meses anteriores nem recebimentos já realizados.</p></div></div>
-    {error && <p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}
-    {success && <p role="status" className="mt-3 text-sm text-emerald-300">{success}</p>}
-    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : <div className="mt-4 space-y-3">{rules.length === 0 ? <p className="text-sm text-slate-400">Nenhuma série ativa.</p> : rules.map((rule) => <article key={rule.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3"><div className="flex items-start justify-between gap-3"><div><strong>{rule.income_description}</strong><p className="mt-1 text-xs text-slate-400">{money(rule.estimated_amount)} · {rule.frequency === 'monthly' ? 'mensal' : 'anual'} · desde {rule.start_date}</p></div><div className="flex gap-2"><button type="button" onClick={() => open(rule,'revise')} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold">Alterar futuro</button><button type="button" onClick={() => open(rule,'close')} className="rounded-lg border border-rose-900 px-3 py-2 text-xs font-bold text-rose-300">Encerrar</button></div></div></article>)}</div>}
-    {selected && mode && <form onSubmit={submit} className="mt-4 grid gap-3 rounded-xl border border-emerald-900/60 bg-emerald-950/10 p-3"><h3 className="font-bold">{mode === 'revise' ? `Alterar ${selected.income_description} daqui para frente` : `Encerrar ${selected.income_description}`}</h3><label className="text-sm font-semibold">A partir de<input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label>{mode === 'revise' && <><label className="text-sm font-semibold">Novo valor<input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label><label className="text-sm font-semibold">Nova frequência<select value={frequency} onChange={(e) => setFrequency(e.target.value as RecurringIncomeFrequency)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm font-semibold">Nova data final (opcional)<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label></>}<label className="text-sm font-semibold">Motivo<textarea value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: reajuste salarial, fim do contrato de aluguel…"/></label><div className="flex gap-2"><button disabled={saving} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold disabled:opacity-50">{saving ? 'Salvando…' : mode === 'revise' ? 'Criar nova versão' : 'Encerrar série'}</button><button type="button" onClick={() => { setSelected(null); setMode(null); }} className="min-h-11 rounded-xl border border-slate-700 px-4 font-bold">Cancelar</button></div></form>}
+    {!loadError&&error && <p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}{success && <p role="status" className="mt-3 text-sm text-emerald-300">{success}</p>}
+    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : loadError ? <div className="mt-4 rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div> : <div className="mt-4 space-y-3">{rules.length === 0 ? <p className="text-sm text-slate-400">Nenhuma série ativa.</p> : rules.map((rule) => <article key={rule.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3"><div className="flex items-start justify-between gap-3"><div><strong>{rule.income_description}</strong><p className="mt-1 text-xs text-slate-400">{money(rule.estimated_amount)} · {rule.frequency === 'monthly' ? 'mensal' : 'anual'} · desde {rule.start_date}</p></div><div className="flex gap-2"><button type="button" onClick={() => open(rule,'revise')} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold">Alterar futuro</button><button type="button" onClick={() => open(rule,'close')} className="rounded-lg border border-rose-900 px-3 py-2 text-xs font-bold text-rose-300">Encerrar</button></div></div></article>)}</div>}
+    {!loadError&&selected && mode && <form onSubmit={submit} className="mt-4 grid gap-3 rounded-xl border border-emerald-900/60 bg-emerald-950/10 p-3"><h3 className="font-bold">{mode === 'revise' ? `Alterar ${selected.income_description} daqui para frente` : `Encerrar ${selected.income_description}`}</h3><label className="text-sm font-semibold">A partir de<input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label>{mode === 'revise' && <><label className="text-sm font-semibold">Novo valor<input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label><label className="text-sm font-semibold">Nova frequência<select value={frequency} onChange={(e) => setFrequency(e.target.value as RecurringIncomeFrequency)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm font-semibold">Nova data final (opcional)<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label></>}<label className="text-sm font-semibold">Motivo<textarea value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: reajuste salarial, fim do contrato de aluguel…"/></label><div className="flex gap-2"><button disabled={saving} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold disabled:opacity-50">{saving ? 'Salvando…' : mode === 'revise' ? 'Criar nova versão' : 'Encerrar série'}</button><button type="button" onClick={() => { setSelected(null); setMode(null); }} className="min-h-11 rounded-xl border border-slate-700 px-4 font-bold">Cancelar</button></div></form>}
   </section>;
 }
