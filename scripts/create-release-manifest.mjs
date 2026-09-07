@@ -4,11 +4,11 @@ import path from 'node:path';
 
 const distDir = path.join(process.cwd(), 'dist');
 const outputPath = path.join(distDir, 'release-manifest.json');
-const commitSha = (process.env.GITHUB_SHA || process.env.RELEASE_COMMIT_SHA || '').trim();
+const commitSha = (process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '').trim();
 const supabaseUrl = (process.env.VITE_SUPABASE_URL || '').trim();
 
 if (!commitSha) {
-  console.error('[release-manifest] GITHUB_SHA or RELEASE_COMMIT_SHA is required.');
+  console.error('[release-manifest] RELEASE_COMMIT_SHA or GITHUB_SHA is required.');
   process.exit(1);
 }
 
