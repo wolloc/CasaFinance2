@@ -232,7 +232,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 function PaymentButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{icon}<span>{label}</span></button>;
 }
-function ChoiceButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function ChoiceButton({ active, onClick, label }: { key?: string; active: boolean; onClick: () => void; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{label}</button>;
 }
 function ErrorBox({ text }: { text: string }) { return <p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{text}</p>; }
