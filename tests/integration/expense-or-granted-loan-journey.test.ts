@@ -3,31 +3,29 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const transactions=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const wizard=await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx',import.meta.url),'utf8');
 const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
 const loan=await readFile(new URL('../../src/components/app/LoanAdjustment.tsx',import.meta.url),'utf8');
 const principal=await readFile(new URL('../../src/finance/loanPrincipals.ts',import.meta.url),'utf8');
 
-test('Nova despesa separa consumo de dinheiro emprestado antes de abrir uma mutação',()=>{
-  assert.match(transactions,/O que aconteceu\?/);
-  assert.match(transactions,/Foi um gasto/);
-  assert.match(transactions,/Emprestei dinheiro — vão me devolver/);
-  assert.match(transactions,/chooseExpense=.*setExpenseFormRequestId/);
-  assert.match(transactions,/chooseLoan=.*onGrantLoan/);
+test('Nova despesa abre diretamente a jornada de gasto sem oferecer empréstimo',()=>{
+  assert.match(transactions,/<NewExpenseWizard openRequestId=\{createRequestId\}/);
+  assert.doesNotMatch(transactions,/Foi um gasto|Emprestei dinheiro — vão me devolver|Natureza do acontecimento/);
+  assert.doesNotMatch(wizard,/Emprestei dinheiro|createLoanPrincipal/);
 });
 
-test('dinheiro emprestado reutiliza o fluxo canônico de empréstimo concedido',()=>{
+test('empréstimo continua existindo como fluxo financeiro separado',()=>{
   assert.match(app,/screen==='loan-granted'/);
   assert.match(app,/initialDirection="granted"/);
-  assert.match(app,/backLabel="Voltar aos gastos"/);
   assert.match(loan,/createLoanPrincipal/);
   assert.match(loan,/Isso não virou uma despesa/);
   assert.match(principal,/create_loan_principal/);
 });
 
-test('atalho de empréstimo não chama criação de despesa nem cria segundo motor financeiro',()=>{
-  const loanJourney=app.slice(app.indexOf("screen==='loan-granted'"));
-  assert.doesNotMatch(loanJourney,/createHouseholdTransaction|createAndSettleDirectExpense/);
-  assert.doesNotMatch(transactions,/createLoanPrincipal|\.rpc\(/);
+test('Nova despesa não cria segundo motor de empréstimos',()=>{
+  assert.doesNotMatch(wizard,/createLoanPrincipal|loanPrincipals|\.rpc\(/);
+  assert.match(wizard,/createAndSettleDirectExpense/);
+  assert.match(wizard,/createHouseholdTransaction/);
 });
 
 test('fluxo de empréstimo continua fail-closed quando pessoas ou contas não podem ser relidas',()=>{
