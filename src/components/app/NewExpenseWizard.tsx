@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowLeft, CreditCard, Landmark, LoaderCircle, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
@@ -147,7 +147,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       description: description.trim(),
       amount,
       transactionDate: date,
-      categoryId: categoryId || null,
+      categoryId: categoryId || (null as unknown as string),
       buyerMemberId,
       notes: whereWithWhom.trim(),
       instrumentKind,
@@ -278,6 +278,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   </div>;
 }
 
-function PaymentButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function PaymentButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{icon}<span>{label}</span></button>;
 }
