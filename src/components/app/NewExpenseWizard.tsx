@@ -8,11 +8,12 @@ import { allocateEqually } from '../../finance/economicAllocations.js';
 import { createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
 import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreation.js';
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
-import { createExternallyPaidExpense } from '../../finance/externallyPaidExpense.js';
+import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
+type RepaymentMode = 'one_time' | 'installments';
 type Props = { openRequestId: number; onSaved: () => void };
 
 const localDate = () => {
@@ -52,12 +53,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [partySearch, setPartySearch] = useState('');
   const [payerPartyId, setPayerPartyId] = useState('');
   const [needsRepayment, setNeedsRepayment] = useState(false);
+  const [repaymentMode, setRepaymentMode] = useState<RepaymentMode>('one_time');
+  const [repaymentInstallmentCount, setRepaymentInstallmentCount] = useState(2);
   const [repaymentDueDate, setRepaymentDueDate] = useState('');
+  const [repaymentSourceAccountId, setRepaymentSourceAccountId] = useState('');
 
   const currentMemberId = householdMembers.find((member) => member.profile_id === user?.id)?.id ?? '';
   const today = localDate();
   const expenseCategories = useMemo(() => categories.filter((category) => category.type === 'expense'), [categories]);
   const spendableAccounts = useMemo(() => accounts.filter((account) => account.type !== 'investment'), [accounts]);
+  const repaymentAccountChoices = useMemo(() => spendableAccounts.filter((account) => account.type !== 'meal_benefit'), [spendableAccounts]);
   const accountChoices = useMemo(() => {
     if (paymentChoice === 'cash') return spendableAccounts.filter((account) => account.type === 'cash');
     if (paymentChoice === 'benefit') return spendableAccounts.filter((account) => account.type === 'meal_benefit');
@@ -73,13 +78,15 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     return parties.filter((party) => party.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 6);
   }, [parties, partySearch]);
   const exactParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partySearch.trim().toLocaleLowerCase('pt-BR'));
+  const repaymentInstallmentValue = repaymentInstallmentCount > 0 ? Number(amount || 0) / repaymentInstallmentCount : 0;
 
   const reset = () => {
     const memberId = currentMemberId;
     setStep(1); setBuyerMemberId(memberId); setDate(today); setDescription(''); setWhereWithWhom(''); setCategoryId('');
     setAmount(''); setResponsibility(memberId); setPaymentChoice('account'); setAccountId(''); setCardId('');
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0'); setSharedAccountFunderId(memberId);
-    setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentDueDate(''); setError(null);
+    setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
+    setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); setError(null);
   };
 
   const loadContext = async () => {
@@ -143,8 +150,10 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!cardPayment && !externalPayment && !accountId) return setError('Selecione o recurso utilizado.');
     if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
     if (externalPayment && !payerPartyId) return setError('Informe quem pagou.');
-    if (externalPayment && needsRepayment && !repaymentDueDate) return setError('Informe quando pretende devolver.');
+    if (externalPayment && needsRepayment && !repaymentDueDate) return setError(repaymentMode === 'installments' ? 'Informe a data da primeira devolução.' : 'Informe quando pretende devolver.');
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
+    if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
+    if (externalPayment && needsRepayment && !repaymentSourceAccountId) return setError('Informe de qual recurso pretende fazer a devolução.');
 
     const targets = responsibilityTargets();
     const splits = allocateEqually(amount, targets);
@@ -160,11 +169,19 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setSaving(true);
     try {
       if (externalPayment) {
-        await createExternallyPaidExpense(supabase, {
-          householdId: household.id, description, amount, transactionDate: date, categoryId: categoryId || null,
-          buyerMemberId, responsibility: splits, payerPartyId, needsRepayment,
-          dueDate: needsRepayment ? repaymentDueDate : null, notes: whereWithWhom,
-        });
+        if (needsRepayment) {
+          await createExternallyPaidExpenseWithRepaymentPlan(supabase, {
+            householdId: household.id, description, amount, transactionDate: date, categoryId: categoryId || null,
+            buyerMemberId, responsibility: splits, payerPartyId, repaymentMode,
+            installmentCount: repaymentMode === 'one_time' ? 1 : repaymentInstallmentCount,
+            firstDueDate: repaymentDueDate, plannedSourceAccountId: repaymentSourceAccountId, notes: whereWithWhom,
+          });
+        } else {
+          await createExternallyPaidExpense(supabase, {
+            householdId: household.id, description, amount, transactionDate: date, categoryId: categoryId || null,
+            buyerMemberId, responsibility: splits, payerPartyId, needsRepayment: false, dueDate: null, notes: whereWithWhom,
+          });
+        }
       } else if (paymentChoice === 'card_pix') {
         const chargeSplits = Number(financialCharges) > 0 ? allocateEqually(financialCharges, targets) : [];
         await createSimpleCardPixExpense(supabase, {
@@ -219,11 +236,21 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
         {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><label className="block text-sm text-slate-300">Qual cartão?<select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select></label><fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode === 'single'} onClick={() => setPurchaseMode('single')} label="À vista" /><ChoiceButton active={purchaseMode === 'installments'} onClick={() => setPurchaseMode('installments')} label="Parcelado" /></div></fieldset>{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} className="min-h-11 w-full bg-transparent outline-none" /></div><span className="mt-1 block text-xs text-slate-500">Informe o total cobrado além do valor do Pix. Os encargos seguem a mesma responsabilidade econômica da despesa.</span></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}{paymentChoice === 'card' && <p className="text-xs text-violet-200">O gasto econômico é reconhecido uma vez. O cartão cria os compromissos da fatura; nenhuma conta bancária é reduzida agora.</p>}</div>}
 
-        {externalPayment && <div className="space-y-4 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-4"><div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div><fieldset><legend className="text-sm font-semibold text-slate-200">Você precisa devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!needsRepayment} onClick={() => { setNeedsRepayment(false); setRepaymentDueDate(''); }} label="Não" /><ChoiceButton active={needsRepayment} onClick={() => setNeedsRepayment(true)} label="Sim" /></div><p className="mt-2 text-xs text-slate-500">Se não precisar devolver, o Casa registra apenas que outra pessoa bancou o gasto. Nenhuma entrada ou saída de caixa é inventada.</p></fieldset>{needsRepayment && <label className="block text-sm text-slate-300">Quando pretende devolver?<input required type="date" min={date} value={repaymentDueDate} onChange={(event) => setRepaymentDueDate(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-xs text-slate-500">Isso cria uma obrigação separada com essa pessoa, sem criar outra despesa. O parcelamento da devolução será conectado na próxima evolução da jornada.</span></label>}</div>}
+        {externalPayment && <div className="space-y-4 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-4">
+          <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
+          <fieldset><legend className="text-sm font-semibold text-slate-200">Você precisa devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!needsRepayment} onClick={() => { setNeedsRepayment(false); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); }} label="Não" /><ChoiceButton active={needsRepayment} onClick={() => setNeedsRepayment(true)} label="Sim" /></div><p className="mt-2 text-xs text-slate-500">Se não precisar devolver, o Casa registra apenas que outra pessoa bancou o gasto. Nenhuma entrada ou saída de caixa é inventada.</p></fieldset>
+          {needsRepayment && <div className="space-y-4 border-t border-emerald-900/50 pt-4">
+            <fieldset><legend className="text-sm font-semibold text-slate-200">Como pretende devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={repaymentMode === 'one_time'} onClick={() => setRepaymentMode('one_time')} label="Uma vez" /><ChoiceButton active={repaymentMode === 'installments'} onClick={() => setRepaymentMode('installments')} label="Parcelado" /></div></fieldset>
+            {repaymentMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input required type="number" min="2" max="120" value={repaymentInstallmentCount} onChange={(event) => setRepaymentInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-xs text-slate-500">Valor aproximado por parcela: {repaymentInstallmentValue.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}. O Casa ajusta os centavos automaticamente.</span></label>}
+            <label className="block text-sm text-slate-300">{repaymentMode === 'installments' ? 'Primeira devolução' : 'Quando pretende devolver?'}<input required type="date" min={date} value={repaymentDueDate} onChange={(event) => setRepaymentDueDate(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>
+            <label className="block text-sm text-slate-300">De qual recurso pretende pagar?<select required value={repaymentSourceAccountId} onChange={(event) => setRepaymentSourceAccountId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{repaymentAccountChoices.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>{repaymentAccountChoices.length === 0 && <span className="mt-1 block text-xs text-amber-300">Cadastre uma conta, carteira ou recurso de caixa antes de planejar a devolução.</span>}</label>
+            <p className="text-xs text-emerald-200">Isso cria uma única obrigação com essa pessoa e apenas projeta as futuras devoluções. Nenhuma parcela vira uma nova despesa e nenhum saldo é reduzido agora.</p>
+          </div>}
+        </div>}
 
         {error && <ErrorBox text={error} />}
         <div className="flex gap-3"><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold"><ArrowLeft className="h-4 w-4" />Voltar</button><button type="submit" disabled={saving} className="flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button></div>
-        <p className="text-center text-[11px] text-slate-500">Terceiro como responsável econômico, divisão personalizada, parcelamento de devolução e recorrência serão conectados nas próximas entregas, sem criar formulários paralelos.</p>
+        <p className="text-center text-[11px] text-slate-500">Terceiro como responsável econômico, divisão personalizada e recorrência serão conectados nas próximas entregas, sem criar formulários paralelos.</p>
       </div>}
     </form>
   </div>;
