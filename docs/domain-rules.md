@@ -17,13 +17,14 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 | **Despesa** | Consumo que reduz o resultado e é reconhecido uma única vez. Parcelamento ou financiamento não multiplica a despesa. |
 | **Transferência** | Movimento entre ativos próprios, com duas pernas atômicas e efeito zero em receita e despesa. |
 | **Empréstimo** | Direito ou dever financeiro. Novos empréstimos são representáveis por `financial_obligations`, movimentos e componentes: principal concedido não é despesa, principal tomado não é renda e somente juros, tarifas e perdas têm efeito econômico próprio. |
+| **Comprador / autor do gasto** | Membro que originou/realizou a compra ou gasto. Não determina titularidade, responsabilidade econômica, funding ou pagador. |
 | **Responsabilidade econômica** | Parcela do fato econômico que uma pessoa deve suportar. A soma das allocations deve fechar o valor aplicável. Não existe percentual permanente por membro. |
-| **Funding realizado** | Recurso que efetivamente liquidou o compromisso, atribuído ao membro correspondente. No cartão, surge quando a fatura é paga, não pela titularidade. |
+| **Funding realizado** | Recurso que efetivamente liquidou o compromisso, atribuído ao membro ou terceiro correspondente. No cartão, surge quando a fatura é paga, não pela titularidade. |
 | **Funding projetado** | Recurso/membro previsto para liquidar um compromisso futuro conhecido. Não altera caixa realizado. |
 | **Acerto** | Conta-corrente contínua entre membros, sem reset mensal, derivada da diferença entre funding e responsabilidade no mesmo estado e nos compromissos correspondentes. Sua liquidação é explícita. |
 | **Recebível** | Direito contra terceiro. Seu recebimento reduz a obrigação e movimenta caixa, mas não cria renda novamente. |
 | **Pagável** | Dever a terceiro. Seu saldo aberto compromete a projeção; pagamento reduz a obrigação e movimenta caixa sem duplicar a despesa de origem. |
-| **Parcela** | Compromisso financeiro de uma compra atribuído a mês financeiro/fatura. As parcelas fecham o principal em centavos, mas não são novas despesas econômicas. |
+| **Parcela** | Compromisso financeiro de uma compra atribuído a mês financeiro/fatura. As parcelas fecham o valor financiado em centavos, mas não são novas despesas econômicas. |
 | **Mês financeiro** | Mês ao qual um compromisso, entrada ou indicador de planejamento pertence; pode diferir da data econômica e da data de caixa. |
 | **Pendência anterior** | Item previsto/confirmado cujo prazo passou sem resolução. Continua aberto e carregado para a projeção, sem mudar silenciosamente sua data ou estado de origem. |
 | **Recorrência** | Regra que produz ocorrências identificáveis. Regra e ocorrência nunca são somadas simultaneamente; estimativas variáveis futuras são preservadas. |
@@ -33,24 +34,29 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 
 1. **Caixa não é resultado.** Somente fatos econômicos de receita/despesa/rendimento/perda alteram resultado. Transferências, acertos, pagamento de fatura, principal de empréstimo e aporte/resgate não o alteram.
 2. **Reconhecimento econômico único.** Uma despesa é reconhecida uma vez na origem. Compra, parcela, fatura, limite usado e pagamento são representações vinculadas, nunca despesas cumulativas.
-3. **Papéis independentes.** Titular, comprador, registrador, responsável econômico, funder realizado e funder projetado não são inferidos automaticamente uns dos outros.
-4. **Três relógios.** Data econômica, mês financeiro e data de caixa são independentes. Relatórios de Gastos usam mês financeiro por padrão, sem reescrever a data econômica.
-5. **Valor efetivo único.** Cada cálculo usa `realized` quando aplicável; senão `confirmed`; senão `estimated`/`forecast`. As versões jamais são somadas.
-6. **Previsto não é realizado.** A passagem do tempo não realiza eventos nem caixa. Um forecast vencido vira pendência anterior até confirmação, realização, correção ou cancelamento rastreável.
-7. **Realização parcial preserva estado.** `confirmed 1.000` com `realized_amount 400` permanece `confirmed`; somente a realização completa passa a `realized`. Não se cria estado `partial` apenas para esse caso.
-8. **Cartão sem duplicidade.** A compra cria o evento econômico e compromissos; a fatura os agrega; o pagamento realiza caixa/funding e não cria nova despesa nem novo acerto.
-9. **Parcelamento não parcela a despesa econômica.** O evento econômico ocorre uma vez; parcelas distribuem compromissos pelos meses financeiros. Em centavos, `100,00 / 3` resulta em `33,34 + 33,33 + 33,33`.
-10. **Acerto contínuo e por estado.** Não há reset mensal nem compensação implícita. Para cada membro: **acerto realizado = funding realizado − responsabilidade correspondente**; **acerto projetado = funding projetado − responsabilidade dos compromissos futuros correspondentes**. Realizado e projetado permanecem distinguíveis.
-11. **Acerto projetado no cartão nasce na compra.** Compromissos futuros conhecidos permitem projetar funding e distribuir o acerto nos mesmos meses financeiros da compra. Titular do cartão não vira funder realizado; o pagamento posterior apenas materializa o funding já relacionado e não gera outro acerto.
-12. **Principal de empréstimo é neutro.** Concessão cria recebível e saída de caixa; tomada cria pagável e entrada de caixa. Amortização reduz principal. Juros, tarifas e perdas são eventos econômicos separados.
-13. **Recebível é conservador.** Recebível de terceiro não aumenta a projeção principal antes do recebimento. Sua liquidação aumenta caixa e reduz o direito, com renda zero.
-14. **Pagável é conservador.** Todo pagável aberto compromete a projeção. Uma posição líquida pode ser exibida, mas nunca quita ou compensa automaticamente obrigações brutas.
-15. **Conta conjunta não altera responsabilidade.** A Casa considera 100% do saldo; perspectivas individuais de liquidez atribuem 50/50. Essa divisão não define responsabilidade econômica nem funding.
-16. **Saldo real é realizado.** Deriva de `account_balance_events` canônicos e `money_movements` realizados. Forecast, benefícios, reservas, investimentos, recebíveis, limite de cartão e LIS disponível não aumentam o saldo atual.
-17. **Vínculo com origem.** Refunds, pagamentos, liquidações, encargos, financiamentos e correções preservam relação auditável com o fato original. Refund não é renda comum.
-18. **Passado é corrigido, não apagado.** Depois de efeitos dependentes, correções preservam histórico e recalculam o futuro. Exclusão financeira não é fluxo normal.
-19. **Atomicidade.** Operações compostas — transferências, pagamentos, correções, refunds e liquidações — gravam todas as pernas ou nenhuma. O frontend não coordena updates financeiros independentes.
-20. **Auditabilidade e idempotência.** Autor, Casa, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
+3. **Papéis independentes.** Titular, comprador/autor, registrador, responsável econômico, funder realizado, funder projetado e terceiro pagador não são inferidos automaticamente uns dos outros.
+4. **Responsabilidade fecha o fato econômico.** As allocations econômicas não podem ultrapassar o valor aplicável e devem fechar integralmente esse valor antes da conclusão do fato. Funding não substitui responsabilidade.
+5. **Três relógios.** Data econômica, mês financeiro e data de caixa são independentes. Uma inclusão retroativa preserva a data econômica informada e recalcula suas consequências correspondentes; a data de cadastro não substitui silenciosamente a data do fato.
+6. **Valor efetivo único.** Cada cálculo usa `realized` quando aplicável; senão `confirmed`; senão `estimated`/`forecast`. As versões jamais são somadas.
+7. **Previsto não é realizado.** A passagem do tempo não realiza eventos nem caixa. Um forecast vencido vira pendência anterior até confirmação, realização, correção ou cancelamento rastreável.
+8. **Realização parcial preserva estado.** `confirmed 1.000` com `realized_amount 400` permanece `confirmed`; somente a realização completa passa a `realized`. Não se cria estado `partial` apenas para esse caso.
+9. **Cartão sem duplicidade.** A compra cria o evento econômico e compromissos; a fatura os agrega; o pagamento realiza caixa/funding e não cria nova despesa nem novo acerto. O pagamento de fatura é liquidação financeira, não um novo compromisso de gasto.
+10. **Parcelamento não parcela a despesa econômica.** O evento econômico ocorre uma vez; parcelas distribuem compromissos pelos meses financeiros. Em centavos, `100,00 / 3` resulta em `33,34 + 33,33 + 33,33`.
+11. **Pix por cartão preserva principal e encargo.** O principal reconhece a despesa original uma única vez; tarifas/juros são componentes econômicos financeiros separados; principal + encargos formam o valor financiado no cartão. Não há saída imediata de conta bancária apenas por usar Pix financiado pelo cartão.
+12. **Terceiro pagador não redefine responsabilidade.** Se um terceiro fornece o recurso, o fato econômico continua alocado a quem deve suportá-lo. Se houver devolução, nasce pagável ao terceiro apenas pela parcela que cabe à Casa e ainda precisa ser reembolsada; sua liquidação não cria nova despesa. Sem devolução, não nasce pagável.
+13. **Acerto contínuo e por estado.** Não há reset mensal nem compensação implícita. Para cada membro: **acerto realizado = funding realizado − responsabilidade correspondente**; **acerto projetado = funding projetado − responsabilidade dos compromissos futuros correspondentes**. Realizado e projetado permanecem distinguíveis.
+14. **Acerto projetado no cartão nasce na compra.** Compromissos futuros conhecidos permitem projetar funding e distribuir o acerto nos mesmos meses financeiros da compra. Titular do cartão não vira funder realizado; o pagamento posterior apenas materializa o funding já relacionado e não gera outro acerto.
+15. **Principal de empréstimo é neutro.** Concessão cria recebível e saída de caixa; tomada cria pagável e entrada de caixa. Amortização reduz principal. Juros, tarifas e perdas são eventos econômicos separados.
+16. **Recebível é conservador.** Recebível de terceiro não aumenta a projeção principal antes do recebimento. Sua liquidação aumenta caixa e reduz o direito, com renda zero.
+17. **Pagável é conservador.** Todo pagável aberto compromete a projeção. Uma posição líquida pode ser exibida, mas nunca quita ou compensa automaticamente obrigações brutas.
+18. **Liquidação parcial reduz somente o aberto.** Pagamento parcial de fatura, pagável ou outra obrigação reduz caixa e obrigação somente pelo montante efetivamente liquidado; o saldo restante permanece aberto e não se reconhece novamente o fato econômico de origem.
+19. **Conta conjunta não altera responsabilidade.** A Casa considera 100% do saldo; perspectivas individuais de liquidez atribuem 50/50. Essa divisão não define responsabilidade econômica nem funding.
+20. **Saldo real é realizado.** Deriva de `account_balance_events` canônicos e `money_movements` realizados. Forecast, benefícios, reservas, investimentos, recebíveis, limite de cartão e LIS disponível não aumentam o saldo atual.
+21. **Vínculo com origem.** Refunds, pagamentos, liquidações, encargos, financiamentos e correções preservam relação auditável com o fato original. Refund não é renda comum.
+22. **Recorrência projeta, não antecipa resultado.** Uma regra recorrente pode gerar compromissos/ocorrências futuras, mas esses forecasts não são despesas econômicas realizadas antes da ocorrência efetiva. Confirmação/realização deve reutilizar ou vincular a ocorrência, nunca duplicá-la.
+23. **Passado é corrigido, não apagado.** Depois de efeitos dependentes, correções preservam histórico e recalculam o futuro. Exclusão financeira não é fluxo normal.
+24. **Atomicidade.** Operações compostas — transferências, pagamentos, correções, refunds e liquidações — gravam todas as pernas ou nenhuma. O frontend não coordena updates financeiros independentes.
+25. **Auditabilidade e idempotência.** Autor, Casa, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
 
 ## Matriz resumida
 
@@ -59,10 +65,12 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 | Renda recebida | receita uma vez | aumenta | liquida a entrada esperada, quando houver |
 | Despesa direta | despesa uma vez | diminui | funding realizado e responsabilidades vinculados |
 | Compra no cartão | despesa uma vez | não muda | compromissos, allocations e acerto projetado |
+| Pix por cartão | despesa principal + encargos financeiros separados | não muda no ato | compromisso financiado no cartão |
+| Terceiro paga despesa da Casa | despesa uma vez | não muda no ato | pagável somente se houver devolução |
 | Pagamento de fatura | zero | diminui | reduz fatura e realiza funding; sem novo acerto |
+| Pagamento de pagável | zero, salvo encargos próprios | diminui | reduz pagável |
 | Transferência / saque / depósito | zero | duas pernas | mesmo evento e patrimônio preservado |
 | Recebimento de recebível | zero | aumenta | reduz recebível |
-| Pagamento de pagável | zero, salvo encargos próprios | diminui | reduz pagável |
 | Principal de empréstimo | zero | entra ou sai | cria/reduz receivable ou payable |
 | Aporte/resgate | zero | move entre classes | principal patrimonial preservado |
 | Refund | reverte total/parcialmente a origem | conforme rota efetiva | mantém vínculo e não é renda comum |
@@ -83,6 +91,7 @@ Fatura
 
 Pagamento
 → realiza caixa/funding
+→ liquida compromissos na extensão paga
 → não cria nova despesa
 → não cria novo acerto
 ```
