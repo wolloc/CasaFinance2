@@ -7,8 +7,9 @@ import { listHouseholdCategories, type HouseholdCategory } from '../../finance/h
 import { allocateEqually } from '../../finance/economicAllocations.js';
 import { createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
 import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreation.js';
+import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 
-type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card';
+type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix';
 type PurchaseMode = 'single' | 'installments';
 
 type Props = {
@@ -48,6 +49,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [cardId, setCardId] = useState('');
   const [purchaseMode, setPurchaseMode] = useState<PurchaseMode>('single');
   const [installmentCount, setInstallmentCount] = useState(2);
+  const [financialCharges, setFinancialCharges] = useState('0');
   const [sharedAccountFunderId, setSharedAccountFunderId] = useState('');
 
   const currentMemberId = householdMembers.find((member) => member.profile_id === user?.id)?.id ?? '';
@@ -61,6 +63,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     return spendableAccounts.filter((account) => account.type !== 'cash' && account.type !== 'meal_benefit');
   }, [paymentChoice, spendableAccounts]);
   const selectedAccount = accountChoices.find((account) => account.id === accountId) ?? accounts.find((account) => account.id === accountId) ?? null;
+  const cardPayment = paymentChoice === 'card' || paymentChoice === 'card_pix';
+  const financedTotal = Number(amount || 0) + (paymentChoice === 'card_pix' ? Number(financialCharges || 0) : 0);
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -77,6 +81,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setCardId('');
     setPurchaseMode('single');
     setInstallmentCount(2);
+    setFinancialCharges('0');
     setSharedAccountFunderId(memberId);
     setError(null);
   };
@@ -136,13 +141,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!amount || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return setError('Informe um valor maior que zero.');
     if (!responsibility) return setError('Informe quem assume esse gasto.');
     if (date > today) return setError('A data do gasto não pode estar no futuro.');
+    if (paymentChoice === 'card_pix' && (!Number.isFinite(Number(financialCharges)) || Number(financialCharges) < 0)) return setError('Informe um valor de encargos financeiros igual ou maior que zero.');
 
-    const instrumentKind: InstrumentKind = paymentChoice === 'card' ? 'card' : 'account';
-    if (instrumentKind === 'card' && !cardId) return setError('Selecione o cartão utilizado.');
-    if (instrumentKind === 'account' && !accountId) return setError('Selecione o recurso utilizado.');
-    if (purchaseMode === 'installments' && instrumentKind === 'card' && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
+    const instrumentKind: InstrumentKind = cardPayment ? 'card' : 'account';
+    if (cardPayment && !cardId) return setError('Selecione o cartão utilizado.');
+    if (!cardPayment && !accountId) return setError('Selecione o recurso utilizado.');
+    if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
 
-    const splits = allocateEqually(amount, responsibilityTargets());
+    const targets = responsibilityTargets();
+    const splits = allocateEqually(amount, targets);
+    const appliedInstallmentCount = cardPayment && purchaseMode === 'installments' ? installmentCount : 1;
     const input: TransactionInput = {
       description: description.trim(),
       amount,
@@ -154,12 +162,28 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       accountId: instrumentKind === 'account' ? accountId : undefined,
       cardId: instrumentKind === 'card' ? cardId : undefined,
       splits,
-      installmentCount: instrumentKind === 'card' && purchaseMode === 'installments' ? installmentCount : 1,
+      installmentCount: appliedInstallmentCount,
     };
 
     setSaving(true);
     try {
-      if (instrumentKind === 'account') {
+      if (paymentChoice === 'card_pix') {
+        const chargeSplits = Number(financialCharges) > 0 ? allocateEqually(financialCharges, targets) : [];
+        await createSimpleCardPixExpense(supabase, {
+          householdId: household.id,
+          description,
+          principalAmount: amount,
+          financialChargeAmount: financialCharges || '0',
+          transactionDate: date,
+          categoryId: categoryId || null,
+          buyerMemberId,
+          cardId,
+          principalResponsibility: splits,
+          chargeResponsibility: chargeSplits,
+          installmentCount: appliedInstallmentCount,
+          notes: whereWithWhom,
+        });
+      } else if (instrumentKind === 'account') {
         const funderMemberId = selectedAccount?.owner_member_id || sharedAccountFunderId || currentMemberId;
         if (!funderMemberId) throw new Error('Não foi possível identificar quem bancou esta saída.');
         await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
@@ -242,10 +266,11 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
             <PaymentButton active={paymentChoice === 'cash'} onClick={() => setPaymentChoice('cash')} icon={<WalletCards className="h-4 w-4" />} label="Carteira / dinheiro" />
             <PaymentButton active={paymentChoice === 'benefit'} onClick={() => setPaymentChoice('benefit')} icon={<WalletCards className="h-4 w-4" />} label="VA/VR/benefício" />
             <PaymentButton active={paymentChoice === 'card'} onClick={() => setPaymentChoice('card')} icon={<CreditCard className="h-4 w-4" />} label="Cartão de crédito" />
+            <PaymentButton active={paymentChoice === 'card_pix'} onClick={() => setPaymentChoice('card_pix')} icon={<CreditCard className="h-4 w-4" />} label="Pix por cartão" />
           </div>
         </fieldset>
 
-        {paymentChoice !== 'card' && <label className="block text-sm text-slate-300">Qual recurso foi usado?
+        {!cardPayment && <label className="block text-sm text-slate-300">Qual recurso foi usado?
           <select required value={accountId} onChange={(event) => { setAccountId(event.target.value); setSharedAccountFunderId(currentMemberId); }} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3">
             <option value="">Selecione</option>
             {accountChoices.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
@@ -253,26 +278,34 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           {accountChoices.length === 0 && <span className="mt-1 block text-xs text-amber-300">Nenhum recurso desse tipo está cadastrado na Casa.</span>}
         </label>}
 
-        {paymentChoice !== 'card' && selectedAccount && !selectedAccount.owner_member_id && <label className="block text-sm text-slate-300">Quem bancou esta saída?
+        {!cardPayment && selectedAccount && !selectedAccount.owner_member_id && <label className="block text-sm text-slate-300">Quem bancou esta saída?
           <span className="block text-xs text-slate-500">Essa pergunta aparece somente porque o recurso selecionado é compartilhado e o Casa ainda precisa registrar o funding por membro.</span>
           <select required value={sharedAccountFunderId} onChange={(event) => setSharedAccountFunderId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3">
             {householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}
           </select>
         </label>}
 
-        {paymentChoice === 'card' && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4">
+        {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4">
           <label className="block text-sm text-slate-300">Qual cartão?
             <select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select>
           </label>
-          <fieldset><legend className="text-sm text-slate-300">Como foi a compra?</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => setPurchaseMode('single')} className={`min-h-11 rounded-xl border text-sm font-semibold ${purchaseMode === 'single' ? 'border-violet-500 bg-violet-950/50' : 'border-slate-700 bg-slate-800'}`}>À vista</button><button type="button" onClick={() => setPurchaseMode('installments')} className={`min-h-11 rounded-xl border text-sm font-semibold ${purchaseMode === 'installments' ? 'border-violet-500 bg-violet-950/50' : 'border-slate-700 bg-slate-800'}`}>Parcelada</button></div></fieldset>
+          <fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => setPurchaseMode('single')} className={`min-h-11 rounded-xl border text-sm font-semibold ${purchaseMode === 'single' ? 'border-violet-500 bg-violet-950/50' : 'border-slate-700 bg-slate-800'}`}>À vista</button><button type="button" onClick={() => setPurchaseMode('installments')} className={`min-h-11 rounded-xl border text-sm font-semibold ${purchaseMode === 'installments' ? 'border-violet-500 bg-violet-950/50' : 'border-slate-700 bg-slate-800'}`}>Parcelado</button></div></fieldset>
           {purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}
-          <p className="text-xs text-violet-200">O gasto econômico é reconhecido uma vez. O cartão cria os compromissos da fatura; nenhuma conta bancária é reduzida agora.</p>
+          {paymentChoice === 'card_pix' && <>
+            <label className="block text-sm text-slate-300">Encargos financeiros
+              <div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} className="min-h-11 w-full bg-transparent outline-none" /></div>
+              <span className="mt-1 block text-xs text-slate-500">Informe o total cobrado além do valor do Pix. Se não houve custo adicional, use R$ 0.</span>
+            </label>
+            <div className="rounded-xl bg-slate-950/60 p-3 text-xs"><div className="flex justify-between gap-3 text-slate-400"><span>Valor do Pix</span><span>{Number(amount || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div><div className="mt-1 flex justify-between gap-3 text-slate-400"><span>Encargos</span><span>{Number(financialCharges || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div><div className="mt-2 flex justify-between gap-3 border-t border-slate-800 pt-2 font-bold text-slate-100"><span>Total no cartão</span><span>{financedTotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div></div>
+            <p className="text-xs text-violet-200">O Pix é pago agora ao destinatário, mas nenhuma conta bancária da Casa é reduzida. O principal e os encargos entram no cartão e serão liquidados pela fatura.</p>
+          </>}
+          {paymentChoice === 'card' && <p className="text-xs text-violet-200">O gasto econômico é reconhecido uma vez. O cartão cria os compromissos da fatura; nenhuma conta bancária é reduzida agora.</p>}
         </div>}
 
         {error && <p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</p>}
 
         <div className="flex gap-3"><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold"><ArrowLeft className="h-4 w-4" />Voltar</button><button type="submit" disabled={saving} className="flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button></div>
-        <p className="text-center text-[11px] text-slate-500">Pix por cartão, outra pessoa pagou, terceiro envolvido e recorrência serão conectados nesta mesma jornada nas próximas entregas, sem criar formulários paralelos.</p>
+        <p className="text-center text-[11px] text-slate-500">Outra pessoa pagou, terceiro envolvido, divisão personalizada e recorrência serão conectados nesta mesma jornada nas próximas entregas, sem criar formulários paralelos.</p>
       </div>}
     </form>
   </div>;
