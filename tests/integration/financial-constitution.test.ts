@@ -31,7 +31,7 @@ test('constitution and product spec agree on the core UX and member semantics', 
     assert.ok(productSpec.includes(principle));
   }
   assert.match(constitution, /comprador ≠ titular ≠ responsável ≠ funder/);
-  assert.match(productSpec, /Titular, comprador e responsável são independentes/);
+  assert.match(productSpec, /comprador\/autor do gasto, independentemente de pagador, titular do instrumento ou responsável econômico/);
 });
 
 test('constitution protects neutral movements from becoming income or expense', () => {
