@@ -8,6 +8,8 @@ export type ExternalExpenseAllocation = {
   percentage: string;
 };
 
+export type ExternalRepaymentMode = 'one_time' | 'installments';
+
 const splitPayload = (allocations: ExternalExpenseAllocation[]) => allocations.map((split) => ({
   ...(split.memberId ? { member_id: split.memberId } : { party_id: split.partyId }),
   amount: split.amount,
@@ -31,19 +33,7 @@ export async function createExternallyPaidExpense(client: SupabaseClient, input:
   const splits = splitPayload(input.responsibility);
   const dueDate = input.needsRepayment ? input.dueDate || null : null;
   const notes = input.notes?.trim() || null;
-  const identity = [
-    input.householdId,
-    description,
-    input.amount,
-    input.transactionDate,
-    input.categoryId ?? null,
-    input.buyerMemberId,
-    splits,
-    input.payerPartyId,
-    input.needsRepayment,
-    dueDate,
-    notes,
-  ] as const;
+  const identity = [input.householdId,description,input.amount,input.transactionDate,input.categoryId ?? null,input.buyerMemberId,splits,input.payerPartyId,input.needsRepayment,dueDate,notes] as const;
 
   return runRetryStableRpc(client, 'create-externally-paid-expense', identity, 'create_externally_paid_expense', {
     p_household_id: input.householdId,
@@ -56,6 +46,44 @@ export async function createExternallyPaidExpense(client: SupabaseClient, input:
     p_payer_party_id: input.payerPartyId,
     p_needs_repayment: input.needsRepayment,
     p_due_date: dueDate,
+    p_notes: notes,
+  });
+}
+
+export async function createExternallyPaidExpenseWithRepaymentPlan(client: SupabaseClient, input: {
+  householdId: string;
+  description: string;
+  amount: string;
+  transactionDate: string;
+  categoryId?: string | null;
+  buyerMemberId: string;
+  responsibility: ExternalExpenseAllocation[];
+  payerPartyId: string;
+  repaymentMode: ExternalRepaymentMode;
+  installmentCount: number;
+  firstDueDate: string;
+  plannedSourceAccountId: string;
+  notes?: string;
+}) {
+  const description = input.description.trim();
+  const splits = splitPayload(input.responsibility);
+  const notes = input.notes?.trim() || null;
+  const count = input.repaymentMode === 'one_time' ? 1 : input.installmentCount;
+  const identity = [input.householdId,description,input.amount,input.transactionDate,input.categoryId ?? null,input.buyerMemberId,splits,input.payerPartyId,input.repaymentMode,count,input.firstDueDate,input.plannedSourceAccountId,notes] as const;
+
+  return runRetryStableRpc(client, 'create-externally-paid-expense-with-repayment-plan', identity, 'create_externally_paid_expense_with_repayment_plan', {
+    p_household_id: input.householdId,
+    p_description: description,
+    p_amount: input.amount,
+    p_transaction_date: input.transactionDate,
+    p_category_id: input.categoryId ?? null,
+    p_buyer_member_id: input.buyerMemberId,
+    p_splits: splits,
+    p_payer_party_id: input.payerPartyId,
+    p_repayment_mode: input.repaymentMode,
+    p_installment_count: count,
+    p_first_due_date: input.firstDueDate,
+    p_planned_source_account_id: input.plannedSourceAccountId,
     p_notes: notes,
   });
 }
