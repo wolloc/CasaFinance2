@@ -41,8 +41,8 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
     <ExpenseMonthBrowser />
-    <div className="[&_header>button]:hidden">
-      <HouseholdTransactionsSetup key={expenseListVersion} embedded mode={mode} />
+    <div key={expenseListVersion} className="[&_header>button]:hidden">
+      <HouseholdTransactionsSetup embedded mode={mode} />
     </div>
 
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
