@@ -18,7 +18,7 @@ test('Nova despesa gera nova intenção e abre diretamente a jornada guiada',()=
 
 test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horário de pagamento',()=>{
  assert.doesNotMatch(wizard,/O que aconteceu\?/);
- assert.match(wizard,/Sobre o valor/);
+ assert.doesNotMatch(wizard,/Sobre o valor/);
  assert.doesNotMatch(wizard,/Etapa \{step\} de 2/);
  assert.match(wizard,/Quem fez esse gasto\?/);
  assert.match(wizard,/Com o que gastou\?/);
