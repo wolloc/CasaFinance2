@@ -16,14 +16,18 @@ test('Nova despesa gera nova intenção e abre diretamente a jornada guiada',()=
  assert.doesNotMatch(screen,/setShowNature|chooseExpense|chooseLoan/);
 });
 
-test('Nova despesa segue duas etapas e não expõe horário de pagamento',()=>{
- assert.match(wizard,/O que aconteceu\?/);
- assert.match(wizard,/Sobre o valor/);
- assert.match(wizard,/Etapa \{step\} de 2/);
+test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horário de pagamento',()=>{
+ assert.doesNotMatch(wizard,/O que aconteceu\?/);
+ assert.doesNotMatch(wizard,/Sobre o valor/);
+ assert.doesNotMatch(wizard,/Etapa \{step\} de 2/);
  assert.match(wizard,/Quem fez esse gasto\?/);
  assert.match(wizard,/Com o que gastou\?/);
  assert.match(wizard,/Quem assume esse gasto\?/);
  assert.match(wizard,/Como foi pago\?/);
+ assert.match(wizard,/type="date" max=\{today\}/);
+ assert.match(wizard,/if \(date > today\) return setDate\(today\)/);
+ assert.doesNotMatch(wizard,/Quem originou o gasto\. Isso não define/);
+ assert.doesNotMatch(wizard,/Terceiro como responsável econômico, divisão personalizada e recorrência/);
  assert.doesNotMatch(wizard,/datetime-local|Quando o dinheiro saiu\?/);
 });
 
