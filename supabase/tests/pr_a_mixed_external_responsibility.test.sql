@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(38);
 
 -- Fixture isolada da PR A.
 insert into auth.users (
@@ -105,6 +105,8 @@ select is((select counterparty_id from public.financial_obligations o join publi
 select is((select coalesce(sum(s.amount),0) from public.obligation_repayment_schedule_items s join public.financial_obligations o on o.id=s.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-A07 payer also responsible'),60.00::numeric,'A07 repayment schedule closes Casa share 60');
 select is((select coalesce(sum(p.amount),0) from public.commitment_funding_plans p join public.financial_obligations o on o.id=p.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-A07 payer also responsible' and p.state='active'),60.00::numeric,'A07 funding plan closes Casa share 60');
 select is((select count(*) from public.transactions where description='PR-A07 payer also responsible'),1::bigint,'A07 creates one economic transaction');
+select is((select coalesce(sum(f.amount),0) from public.financing_allocations f join public.transactions t on t.id=f.transaction_id where t.description='PR-A07 payer also responsible' and f.mechanism='external'),100.00::numeric,'A07 canonical external financing preserves gross 100');
+select is((select count(*) from public.transaction_payment_instruments i join public.transactions t on t.id=i.transaction_id where t.description='PR-A07 payer also responsible'),0::bigint,'A07 does not invent Casa account/card instrument');
 
 -- A08: Casa R$60 + terceiro A R$40; terceiro B paga R$100.
 select lives_ok($$
@@ -124,6 +126,21 @@ select is((select coalesce(sum(s.amount),0) from public.obligation_repayment_sch
 select is((select count(*) from public.obligation_repayment_schedule_items s join public.financial_obligations o on o.id=s.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-A08 different payer'),3::bigint,'A08 creates requested three repayment schedule items');
 select is((select coalesce(sum(p.amount),0) from public.commitment_funding_plans p join public.financial_obligations o on o.id=p.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-A08 different payer' and p.state='active'),60.00::numeric,'A08 funding plan closes Casa share 60');
 select is((select count(*) from public.transactions where description='PR-A08 different payer'),1::bigint,'A08 creates one economic transaction');
+select is((select coalesce(sum(f.amount),0) from public.financing_allocations f join public.transactions t on t.id=f.transaction_id where t.description='PR-A08 different payer' and f.mechanism='external'),100.00::numeric,'A08 canonical external financing preserves gross 100');
+select is((select count(*) from public.transaction_payment_instruments i join public.transactions t on t.id=i.transaction_id where t.description='PR-A08 different payer'),0::bigint,'A08 does not invent Casa account/card instrument');
+
+-- Limite de centavos: nenhuma parcela de devolução pode ter valor zero.
+select throws_ok($$
+  select public.create_externally_paid_expense_with_repayment_plan(
+    '73000000-0000-4000-8000-000000000010','PR-A-cent-boundary',1.00,current_date,null,
+    '73000000-0000-4000-8000-000000000021',
+    '[{"member_id":"73000000-0000-4000-8000-000000000021","amount":"0.01","percentage":"1.0000"},{"party_id":"73000000-0000-4000-8000-000000000041","amount":"0.99","percentage":"99.0000"}]'::jsonb,
+    '73000000-0000-4000-8000-000000000042','installments',2,current_date,
+    '73000000-0000-4000-8000-000000000031',null,'pr-a-cent-boundary'
+  )
+$$,'22023','repayment installment count exceeds reimbursable cents','repayment rejects more installments than reimbursable cents');
+select is((select count(*) from public.transactions where description='PR-A-cent-boundary'),0::bigint,'cent-boundary command rolls back economic transaction');
+select is((select count(*) from public.financial_obligations o join public.transactions t on t.id=o.source_transaction_id where t.description='PR-A-cent-boundary'),0::bigint,'cent-boundary command rolls back payable');
 
 reset role;
 select * from finish();
