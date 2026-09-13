@@ -5,6 +5,9 @@ export type NewExpenseRecurrenceContext = {
 };
 
 export function recurringExpenseBlockReason(context: NewExpenseRecurrenceContext) {
+  if (context.paymentChoice === 'benefit') {
+    return 'Gastos em VA/VR/benefício não podem ativar recorrência. Registre cada uso quando ele acontecer.';
+  }
   if (context.purchaseMode === 'installments' && (context.paymentChoice === 'card' || context.paymentChoice === 'card_pix')) {
     return 'Compra parcelada já possui compromissos próprios e não pode ser tratada como recorrência.';
   }
