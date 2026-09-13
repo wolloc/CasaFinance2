@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { allocateProportionally } from '../../src/finance/economicAllocations.ts';
 
 const wizard = await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx', import.meta.url), 'utf8');
 const service = await readFile(new URL('../../src/finance/simpleCardPixExpense.ts', import.meta.url), 'utf8');
@@ -41,4 +42,14 @@ test('principal and charge follow the same card installment route and retry-safe
   assert.match(sql, /financial_command_existing_or_lock/);
   assert.match(sql, /financial_command_store/);
   assert.match(service, /runRetryStableRpc/);
+});
+
+test('card Pix charge allocation closes in cents and never sends zero amounts', () => {
+  const allocations = allocateProportionally('0.10', [
+    { memberId: 'member-a', amount: '99.00', percentage: '99.0000' },
+    { partyId: 'party-a', amount: '1.00', percentage: '1.0000' },
+  ]);
+  assert.equal(allocations.reduce((sum, row) => sum + Math.round(Number(row.amount) * 100), 0), 10);
+  assert.ok(allocations.every((row) => Number(row.amount) > 0));
+  assert.match(wizard, /allocateProportionally\(financialCharges \|\| '0', splits\)/);
 });

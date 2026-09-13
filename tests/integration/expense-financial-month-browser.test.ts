@@ -39,3 +39,12 @@ test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
  assert.match(browser,/setRefreshVersion\(value=>value\+1\)/);
  assert.doesNotMatch(browser,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
+
+test('gastos realizados excluem forecast e exibem somente a parcela econômica da Casa',()=>{
+ const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
+ assert.match(economicQuery,/\.in\('economic_state',\['confirmed','realized'\]\)/);
+ assert.doesNotMatch(economicQuery,/\['forecast','confirmed','realized'\]/);
+ assert.match(economicQuery,/economic_allocations\(amount,responsible_member_id,responsible_party_id\)/);
+ assert.match(economicQuery,/filter\(allocation=>Boolean\(allocation\.responsible_member_id\)\)/);
+ assert.match(economicQuery,/householdAmount\.toFixed\(2\)/);
+});

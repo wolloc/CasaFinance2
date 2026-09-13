@@ -4,8 +4,8 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
 import { listHouseholdCategories, type HouseholdCategory } from '../../finance/householdCategories.js';
-import { allocateCustomAmounts, allocateEqually, type EconomicAllocation } from '../../finance/economicAllocations.js';
-import { createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
+import { allocateCustomAmounts, allocateEqually, allocateProportionally, type EconomicAllocation } from '../../finance/economicAllocations.js';
+import { createAndSettleSharedExpense, createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
 import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreation.js';
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
@@ -174,6 +174,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!cardPayment && !externalPayment && !accountId) return setError('Selecione o recurso utilizado.');
     if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
     if (externalPayment && !payerPartyId) return setError('Informe quem pagou.');
+    if (externalPayment && needsRepayment && responsibilityAllocations().some((split) => split.partyId)) return setError('Para planejar uma devolução, a responsabilidade econômica precisa pertencer somente à Casa.');
     if (externalPayment && needsRepayment && !repaymentDueDate) return setError(repaymentMode === 'installments' ? 'Informe a data da primeira devolução.' : 'Informe quando pretende devolver.');
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
     if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
@@ -208,14 +209,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           });
         }
       } else if (paymentChoice === 'card_pix') {
-        const chargeSplits = Number(financialCharges) > 0
-          ? splits.map((split) => ({ ...split, amount: (Number(financialCharges) * Number(split.percentage) / 100).toFixed(2) }))
-          : [];
-        if (chargeSplits.length > 0) {
-          const difference = Math.round(Number(financialCharges) * 100) - chargeSplits.reduce((sum, split) => sum + Math.round(Number(split.amount) * 100), 0);
-          const lastIndex = chargeSplits.length - 1;
-          chargeSplits[lastIndex] = { ...chargeSplits[lastIndex], amount: ((Math.round(Number(chargeSplits[lastIndex]?.amount ?? 0) * 100) + difference) / 100).toFixed(2) };
-        }
+        const chargeSplits = allocateProportionally(financialCharges || '0', splits);
         await createSimpleCardPixExpense(supabase, {
           householdId: household.id, description, principalAmount: amount, financialChargeAmount: financialCharges || '0',
           transactionDate: date, categoryId: categoryId || null, buyerMemberId, cardId,
@@ -225,7 +219,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       } else if (instrumentKind === 'account') {
         const funderMemberId = selectedAccount?.owner_member_id || sharedAccountFunderId || currentMemberId;
         if (!funderMemberId) throw new Error('Não foi possível identificar quem bancou esta saída.');
-        await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
+        if (splits.some((split) => split.partyId)) await createAndSettleSharedExpense(supabase, household.id, input, funderMemberId, null);
+        else await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
       } else {
         await createHouseholdTransaction(supabase, household.id, 'expense', input);
       }
@@ -296,7 +291,7 @@ function PaymentButton({ active, onClick, icon, label }: { active: boolean; onCl
 function ChoiceButton({ active, onClick, label }: { key?: string; active: boolean; onClick: () => void; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{label}</button>;
 }
-function AllocationField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function AllocationField({ label, value, onChange }: { key?: string; label: string; value: string; onChange: (value: string) => void }) {
   return <label className="flex items-center justify-between gap-3 text-sm text-slate-300"><span className="min-w-0 truncate">{label}</span><span className="flex min-h-10 w-32 items-center rounded-lg bg-slate-800 px-3"><span className="mr-1 text-xs text-slate-500">R$</span><input aria-label={`Responsabilidade de ${label}`} inputMode="decimal" type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} className="w-full bg-transparent text-right outline-none" placeholder="0,00" /></span></label>;
 }
 function ErrorBox({ text }: { text: string }) { return <p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{text}</p>; }

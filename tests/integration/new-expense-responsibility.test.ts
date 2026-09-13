@@ -34,3 +34,14 @@ test('Nova Despesa mantém responsável terceiro separado do terceiro pagador', 
   assert.match(wizard, /registerPartyInline\('responsible'\)/);
   assert.doesNotMatch(wizard, /Pessoa responsável<select/);
 });
+
+test('pagamento da Casa com parcela de terceiro usa o comando compartilhado canônico', () => {
+  assert.match(wizard, /createAndSettleSharedExpense/);
+  assert.match(wizard, /splits\.some\(\(split\) => split\.partyId\)/);
+  assert.match(wizard, /createAndSettleSharedExpense\(supabase, household\.id, input, funderMemberId, null\)/);
+});
+
+test('devolução externa nunca inclui responsabilidade econômica de terceiro', () => {
+  assert.match(wizard, /externalPayment && needsRepayment && responsibilityAllocations\(\)\.some\(\(split\) => split\.partyId\)/);
+  assert.match(wizard, /responsabilidade econômica precisa pertencer somente à Casa/);
+});
