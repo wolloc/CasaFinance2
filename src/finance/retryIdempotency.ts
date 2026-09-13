@@ -43,8 +43,19 @@ export async function runRetryStableRpc(
   params: Record<string, unknown>,
 ) {
   const requestKey = getRetryStableRequestKey(operation, identity);
-  const result = await client.rpc(rpcName, { ...params, p_request_key: requestKey });
-  if (result.error) throw result.error;
+  const payload = { ...params, p_request_key: requestKey };
+  let result = await client.rpc(rpcName, payload);
+  const ambiguous = result.error && /statement timeout|canceling statement|network|fetch|connection/i.test(result.error.message ?? '');
+  // A timeout may arrive after PostgreSQL committed. One automatic replay with
+  // the same command key asks the canonical RPC for the existing result instead
+  // of asking the user to create a second economic fact.
+  if (ambiguous) result = await client.rpc(rpcName, payload);
+  if (result.error) {
+    if (/statement timeout|canceling statement|network|fetch|connection/i.test(result.error.message ?? '')) {
+      throw new Error('Não foi possível confirmar a resposta do Casa. Não registre a despesa novamente; aguarde e confira em Gastos.');
+    }
+    throw result.error;
+  }
   releaseRetryStableRequestKey(operation, identity);
   return result.data as string;
 }
