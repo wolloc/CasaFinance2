@@ -29,6 +29,8 @@ export type EconomicMonthExpense = {
   category?:{name:string}|null;
 };
 
+type EconomicAllocationRow={amount:string;responsible_member_id:string|null;responsible_party_id:string|null};
+
 export function monthStart(month:string){return `${month}-01`;}
 export function nextMonthStart(month:string){const [year,rawMonth]=month.split('-').map(Number);const date=new Date(Date.UTC(year,rawMonth,1));return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-01`;}
 
@@ -47,14 +49,14 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
 
 export async function listEconomicMonthExpenses(client:SupabaseClient,householdId:string,month:string){
   const response=await client.from('transactions')
-    .select('id,description,amount,transaction_date,economic_state,category_id,category:categories(name)')
+    .select('id,description,amount,transaction_date,economic_state,category_id,category:categories(name),economic_allocations(amount,responsible_member_id,responsible_party_id)')
     .eq('household_id',householdId)
     .eq('type','expense')
     .is('deleted_at',null)
     .gte('transaction_date',monthStart(month))
     .lt('transaction_date',nextMonthStart(month))
-    .in('economic_state',['forecast','confirmed','realized'])
+    .in('economic_state',['confirmed','realized'])
     .order('transaction_date',{ascending:false});
   if(response.error)throw response.error;
-  return (response.data??[]).map(row=>({...row,category:Array.isArray(row.category)?row.category[0]??null:row.category})) as EconomicMonthExpense[];
+  return (response.data??[]).map(row=>{const allocations=(row.economic_allocations??[]) as EconomicAllocationRow[];const householdAmount=allocations.filter(allocation=>Boolean(allocation.responsible_member_id)).reduce((sum,allocation)=>sum+Number(allocation.amount),0);return {id:row.id,description:row.description,amount:householdAmount.toFixed(2),transaction_date:row.transaction_date,economic_state:row.economic_state,category_id:row.category_id,category:Array.isArray(row.category)?row.category[0]??null:row.category};}) as EconomicMonthExpense[];
 }

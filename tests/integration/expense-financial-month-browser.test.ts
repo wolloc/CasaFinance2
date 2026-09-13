@@ -18,8 +18,8 @@ test('visão avançada pela compra lê o fato econômico original sem reescrever
  assert.match(service,/from\('transactions'\)/);
  assert.match(service,/gte\('transaction_date',monthStart\(month\)\)/);
  assert.match(service,/lt\('transaction_date',nextMonthStart\(month\)\)/);
- assert.match(browser,/Ver pela data da compra/);
- assert.match(browser,/Valor econômico original/);
+ assert.match(browser,/Gastos realizados/);
+ assert.match(browser,/Compras parceladas aparecem uma vez/);
 });
 
 test('Gastos prioriza o navegador mensal e explica que parcela não é nova despesa',()=>{
@@ -27,8 +27,10 @@ test('Gastos prioriza o navegador mensal e explica que parcela não é nova desp
  const operational=screen.indexOf('<HouseholdTransactionsSetup');
  assert.ok(month>=0,'financial month browser must be present');
  assert.ok(operational>month,'financial month must appear before operational history');
- assert.match(browser,/Esta parcela é o compromisso do mês; não é uma segunda despesa/);
- assert.match(browser,/uma compra de R\$ 2\.400 em 12x/);
+ assert.match(browser,/Compromissos do mês/);
+ assert.match(browser,/Item da fatura; o pagamento não vira outro gasto/);
+ assert.match(browser,/border-orange-500/);
+ assert.match(screen,/Histórico e correções/);
 });
 
 test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
@@ -36,4 +38,13 @@ test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
  assert.match(browser,/Nenhum valor antigo foi mantido na tela/);
  assert.match(browser,/setRefreshVersion\(value=>value\+1\)/);
  assert.doesNotMatch(browser,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
+});
+
+test('gastos realizados excluem forecast e exibem somente a parcela econômica da Casa',()=>{
+ const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
+ assert.match(economicQuery,/\.in\('economic_state',\['confirmed','realized'\]\)/);
+ assert.doesNotMatch(economicQuery,/\['forecast','confirmed','realized'\]/);
+ assert.match(economicQuery,/economic_allocations\(amount,responsible_member_id,responsible_party_id\)/);
+ assert.match(economicQuery,/filter\(allocation=>Boolean\(allocation\.responsible_member_id\)\)/);
+ assert.match(economicQuery,/householdAmount\.toFixed\(2\)/);
 });

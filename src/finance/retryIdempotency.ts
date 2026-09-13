@@ -43,8 +43,20 @@ export async function runRetryStableRpc(
   params: Record<string, unknown>,
 ) {
   const requestKey = getRetryStableRequestKey(operation, identity);
-  const result = await client.rpc(rpcName, { ...params, p_request_key: requestKey });
-  if (result.error) throw result.error;
+  const payload = { ...params, p_request_key: requestKey };
+  let result = await client.rpc(rpcName, payload);
+  const message = result.error?.message ?? '';
+  const transportFailure = /network|failed to fetch|fetch failed|connection (?:closed|reset)|econnreset/i.test(message);
+  // Only transport failures are replayed automatically. PostgreSQL statement
+  // timeout is a database result and must not trigger a blind second execution.
+  // A transport replay still uses the exact same idempotency key.
+  if (transportFailure) result = await client.rpc(rpcName, payload);
+  if (result.error) {
+    if (/statement timeout|canceling statement|network|failed to fetch|fetch failed|connection|econnreset/i.test(result.error.message ?? '')) {
+      throw new Error('Não foi possível confirmar a resposta do Casa. Não registre a despesa novamente; aguarde e confira em Gastos.');
+    }
+    throw result.error;
+  }
   releaseRetryStableRequestKey(operation, identity);
   return result.data as string;
 }

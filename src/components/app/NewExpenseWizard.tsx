@@ -4,8 +4,8 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
 import { listHouseholdCategories, type HouseholdCategory } from '../../finance/householdCategories.js';
-import { allocateEqually } from '../../finance/economicAllocations.js';
-import { createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
+import { allocateCustomAmounts, allocateEqually, allocateProportionally, type EconomicAllocation } from '../../finance/economicAllocations.js';
+import { createAndSettleSharedExpense, createHouseholdTransaction, type InstrumentKind, type TransactionInput } from '../../finance/householdTransactions.js';
 import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreation.js';
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
@@ -48,6 +48,9 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
   const [responsibility, setResponsibility] = useState('');
+  const [responsiblePartyId, setResponsiblePartyId] = useState('');
+  const [responsiblePartySearch, setResponsiblePartySearch] = useState('');
+  const [customResponsibility, setCustomResponsibility] = useState<Record<string, string>>({});
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>('account');
   const [accountId, setAccountId] = useState('');
   const [cardId, setCardId] = useState('');
@@ -82,13 +85,19 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!query) return parties.slice(0, 6);
     return parties.filter((party) => party.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 6);
   }, [parties, partySearch]);
+  const responsiblePartyMatches = useMemo(() => {
+    const query = responsiblePartySearch.trim().toLocaleLowerCase('pt-BR');
+    if (!query) return parties.slice(0, 6);
+    return parties.filter((party) => party.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 6);
+  }, [parties, responsiblePartySearch]);
   const exactParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partySearch.trim().toLocaleLowerCase('pt-BR'));
+  const exactResponsibleParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === responsiblePartySearch.trim().toLocaleLowerCase('pt-BR'));
   const repaymentInstallmentValue = repaymentInstallmentCount > 0 ? Number(amount || 0) / repaymentInstallmentCount : 0;
 
   const reset = () => {
     const memberId = currentMemberId;
     setStep(1); setBuyerMemberId(memberId); setDate(today); setDescription(''); setWhereWithWhom(''); setCategoryId('');
-    setAmount(''); setResponsibility(memberId); setPaymentChoice('account'); setAccountId(''); setCardId('');
+    setAmount(''); setResponsibility(memberId); setResponsiblePartyId(''); setResponsiblePartySearch(''); setCustomResponsibility({}); setPaymentChoice('account'); setAccountId(''); setCardId('');
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0'); setSharedAccountFunderId(memberId);
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); setError(null);
@@ -128,16 +137,25 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
   const responsibilityTargets = () => responsibility === 'split'
     ? householdMembers.map((member) => ({ memberId: member.id }))
-    : [{ memberId: responsibility }];
+    : responsibility === 'party' ? [{ partyId: responsiblePartyId }] : [{ memberId: responsibility }];
 
-  const registerPartyInline = async () => {
-    if (!supabase || !household || !partySearch.trim()) return;
+  const responsibilityAllocations = (): EconomicAllocation[] => responsibility === 'split-custom'
+    ? allocateCustomAmounts(amount, [
+      ...householdMembers.map((member) => ({ memberId: member.id, value: customResponsibility[`member:${member.id}`] ?? '0' })),
+      ...parties.map((party) => ({ partyId: party.id, value: customResponsibility[`party:${party.id}`] ?? '0' })),
+    ])
+    : allocateEqually(amount, responsibilityTargets());
+
+  const registerPartyInline = async (role: 'payer' | 'responsible') => {
+    const name = role === 'payer' ? partySearch.trim() : responsiblePartySearch.trim();
+    if (!supabase || !household || !name) return;
     setCreatingParty(true); setError(null);
     try {
-      const id = await createFinancialParty(supabase, household.id, partySearch.trim());
-      const created: FinancialParty = { id, name: partySearch.trim(), kind: 'person', tax_id: null, notes: null };
+      const id = await createFinancialParty(supabase, household.id, name);
+      const created: FinancialParty = { id, name, kind: 'person', tax_id: null, notes: null };
       setParties((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
-      setPayerPartyId(id);
+      if (role === 'payer') setPayerPartyId(id);
+      else setResponsiblePartyId(id);
     } catch (cause) {
       setError(errorMessage(cause, 'Não foi possível cadastrar essa pessoa agora.'));
     } finally { setCreatingParty(false); }
@@ -149,19 +167,22 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setError(null);
     if (!amount || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return setError('Informe um valor maior que zero.');
     if (!responsibility) return setError('Informe quem assume esse gasto.');
+    if (responsibility === 'party' && !responsiblePartyId) return setError('Selecione a outra pessoa responsável.');
     if (date > today) return setError('A data do gasto não pode estar no futuro.');
     if (paymentChoice === 'card_pix' && (!Number.isFinite(Number(financialCharges)) || Number(financialCharges) < 0)) return setError('Informe um valor de encargos financeiros igual ou maior que zero.');
     if (cardPayment && !cardId) return setError('Selecione o cartão utilizado.');
     if (!cardPayment && !externalPayment && !accountId) return setError('Selecione o recurso utilizado.');
     if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
     if (externalPayment && !payerPartyId) return setError('Informe quem pagou.');
+    if (externalPayment && needsRepayment && responsibilityAllocations().some((split) => split.partyId)) return setError('Para planejar uma devolução, a responsabilidade econômica precisa pertencer somente à Casa.');
     if (externalPayment && needsRepayment && !repaymentDueDate) return setError(repaymentMode === 'installments' ? 'Informe a data da primeira devolução.' : 'Informe quando pretende devolver.');
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
     if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
     if (externalPayment && needsRepayment && !repaymentSourceAccountId) return setError('Informe de qual recurso pretende fazer a devolução.');
 
-    const targets = responsibilityTargets();
-    const splits = allocateEqually(amount, targets);
+    let splits: EconomicAllocation[];
+    try { splits = responsibilityAllocations(); }
+    catch (cause) { return setError(errorMessage(cause, 'Confira a divisão de responsabilidade.')); }
     const appliedInstallmentCount = cardPayment && purchaseMode === 'installments' ? installmentCount : 1;
     const instrumentKind: InstrumentKind = cardPayment ? 'card' : 'account';
     const input: TransactionInput = {
@@ -188,7 +209,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           });
         }
       } else if (paymentChoice === 'card_pix') {
-        const chargeSplits = Number(financialCharges) > 0 ? allocateEqually(financialCharges, targets) : [];
+        const chargeSplits = allocateProportionally(financialCharges || '0', splits);
         await createSimpleCardPixExpense(supabase, {
           householdId: household.id, description, principalAmount: amount, financialChargeAmount: financialCharges || '0',
           transactionDate: date, categoryId: categoryId || null, buyerMemberId, cardId,
@@ -198,7 +219,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       } else if (instrumentKind === 'account') {
         const funderMemberId = selectedAccount?.owner_member_id || sharedAccountFunderId || currentMemberId;
         if (!funderMemberId) throw new Error('Não foi possível identificar quem bancou esta saída.');
-        await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
+        if (splits.some((split) => split.partyId)) await createAndSettleSharedExpense(supabase, household.id, input, funderMemberId, null);
+        else await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
       } else {
         await createHouseholdTransaction(supabase, household.id, 'expense', input);
       }
@@ -232,7 +254,10 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       {!loading && step === 2 && <div className="mt-5 space-y-5">
         <label className="block text-sm font-semibold text-slate-200">Quanto? <span className="text-rose-300">*</span><div className="mt-2 flex min-h-16 items-center rounded-2xl border border-blue-500/40 bg-slate-800 px-4 shadow-sm"><span className="mr-2 text-lg text-slate-400">R$</span><input required inputMode="decimal" type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} onBlur={() => { if (amount && Number.isFinite(Number(amount))) setAmount(Number(amount).toFixed(2)); }} className="min-h-14 w-full bg-transparent text-2xl font-black outline-none" placeholder="0,00" /></div></label>
 
-        <fieldset><legend className="text-sm font-semibold text-slate-200">Quem assume esse gasto? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2">{householdMembers.map((member) => <ChoiceButton key={member.id} active={responsibility === member.id} onClick={() => setResponsibility(member.id)} label={member.display_name} />)}<ChoiceButton active={responsibility === 'split'} onClick={() => setResponsibility('split')} label="Dividir" /></div></fieldset>
+        <fieldset><legend className="text-sm font-semibold text-slate-200">Quem assume esse gasto? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2">{householdMembers.map((member) => <ChoiceButton key={member.id} active={responsibility === member.id} onClick={() => setResponsibility(member.id)} label={member.display_name} />)}<ChoiceButton active={responsibility === 'split'} onClick={() => setResponsibility('split')} label="Dividir igualmente" /><ChoiceButton active={responsibility === 'split-custom'} onClick={() => setResponsibility('split-custom')} label="Divisão personalizada" /><ChoiceButton active={responsibility === 'party'} onClick={() => setResponsibility('party')} label="Outra pessoa envolvida" /></div>
+          {responsibility === 'party' && <div className="mt-3 rounded-xl border border-slate-700 p-3"><label className="block text-sm text-slate-300">Pessoa responsável<input value={responsiblePartySearch} onChange={(event) => { setResponsiblePartySearch(event.target.value); setResponsiblePartyId(''); }} placeholder="Busque pelo nome" className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label><div className="mt-2 space-y-2">{responsiblePartyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setResponsiblePartyId(party.id); setResponsiblePartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${responsiblePartyId === party.id ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{responsiblePartySearch.trim() && !exactResponsibleParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('responsible')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-700 text-sm font-semibold text-blue-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{responsiblePartySearch.trim()}”</button>}</div><span className="mt-2 block text-xs text-slate-500">Isso define responsabilidade econômica, não quem pagou.</span></div>}
+          {responsibility === 'split-custom' && <div className="mt-3 space-y-2 rounded-xl border border-slate-700 p-3"><p className="text-xs text-slate-400">Informe apenas quem participa. A soma deve fechar exatamente o total.</p>{householdMembers.map((member) => <AllocationField key={`member:${member.id}`} label={member.display_name} value={customResponsibility[`member:${member.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`member:${member.id}`]: value }))} />)}{parties.map((party) => <AllocationField key={`party:${party.id}`} label={party.name} value={customResponsibility[`party:${party.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`party:${party.id}`]: value }))} />)}</div>}
+        </fieldset>
 
         <fieldset><legend className="text-sm font-semibold text-slate-200">Como foi pago? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2"><PaymentButton active={paymentChoice === 'account'} onClick={() => setPaymentChoice('account')} icon={<Landmark className="h-4 w-4" />} label="Conta / Pix" /><PaymentButton active={paymentChoice === 'cash'} onClick={() => setPaymentChoice('cash')} icon={<WalletCards className="h-4 w-4" />} label="Carteira / dinheiro" /><PaymentButton active={paymentChoice === 'benefit'} onClick={() => setPaymentChoice('benefit')} icon={<WalletCards className="h-4 w-4" />} label="VA/VR/benefício" /><PaymentButton active={paymentChoice === 'card'} onClick={() => setPaymentChoice('card')} icon={<CreditCard className="h-4 w-4" />} label="Cartão de crédito" /><PaymentButton active={paymentChoice === 'card_pix'} onClick={() => setPaymentChoice('card_pix')} icon={<CreditCard className="h-4 w-4" />} label="Pix por cartão" /><PaymentButton active={externalPayment} onClick={() => setPaymentChoice('external')} icon={<UserRound className="h-4 w-4" />} label="Outra pessoa pagou" /></div></fieldset>
 
@@ -243,7 +268,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><label className="block text-sm text-slate-300">Qual cartão?<select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select></label><fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode === 'single'} onClick={() => setPurchaseMode('single')} label="À vista" /><ChoiceButton active={purchaseMode === 'installments'} onClick={() => setPurchaseMode('installments')} label="Parcelado" /></div></fieldset>{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} onBlur={() => { if (financialCharges && Number.isFinite(Number(financialCharges))) setFinancialCharges(Number(financialCharges).toFixed(2)); }} className="min-h-11 w-full bg-transparent outline-none" /></div></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}</div>}
 
         {externalPayment && <div className="space-y-4 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-4">
-          <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
+          <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('payer')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
           <fieldset><legend className="text-sm font-semibold text-slate-200">Você precisa devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!needsRepayment} onClick={() => { setNeedsRepayment(false); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); }} label="Não" /><ChoiceButton active={needsRepayment} onClick={() => setNeedsRepayment(true)} label="Sim" /></div></fieldset>
           {needsRepayment && <div className="space-y-4 border-t border-emerald-900/50 pt-4">
             <fieldset><legend className="text-sm font-semibold text-slate-200">Como pretende devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={repaymentMode === 'one_time'} onClick={() => setRepaymentMode('one_time')} label="Uma vez" /><ChoiceButton active={repaymentMode === 'installments'} onClick={() => setRepaymentMode('installments')} label="Parcelado" /></div></fieldset>
@@ -265,6 +290,9 @@ function PaymentButton({ active, onClick, icon, label }: { active: boolean; onCl
 }
 function ChoiceButton({ active, onClick, label }: { key?: string; active: boolean; onClick: () => void; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{label}</button>;
+}
+function AllocationField({ label, value, onChange }: { key?: string; label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="flex items-center justify-between gap-3 text-sm text-slate-300"><span className="min-w-0 truncate">{label}</span><span className="flex min-h-10 w-32 items-center rounded-lg bg-slate-800 px-3"><span className="mr-1 text-xs text-slate-500">R$</span><input aria-label={`Responsabilidade de ${label}`} inputMode="decimal" type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} className="w-full bg-transparent text-right outline-none" placeholder="0,00" /></span></label>;
 }
 function ErrorBox({ text }: { text: string }) { return <p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{text}</p>; }
 function MoneyRow({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) { return <div className={`flex justify-between gap-3 ${strong ? 'font-bold text-slate-100' : 'text-slate-400'}`}><span>{label}</span><span>{value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>; }

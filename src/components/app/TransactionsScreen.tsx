@@ -41,9 +41,11 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
     <ExpenseMonthBrowser />
-    <div key={expenseListVersion} className="[&_header>button]:hidden">
-      <HouseholdTransactionsSetup embedded mode={mode} />
-    </div>
+    <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
+      <summary className="cursor-pointer font-semibold text-slate-200">Histórico e correções</summary>
+      <p className="mt-1 text-xs text-slate-500">Abra para editar ou corrigir lançamentos. A lista não compete com as duas lentes mensais acima.</p>
+      <div key={expenseListVersion} className="mt-4 border-t border-slate-800 pt-4 [&_header>button]:hidden"><HouseholdTransactionsSetup embedded mode={mode} /></div>
+    </details>
 
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer list-none font-semibold text-slate-200">
