@@ -17,7 +17,6 @@ import { PartialDirectRefundAction } from './PartialDirectRefundAction.js';
 import { CardRefundAction } from './CardRefundAction.js';
 import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
 import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
-import { CardPixExpenseAction } from './CardPixExpenseAction.js';
 import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 import { NewExpenseWizard } from './NewExpenseWizard.js';
 
@@ -55,9 +54,8 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
       <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
         <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
           <summary className="cursor-pointer font-semibold text-slate-200">Formas especiais de pagar</summary>
-          <p className="mt-1 text-xs text-slate-500">PIX usando cartão, pagamento de gasto já registrado ou quando outra pessoa pagou.</p>
+          <p className="mt-1 text-xs text-slate-500">Use para pagar um gasto já registrado ou quando outra pessoa pagou. PIX por cartão já faz parte de Nova despesa.</p>
           <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
-            <CardPixExpenseAction />
             {!directExpenseIntent && <DirectExpensePaymentAction />}
             <ExternalExpensePaymentAction />
           </div>
