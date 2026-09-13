@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, CreditCard, Landmark, LoaderCircle, UserRound, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CreditCard, Landmark, LoaderCircle, UserRound, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
@@ -10,6 +10,8 @@ import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreat
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
+import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
+import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
@@ -69,6 +71,13 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [repaymentInstallmentCount, setRepaymentInstallmentCount] = useState(2);
   const [repaymentDueDate, setRepaymentDueDate] = useState('');
   const [repaymentSourceAccountId, setRepaymentSourceAccountId] = useState('');
+  const [recurring, setRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringExpenseFrequency>('monthly');
+  const [recurringIntervalCount, setRecurringIntervalCount] = useState(1);
+  const [recurringStartDate, setRecurringStartDate] = useState('');
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+  const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
+  const [createdRecurringRuleId, setCreatedRecurringRuleId] = useState<string | null>(null);
 
   const currentMemberId = householdMembers.find((member) => member.profile_id === user?.id)?.id ?? '';
   const today = localDate();
@@ -96,6 +105,10 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   }, [parties, responsiblePartySearch]);
   const exactParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partySearch.trim().toLocaleLowerCase('pt-BR'));
   const exactResponsibleParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === responsiblePartySearch.trim().toLocaleLowerCase('pt-BR'));
+  const hasPartyResponsibility = responsibility === 'party' || (
+    responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
+  );
+  const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -103,7 +116,9 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setAmount(''); setResponsibility(memberId); setResponsiblePartyId(''); setResponsiblePartySearch(''); setCustomResponsibility({}); setPaymentChoice('account'); setAccountId(''); setCardId('');
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0'); setSharedAccountFunderId(memberId);
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
-    setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); setError(null);
+    setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
+    setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringEndDate('');
+    setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setError(null);
   };
 
   const loadContext = async () => {
@@ -185,6 +200,10 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
     if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
     if (externalPayment && needsRepayment && !repaymentSourceAccountId) return setError('Informe de qual recurso pretende fazer a devolução.');
+    if (recurring && recurringBlockedReason) return setError(recurringBlockedReason);
+    if (recurring && (!recurringStartDate || recurringStartDate <= today || recurringStartDate <= date)) return setError('Informe a primeira repetição em uma data futura.');
+    if (recurring && (!Number.isInteger(recurringIntervalCount) || recurringIntervalCount < 1)) return setError('O intervalo da recorrência precisa ser de pelo menos 1 período.');
+    if (recurring && recurringEndDate && recurringEndDate < recurringStartDate) return setError('A data final da recorrência não pode ser anterior à primeira repetição.');
 
     let splits: EconomicAllocation[];
     try { splits = responsibilityAllocations(); }
@@ -204,40 +223,62 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     };
 
     setSaving(true);
+    let savedTransactionId = createdTransactionId;
+    let savedRecurringRuleId = createdRecurringRuleId;
     try {
-      if (externalPayment) {
+      if (!savedTransactionId && externalPayment) {
         if (needsRepayment) {
-          await createExternallyPaidExpenseWithRepaymentPlan(supabase, {
+          savedTransactionId = String(await createExternallyPaidExpenseWithRepaymentPlan(supabase, {
             householdId: household.id, description, amount, transactionDate: date, categoryId: categoryId || null,
             buyerMemberId, responsibility: splits, payerPartyId, repaymentMode,
             installmentCount: repaymentMode === 'one_time' ? 1 : repaymentInstallmentCount,
             firstDueDate: repaymentDueDate, plannedSourceAccountId: repaymentSourceAccountId, notes: whereWithWhom,
-          });
+          }));
         } else {
-          await createExternallyPaidExpense(supabase, {
+          savedTransactionId = String(await createExternallyPaidExpense(supabase, {
             householdId: household.id, description, amount, transactionDate: date, categoryId: categoryId || null,
             buyerMemberId, responsibility: splits, payerPartyId, needsRepayment: false, dueDate: null, notes: whereWithWhom,
-          });
+          }));
         }
-      } else if (paymentChoice === 'card_pix') {
+      } else if (!savedTransactionId && paymentChoice === 'card_pix') {
         const chargeSplits = allocateProportionally(financialCharges || '0', splits);
-        await createSimpleCardPixExpense(supabase, {
+        savedTransactionId = String(await createSimpleCardPixExpense(supabase, {
           householdId: household.id, description, principalAmount: amount, financialChargeAmount: financialCharges || '0',
           transactionDate: date, categoryId: categoryId || null, buyerMemberId, cardId,
           principalResponsibility: splits, chargeResponsibility: chargeSplits,
           installmentCount: appliedInstallmentCount, notes: whereWithWhom,
-        });
-      } else if (instrumentKind === 'account') {
+        }));
+      } else if (!savedTransactionId && instrumentKind === 'account') {
         const funderMemberId = selectedAccount?.owner_member_id || sharedAccountFunderId || currentMemberId;
         if (!funderMemberId) throw new Error('Não foi possível identificar quem bancou esta saída.');
-        if (splits.some((split) => split.partyId)) await createAndSettleSharedExpense(supabase, household.id, input, funderMemberId, null);
-        else await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date));
-      } else {
-        await createHouseholdTransaction(supabase, household.id, 'expense', input);
+        savedTransactionId = String(splits.some((split) => split.partyId)
+          ? await createAndSettleSharedExpense(supabase, household.id, input, funderMemberId, null)
+          : await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date)));
+      } else if (!savedTransactionId) {
+        savedTransactionId = String(await createHouseholdTransaction(supabase, household.id, 'expense', input));
+      }
+      if (!savedTransactionId || savedTransactionId === 'null' || savedTransactionId === 'undefined') throw new Error('A despesa foi processada sem retornar uma referência válida.');
+      setCreatedTransactionId(savedTransactionId);
+
+      if (recurring) {
+        if (!savedRecurringRuleId) {
+          savedRecurringRuleId = String(await createRecurringExpenseFromTransaction(supabase, {
+            householdId: household.id,
+            transactionId: savedTransactionId,
+            frequency: recurringFrequency,
+            intervalCount: recurringIntervalCount,
+            startDate: recurringStartDate,
+            endDate: recurringEndDate,
+          }));
+          setCreatedRecurringRuleId(savedRecurringRuleId);
+        }
+        await ensureRecurringExpenseHorizon(supabase, household.id, recurringExpenseHorizonDate(recurringStartDate));
       }
       setOpen(false); onSaved();
     } catch (cause) {
-      setError(errorMessage(cause, 'Não foi possível registrar a despesa.'));
+      setError(errorMessage(cause, savedTransactionId
+        ? 'A despesa foi registrada, mas a recorrência ainda não foi concluída. Tente novamente para continuar sem duplicar o gasto.'
+        : 'Não foi possível registrar a despesa.'));
     } finally { setSaving(false); }
   };
 
@@ -290,6 +331,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
             <label className="block text-sm text-slate-300">De qual recurso pretende pagar?<select required value={repaymentSourceAccountId} onChange={(event) => setRepaymentSourceAccountId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{repaymentAccountChoices.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>{repaymentAccountChoices.length === 0 && <span className="mt-1 block text-xs text-amber-300">Cadastre uma conta ou carteira antes de planejar a devolução.</span>}</label>
           </div>}
         </div>}
+
+        <fieldset className="rounded-2xl border border-amber-900/60 bg-amber-950/20 p-4"><legend className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-200"><CalendarClock className="h-4 w-4 text-amber-300" />Esse gasto se repete?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!recurring} onClick={() => setRecurring(false)} label="Não" /><ChoiceButton active={recurring} onClick={() => { if (!recurringBlockedReason) setRecurring(true); }} label="Sim" /></div>{recurringBlockedReason && <p className="mt-3 text-xs text-amber-200">{recurringBlockedReason}</p>}{recurring && !recurringBlockedReason && <div className="mt-4 space-y-3 border-t border-amber-900/50 pt-4"><p className="text-xs text-slate-400">A despesa de hoje continua realizada uma única vez. As próximas ocorrências serão apenas projeções até você confirmá-las.</p><div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Frequência<select value={recurringFrequency} onChange={(event) => setRecurringFrequency(event.target.value as RecurringExpenseFrequency)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"><option value="weekly">Semanal</option><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm text-slate-300">A cada<input type="number" min="1" value={recurringIntervalCount} onChange={(event) => setRecurringIntervalCount(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div><div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={today} value={recurringStartDate} onChange={(event) => setRecurringStartDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label><label className="text-sm text-slate-300">Termina em <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || today} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div></div>}</fieldset>
 
         {error && <ErrorBox text={error} />}
         <div className="flex gap-3"><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold"><ArrowLeft className="h-4 w-4" />Voltar</button><button type="submit" disabled={saving} className="flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button></div>
