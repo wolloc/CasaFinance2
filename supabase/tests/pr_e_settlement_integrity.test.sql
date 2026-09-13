@@ -46,15 +46,15 @@ select lives_ok($$
     '79000000-0000-4000-8000-000000000031','79000000-0000-4000-8000-000000000021',
     100.00,now(),'pr-e-a17-pay'
   )
-$,'A17 full invoice payment succeeds');
-select lives_ok($
+$$,'A17 full invoice payment succeeds');
+select lives_ok($$
   select public.pay_card_invoice_idempotent(
     '79000000-0000-4000-8000-000000000010',
     (select invoice_id from public.transactions where description='PR-E A17 full invoice'),
     '79000000-0000-4000-8000-000000000031','79000000-0000-4000-8000-000000000021',
     100.00,now(),'pr-e-a17-pay'
   )
-$,'A17 retry with the same key succeeds without duplicate effects');
+$$,'A17 retry with the same key succeeds without duplicate effects');
 select is((select count(*) from public.transactions where description='PR-E A17 full invoice' and type='expense'),1::bigint,'A17 original expense exists exactly once');
 select is((select count(*) from public.transactions where household_id='79000000-0000-4000-8000-000000000010' and type='invoice_payment' and amount=100.00),1::bigint,'A17 settlement is invoice_payment, not expense');
 select is((select count(*) from public.money_movements m join public.transactions t on t.invoice_id=m.invoice_id where t.description='PR-E A17 full invoice' and m.kind='invoice_payment'),1::bigint,'A17 creates one cash outflow');
@@ -81,15 +81,15 @@ select lives_ok($$
     '79000000-0000-4000-8000-000000000031','79000000-0000-4000-8000-000000000021',
     40.00,now(),'pr-e-a18-pay'
   )
-$,'A18 partial invoice payment succeeds');
-select lives_ok($
+$$,'A18 partial invoice payment succeeds');
+select lives_ok($$
   select public.pay_card_invoice_idempotent(
     '79000000-0000-4000-8000-000000000010',
     (select invoice_id from public.transactions where description='PR-E A18 partial invoice'),
     '79000000-0000-4000-8000-000000000031','79000000-0000-4000-8000-000000000021',
     40.00,now(),'pr-e-a18-pay'
   )
-$,'A18 retry with the same key succeeds without duplicate effects');
+$$,'A18 retry with the same key succeeds without duplicate effects');
 select is((select count(*) from public.transactions where description='PR-E A18 partial invoice' and type='expense'),1::bigint,'A18 original expense exists exactly once');
 select is((select count(*) from public.money_movements m join public.transactions t on t.invoice_id=m.invoice_id where t.description='PR-E A18 partial invoice' and m.kind='invoice_payment'),1::bigint,'A18 creates one cash outflow');
 select is((select sum(m.amount) from public.money_movements m join public.transactions t on t.invoice_id=m.invoice_id where t.description='PR-E A18 partial invoice' and m.kind='invoice_payment'),40.00::numeric,'A18 cash outflow is exactly 40');
@@ -116,15 +116,15 @@ select lives_ok($$
     '79000000-0000-4000-8000-000000000031',60.00,now(),
     '79000000-0000-4000-8000-000000000021',null,'pr-e-a19-pay'
   )
-$,'A19 partial obligation payment succeeds');
-select lives_ok($
+$$,'A19 partial obligation payment succeeds');
+select lives_ok($$
   select public.settle_financial_obligation_idempotent(
     '79000000-0000-4000-8000-000000000010',
     (select o.id from public.financial_obligations o join public.transactions t on t.id=o.source_transaction_id where t.description='PR-E A19 external reimbursement' and o.kind='payable'),
     '79000000-0000-4000-8000-000000000031',60.00,now(),
     '79000000-0000-4000-8000-000000000021',null,'pr-e-a19-pay'
   )
-$,'A19 retry with the same key succeeds without duplicate effects');
+$$,'A19 retry with the same key succeeds without duplicate effects');
 select is((select count(*) from public.transactions where description='PR-E A19 external reimbursement' and type='expense'),1::bigint,'A19 original expense remains exactly once');
 select is((select count(*) from public.money_movements m join public.financial_obligations o on o.id=m.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-E A19 external reimbursement' and m.kind='payable_payment'),1::bigint,'A19 creates one payable cash outflow');
 select is((select sum(m.amount) from public.money_movements m join public.financial_obligations o on o.id=m.obligation_id join public.transactions t on t.id=o.source_transaction_id where t.description='PR-E A19 external reimbursement' and m.kind='payable_payment'),60.00::numeric,'A19 cash outflow is exactly 60');
