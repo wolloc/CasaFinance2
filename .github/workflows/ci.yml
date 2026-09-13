@@ -96,6 +96,9 @@ jobs:
       - name: Run Marco 3 dynamic RLS security gate
         run: supabase test db supabase/tests/marco3_rls_security.test.sql
 
+      - name: Run PR A mixed external responsibility behavior gate
+        run: supabase test db supabase/tests/pr_a_mixed_external_responsibility.test.sql
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
