@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../../src/components/app/TransactionsScreen.tsx', import.meta.url), 'utf8');
 
 test('daily expense flow appears before secondary actions', () => {
-  const daily = source.indexOf('<HouseholdTransactionsSetup');
-  const advanced = source.indexOf('<details');
+  const daily = source.indexOf('<NewExpenseWizard');
+  const advanced = source.indexOf('Precisa fazer algo diferente?');
   assert.ok(daily >= 0, 'daily expense flow must be present');
   assert.ok(advanced > daily, 'secondary tools must come after the daily flow');
   assert.match(source, /Precisa fazer algo diferente\?/);
