@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(32);
 
 insert into auth.users(
   id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -19,10 +19,14 @@ insert into public.household_members(id,household_id,profile_id,role)
 values ('7a000000-0000-4000-8000-000000000021','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000001','owner');
 
 insert into public.accounts(id,household_id,owner_member_id,name,type)
-values ('7a000000-0000-4000-8000-000000000031','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021','Conta PR F','checking');
+values
+  ('7a000000-0000-4000-8000-000000000031','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021','Conta PR F','checking'),
+  ('7a000000-0000-4000-8000-000000000032','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021','VA PR F','meal_benefit');
 
 insert into public.account_ownerships(account_id,household_id,member_id)
-values ('7a000000-0000-4000-8000-000000000031','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021');
+values
+  ('7a000000-0000-4000-8000-000000000031','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021'),
+  ('7a000000-0000-4000-8000-000000000032','7a000000-0000-4000-8000-000000000010','7a000000-0000-4000-8000-000000000021');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','7a000000-0000-4000-8000-000000000001',true);
@@ -124,6 +128,27 @@ select is((select t.economic_state::text from public.transactions t join public.
 select is((select t.realized_amount from public.transactions t join public.recurring_occurrences o on o.transaction_id=t.id where o.household_id='7a000000-0000-4000-8000-000000000010' order by o.competence_date limit 1),110.00::numeric,'F24b paid occurrence realizes the confirmed amount exactly');
 select is((select o.status::text from public.recurring_occurrences o where o.household_id='7a000000-0000-4000-8000-000000000010' order by o.competence_date limit 1),'paid'::text,'F24c occurrence status closes as paid');
 select is((select count(*) from public.financial_transaction_positions p join public.recurring_occurrences o on o.transaction_id=p.transaction_id where o.household_id='7a000000-0000-4000-8000-000000000010' and p.economic_state='realized'),1::bigint,'F25 only the paid occurrence enters realized economic facts');
+select is((select count(*) from public.transactions where household_id='7a000000-0000-4000-8000-000000000010' and type='expense' and deleted_at is null),4::bigint,'F26 settlement creates no additional unlinked economic expense');
+
+select lives_ok($$
+  select public.create_and_settle_direct_expense_idempotent(
+    '7a000000-0000-4000-8000-000000000010','PR-F benefit expense',25.00,current_date,null,
+    '7a000000-0000-4000-8000-000000000021','7a000000-0000-4000-8000-000000000032','7a000000-0000-4000-8000-000000000021',
+    '[{"member_id":"7a000000-0000-4000-8000-000000000021","amount":"25.00","percentage":"100.0000"}]'::jsonb,
+    (current_date::timestamp + time '13:00') at time zone 'UTC',null,'pr-f-benefit-source'
+  )
+$$,'F27 benefit expense itself remains a valid realized expense');
+select throws_ok($$
+  select public.create_recurring_expense_rule_from_transaction_idempotent(
+    '7a000000-0000-4000-8000-000000000010',
+    (select id from public.transactions where description='PR-F benefit expense'),
+    'monthly',1,current_date+1,null,'pr-f-benefit-rule'
+  )
+$$,'0A000','benefit expenses cannot become recurring series','F28 benefit expense cannot activate recurrence');
+select is((select count(*) from public.recurring_rules rr join public.transactions t on t.id=rr.template_transaction_id where rr.household_id='7a000000-0000-4000-8000-000000000010' and t.description='PR-F benefit expense'),0::bigint,'F29 rejected benefit recurrence creates no rule');
+select is((select count(*) from public.transactions where household_id='7a000000-0000-4000-8000-000000000010' and type='expense' and description='PR-F benefit expense'),1::bigint,'F30 rejected recurrence does not duplicate the benefit expense');
+select is((select count(*) from public.money_movements where household_id='7a000000-0000-4000-8000-000000000010' and related_transaction_id=(select id from public.transactions where description='PR-F benefit expense')),1::bigint,'F31 benefit expense keeps exactly one cash movement');
+select is((select count(*) from public.funding_events where household_id='7a000000-0000-4000-8000-000000000010' and financed_transaction_id=(select id from public.transactions where description='PR-F benefit expense')),1::bigint,'F32 benefit expense keeps exactly one funding event');
 
 reset role;
 select * from finish();
