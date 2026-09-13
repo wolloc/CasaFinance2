@@ -46,3 +46,11 @@ test('devolução externa com responsabilidade mista segue o comando canônico s
   assert.match(wizard, /responsibility: splits/);
   assert.doesNotMatch(wizard, /responsabilidade econômica precisa pertencer somente à Casa/);
 });
+
+test('preview e validações de devolução usam somente a responsabilidade da Casa', () => {
+  assert.match(wizard, /const casaResponsibilityAmount/);
+  assert.match(wizard, /allocation\.memberId \? Number\(allocation\.amount\) : 0/);
+  assert.match(wizard, /previewCasaRepayableAmount \/ repaymentInstallmentCount/);
+  assert.match(wizard, /Não há valor de responsabilidade da Casa para devolver/);
+  assert.match(wizard, /cada devolução precisa ter pelo menos R\$ 0,01/);
+});
