@@ -111,6 +111,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Run PR B realized expense positions behavior gate
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_b_realized_expense_positions.test.sql 2>&1 | tee pr-b-db-test.log
+
+      - name: Retain PR B database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-b-db-test-log-${{ github.sha }}
+          path: pr-b-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
