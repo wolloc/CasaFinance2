@@ -6,7 +6,7 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 
 | Conceito | Definição e efeito financeiro |
 | --- | --- |
-| **Casa** | Unidade de isolamento e colaboração (`household`), composta por exatamente dois membros ativos. Dados de Casas distintas nunca se misturam nem se compensam. |
+| **Casa** | Unidade de isolamento, colaboração e consolidação (`household`), composta por um ou dois membros ativos no produto atual. A Casa não é proprietária de recursos, saldos, direitos ou obrigações: esses valores permanecem atribuíveis a membros, recursos vinculados a membros ou terceiros. Dados de Casas distintas nunca se misturam nem se compensam. |
 | **Membro** | Pessoa da Casa que pode registrar, comprar, ser titular, responsável ou funder; esses papéis são independentes. |
 | **Evento econômico** | Fato que reconhece receita, despesa, rendimento, perda ou outro efeito econômico uma única vez, independentemente de como e quando será financiado. |
 | **Conta / dinheiro físico** | Recurso transacional cujo saldo realizado compõe o caixa atual. Dinheiro físico tem localização própria; saque e depósito são transferências. |
@@ -43,20 +43,21 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 9. **Cartão sem duplicidade.** A compra cria o evento econômico e compromissos; a fatura os agrega; o pagamento realiza caixa/funding e não cria nova despesa nem novo acerto. O pagamento de fatura é liquidação financeira, não um novo compromisso de gasto.
 10. **Parcelamento não parcela a despesa econômica.** O evento econômico ocorre uma vez; parcelas distribuem compromissos pelos meses financeiros. Em centavos, `100,00 / 3` resulta em `33,34 + 33,33 + 33,33`.
 11. **Pix por cartão preserva principal e encargo.** O principal reconhece a despesa original uma única vez; tarifas/juros são componentes econômicos financeiros separados; principal + encargos formam o valor financiado no cartão. Não há saída imediata de conta bancária apenas por usar Pix financiado pelo cartão.
-12. **Terceiro pagador não redefine responsabilidade.** Se um terceiro fornece o recurso, o fato econômico continua alocado a quem deve suportá-lo. Se houver devolução, nasce pagável ao terceiro apenas pela parcela que cabe à Casa e ainda precisa ser reembolsada; sua liquidação não cria nova despesa. Sem devolução, não nasce pagável.
+12. **Terceiro pagador não redefine responsabilidade.** Se um terceiro fornece o recurso, o fato econômico continua alocado a quem deve suportá-lo. Se houver devolução, nasce pagável ao terceiro apenas pela parcela atribuída economicamente aos membros da Casa e ainda não reembolsada; sua liquidação não cria nova despesa. Sem devolução, não nasce pagável.
 13. **Acerto contínuo e por estado.** Não há reset mensal nem compensação implícita. Para cada membro: **acerto realizado = funding realizado − responsabilidade correspondente**; **acerto projetado = funding projetado − responsabilidade dos compromissos futuros correspondentes**. Realizado e projetado permanecem distinguíveis.
 14. **Acerto projetado no cartão nasce na compra.** Compromissos futuros conhecidos permitem projetar funding e distribuir o acerto nos mesmos meses financeiros da compra. Titular do cartão não vira funder realizado; o pagamento posterior apenas materializa o funding já relacionado e não gera outro acerto.
 15. **Principal de empréstimo é neutro.** Concessão cria recebível e saída de caixa; tomada cria pagável e entrada de caixa. Amortização reduz principal. Juros, tarifas e perdas são eventos econômicos separados.
 16. **Recebível é conservador.** Recebível de terceiro não aumenta a projeção principal antes do recebimento. Sua liquidação aumenta caixa e reduz o direito, com renda zero.
 17. **Pagável é conservador.** Todo pagável aberto compromete a projeção. Uma posição líquida pode ser exibida, mas nunca quita ou compensa automaticamente obrigações brutas.
 18. **Liquidação parcial reduz somente o aberto.** Pagamento parcial de fatura, pagável ou outra obrigação reduz caixa e obrigação somente pelo montante efetivamente liquidado; o saldo restante permanece aberto e não se reconhece novamente o fato econômico de origem.
-19. **Conta conjunta não altera responsabilidade.** A Casa considera 100% do saldo; perspectivas individuais de liquidez atribuem 50/50. Essa divisão não define responsabilidade econômica nem funding.
+19. **Conta conjunta não altera responsabilidade.** O saldo pertence ao recurso cadastrado e sua titularidade deve permanecer rastreável. Na visão consolidada da Casa, esse saldo é contado uma única vez. Perspectivas individuais de liquidez podem atribuí-lo 50/50 quando essa for a regra definida para a conta conjunta; essa divisão não define responsabilidade econômica nem funding.
 20. **Saldo real é realizado.** Deriva de `account_balance_events` canônicos e `money_movements` realizados. Forecast, benefícios, reservas, investimentos, recebíveis, limite de cartão e LIS disponível não aumentam o saldo atual.
 21. **Vínculo com origem.** Refunds, pagamentos, liquidações, encargos, financiamentos e correções preservam relação auditável com o fato original. Refund não é renda comum.
 22. **Recorrência projeta, não antecipa resultado.** Uma regra recorrente pode gerar compromissos/ocorrências futuras, mas esses forecasts não são despesas econômicas realizadas antes da ocorrência efetiva. Confirmação/realização deve reutilizar ou vincular a ocorrência, nunca duplicá-la.
 23. **Passado é corrigido, não apagado.** Depois de efeitos dependentes, correções preservam histórico e recalculam o futuro. Exclusão financeira não é fluxo normal.
 24. **Atomicidade.** Operações compostas — transferências, pagamentos, correções, refunds e liquidações — gravam todas as pernas ou nenhuma. O frontend não coordena updates financeiros independentes.
-25. **Auditabilidade e idempotência.** Autor, Casa, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
+25. **Auditabilidade e idempotência.** Autor, Casa como escopo, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
+26. **Casa não é agente financeiro.** Nenhum recurso, saldo, direito, obrigação, funding ou responsabilidade pode ser atribuído à Casa como proprietária residual. Toda origem, destino e responsabilidade financeira deve ser atribuível a um membro, a um recurso com titularidade rastreável ou a um terceiro; `household_id` apenas delimita e consolida o contexto.
 
 ## Matriz resumida
 
@@ -66,7 +67,7 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 | Despesa direta | despesa uma vez | diminui | funding realizado e responsabilidades vinculados |
 | Compra no cartão | despesa uma vez | não muda | compromissos, allocations e acerto projetado |
 | Pix por cartão | despesa principal + encargos financeiros separados | não muda no ato | compromisso financiado no cartão |
-| Terceiro paga despesa da Casa | despesa uma vez | não muda no ato | pagável somente se houver devolução |
+| Terceiro paga despesa atribuída a membro(s) | despesa uma vez | não muda no ato | pagável somente pela parcela reembolsável dos membros, se houver devolução |
 | Pagamento de fatura | zero | diminui | reduz fatura e realiza funding; sem novo acerto |
 | Pagamento de pagável | zero, salvo encargos próprios | diminui | reduz pagável |
 | Transferência / saque / depósito | zero | duas pernas | mesmo evento e patrimônio preservado |
