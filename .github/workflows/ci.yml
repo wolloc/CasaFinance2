@@ -141,6 +141,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Run PR D card and card PIX behavior gate
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_d_card_pix_integrity.test.sql 2>&1 | tee pr-d-db-test.log
+
+      - name: Retain PR D database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-d-db-test-log-${{ github.sha }}
+          path: pr-d-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
