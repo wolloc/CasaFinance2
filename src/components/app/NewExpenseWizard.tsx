@@ -26,6 +26,10 @@ const errorMessage = (cause: unknown, fallback: string) => {
   if (cause && typeof cause === 'object' && 'message' in cause && typeof cause.message === 'string') return cause.message;
   return fallback;
 };
+const casaResponsibilityAmount = (allocations: EconomicAllocation[]) => allocations.reduce(
+  (sum, allocation) => sum + (allocation.memberId ? Number(allocation.amount) : 0),
+  0,
+);
 
 export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const { user, household, householdMembers } = useSupabaseAuth();
@@ -92,7 +96,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   }, [parties, responsiblePartySearch]);
   const exactParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partySearch.trim().toLocaleLowerCase('pt-BR'));
   const exactResponsibleParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === responsiblePartySearch.trim().toLocaleLowerCase('pt-BR'));
-  const repaymentInstallmentValue = repaymentInstallmentCount > 0 ? Number(amount || 0) / repaymentInstallmentCount : 0;
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -146,6 +149,10 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     ])
     : allocateEqually(amount, responsibilityTargets());
 
+  let previewCasaRepayableAmount = 0;
+  try { previewCasaRepayableAmount = casaResponsibilityAmount(responsibilityAllocations()); } catch { previewCasaRepayableAmount = 0; }
+  const repaymentInstallmentValue = repaymentInstallmentCount > 0 ? previewCasaRepayableAmount / repaymentInstallmentCount : 0;
+
   const registerPartyInline = async (role: 'payer' | 'responsible') => {
     const name = role === 'payer' ? partySearch.trim() : responsiblePartySearch.trim();
     if (!supabase || !household || !name) return;
@@ -174,7 +181,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!cardPayment && !externalPayment && !accountId) return setError('Selecione o recurso utilizado.');
     if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
     if (externalPayment && !payerPartyId) return setError('Informe quem pagou.');
-    if (externalPayment && needsRepayment && responsibilityAllocations().some((split) => split.partyId)) return setError('Para planejar uma devolução, a responsabilidade econômica precisa pertencer somente à Casa.');
     if (externalPayment && needsRepayment && !repaymentDueDate) return setError(repaymentMode === 'installments' ? 'Informe a data da primeira devolução.' : 'Informe quando pretende devolver.');
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
     if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
@@ -183,6 +189,11 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     let splits: EconomicAllocation[];
     try { splits = responsibilityAllocations(); }
     catch (cause) { return setError(errorMessage(cause, 'Confira a divisão de responsabilidade.')); }
+    const casaRepayableAmount = casaResponsibilityAmount(splits);
+    if (externalPayment && needsRepayment && casaRepayableAmount <= 0) return setError('Não há valor de responsabilidade da Casa para devolver.');
+    if (externalPayment && needsRepayment && repaymentMode === 'installments' && repaymentInstallmentCount > Math.round(casaRepayableAmount * 100)) {
+      return setError('Reduza a quantidade de parcelas: cada devolução precisa ter pelo menos R$ 0,01.');
+    }
     const appliedInstallmentCount = cardPayment && purchaseMode === 'installments' ? installmentCount : 1;
     const instrumentKind: InstrumentKind = cardPayment ? 'card' : 'account';
     const input: TransactionInput = {
@@ -271,6 +282,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('payer')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
           <fieldset><legend className="text-sm font-semibold text-slate-200">Você precisa devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!needsRepayment} onClick={() => { setNeedsRepayment(false); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); }} label="Não" /><ChoiceButton active={needsRepayment} onClick={() => setNeedsRepayment(true)} label="Sim" /></div></fieldset>
           {needsRepayment && <div className="space-y-4 border-t border-emerald-900/50 pt-4">
+            {previewCasaRepayableAmount <= 0 && <p className="rounded-xl border border-amber-800/70 bg-amber-950/30 p-3 text-xs text-amber-200">Não há valor de responsabilidade da Casa para devolver neste rateio.</p>}
+            {previewCasaRepayableAmount > 0 && <p className="text-xs text-slate-400">Valor de responsabilidade da Casa a devolver: {previewCasaRepayableAmount.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</p>}
             <fieldset><legend className="text-sm font-semibold text-slate-200">Como pretende devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={repaymentMode === 'one_time'} onClick={() => setRepaymentMode('one_time')} label="Uma vez" /><ChoiceButton active={repaymentMode === 'installments'} onClick={() => setRepaymentMode('installments')} label="Parcelado" /></div></fieldset>
             {repaymentMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input required type="number" min="2" max="120" value={repaymentInstallmentCount} onChange={(event) => setRepaymentInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-xs text-slate-500">Aprox. {repaymentInstallmentValue.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} por parcela</span></label>}
             <label className="block text-sm text-slate-300">{repaymentMode === 'installments' ? 'Primeira devolução' : 'Quando pretende devolver?'}<input required type="date" min={date} value={repaymentDueDate} onChange={(event) => setRepaymentDueDate(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>
