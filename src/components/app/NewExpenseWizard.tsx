@@ -10,8 +10,9 @@ import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreat
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
-import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
+import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
+import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
@@ -78,6 +79,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [recurringEndDate, setRecurringEndDate] = useState('');
   const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
   const [createdRecurringRuleId, setCreatedRecurringRuleId] = useState<string | null>(null);
+  const [recurrenceRecovery, setRecurrenceRecovery] = useState<PendingExpenseRecurrence | null>(null);
 
   const currentMemberId = householdMembers.find((member) => member.profile_id === user?.id)?.id ?? '';
   const today = localDate();
@@ -118,7 +120,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
     setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringEndDate('');
-    setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setError(null);
+    setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setRecurrenceRecovery(null); setError(null);
   };
 
   const loadContext = async () => {
@@ -139,7 +141,14 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
   useEffect(() => {
     if (openRequestId <= 0 || openRequestId === handledRequestId) return;
-    setHandledRequestId(openRequestId); reset(); setOpen(true); void loadContext();
+    const pending = household ? loadPendingExpenseRecurrence(household.id) : null;
+    setHandledRequestId(openRequestId); reset();
+    if (pending) {
+      setStep(2); setRecurring(true); setRecurringFrequency(pending.frequency); setRecurringIntervalCount(pending.intervalCount);
+      setRecurringStartDate(pending.startDate); setRecurringEndDate(pending.endDate);
+      setCreatedTransactionId(pending.transactionId); setCreatedRecurringRuleId(pending.recurringRuleId); setRecurrenceRecovery(pending);
+    }
+    setOpen(true); void loadContext();
   }, [openRequestId, handledRequestId, household?.id, currentMemberId]);
 
   useEffect(() => { setAccountId(''); }, [paymentChoice]);
@@ -187,6 +196,39 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     event.preventDefault();
     if (!supabase || !household || !user) return;
     setError(null);
+
+    if (recurrenceRecovery) {
+      setSaving(true);
+      let recovery = recurrenceRecovery;
+      try {
+        let ruleId = recovery.recurringRuleId ?? await findRecurringExpenseRuleForTransaction(supabase, {
+          householdId: recovery.householdId,
+          transactionId: recovery.transactionId,
+          frequency: recovery.frequency,
+          intervalCount: recovery.intervalCount,
+          startDate: recovery.startDate,
+          endDate: recovery.endDate,
+        });
+        if (!ruleId) {
+          ruleId = String(await createRecurringExpenseFromTransaction(supabase, {
+            householdId: recovery.householdId,
+            transactionId: recovery.transactionId,
+            frequency: recovery.frequency,
+            intervalCount: recovery.intervalCount,
+            startDate: recovery.startDate,
+            endDate: recovery.endDate,
+          }));
+        }
+        recovery = { ...recovery, recurringRuleId: ruleId };
+        savePendingExpenseRecurrence(recovery); setCreatedRecurringRuleId(ruleId); setRecurrenceRecovery(recovery);
+        await ensureRecurringExpenseHorizon(supabase, recovery.householdId, recurringExpenseHorizonDate(recovery.startDate));
+        clearPendingExpenseRecurrence(recovery.householdId); setRecurrenceRecovery(null); setOpen(false); onSaved();
+      } catch (cause) {
+        setError(`A despesa já foi registrada. A recorrência ainda não foi concluída e o gasto não será cadastrado novamente. ${errorMessage(cause, 'Tente concluir a recorrência novamente.')}`);
+      } finally { setSaving(false); }
+      return;
+    }
+
     if (!amount || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return setError('Informe um valor maior que zero.');
     if (!responsibility) return setError('Informe quem assume esse gasto.');
     if (responsibility === 'party' && !responsiblePartyId) return setError('Selecione a outra pessoa responsável.');
@@ -261,6 +303,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       setCreatedTransactionId(savedTransactionId);
 
       if (recurring) {
+        let recovery: PendingExpenseRecurrence = {
+          householdId: household.id,
+          transactionId: savedTransactionId,
+          recurringRuleId: savedRecurringRuleId,
+          frequency: recurringFrequency,
+          intervalCount: recurringIntervalCount,
+          startDate: recurringStartDate,
+          endDate: recurringEndDate,
+        };
+        savePendingExpenseRecurrence(recovery); setRecurrenceRecovery(recovery);
         if (!savedRecurringRuleId) {
           savedRecurringRuleId = String(await createRecurringExpenseFromTransaction(supabase, {
             householdId: household.id,
@@ -271,14 +323,19 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
             endDate: recurringEndDate,
           }));
           setCreatedRecurringRuleId(savedRecurringRuleId);
+          recovery = { ...recovery, recurringRuleId: savedRecurringRuleId };
+          savePendingExpenseRecurrence(recovery); setRecurrenceRecovery(recovery);
         }
         await ensureRecurringExpenseHorizon(supabase, household.id, recurringExpenseHorizonDate(recurringStartDate));
+        clearPendingExpenseRecurrence(household.id); setRecurrenceRecovery(null);
       }
       setOpen(false); onSaved();
     } catch (cause) {
-      setError(errorMessage(cause, savedTransactionId
-        ? 'A despesa foi registrada, mas a recorrência ainda não foi concluída. Tente novamente para continuar sem duplicar o gasto.'
-        : 'Não foi possível registrar a despesa.'));
+      if (savedTransactionId && recurring) {
+        setError(`A despesa já foi registrada. A recorrência ainda não foi concluída e o gasto não será cadastrado novamente. ${errorMessage(cause, 'Tente concluir a recorrência novamente.')}`);
+      } else {
+        setError(errorMessage(cause, 'Não foi possível registrar a despesa.'));
+      }
     } finally { setSaving(false); }
   };
 
@@ -293,7 +350,17 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
       {loading && <div className="flex min-h-40 items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin text-blue-300" /></div>}
 
-      {!loading && step === 1 && <div className="mt-5 space-y-4">
+      {!loading && recurrenceRecovery && <div className="mt-5 space-y-4">
+        <div className="rounded-2xl border border-amber-800/70 bg-amber-950/30 p-4">
+          <h2 className="font-bold text-amber-100">Despesa já registrada</h2>
+          <p className="mt-2 text-sm text-amber-200">Falta apenas concluir a recorrência. O Casa preservou a referência do gasto e não vai cadastrá-lo novamente.</p>
+          <p className="mt-2 text-xs text-slate-400">Primeira repetição: {recurrenceRecovery.startDate} · intervalo: {recurrenceRecovery.intervalCount} · frequência: {recurrenceRecovery.frequency}.</p>
+        </div>
+        {error && <ErrorBox text={error} />}
+        <button type="submit" disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 font-bold text-slate-950 disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Concluir recorrência</button>
+      </div>}
+
+      {!loading && !recurrenceRecovery && step === 1 && <div className="mt-5 space-y-4">
         <label className="block text-sm text-slate-300">Quem fez esse gasto? <span className="text-rose-300">*</span><select required value={buyerMemberId} onChange={(event) => setBuyerMemberId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3">{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
         <label className="block text-sm text-slate-300">Quando? <span className="text-rose-300">*</span><input required type="date" max={today} value={date} onChange={(event) => setDate(event.target.value > today ? today : event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>
         <label className="block text-sm text-slate-300">Com o que gastou? <span className="text-rose-300">*</span><input required value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" placeholder="Ex.: mercado, aluguel, pneu do carro" /></label>
@@ -303,7 +370,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         <button type="button" onClick={goToStep2} className="min-h-12 w-full rounded-xl bg-blue-600 font-bold">Continuar</button>
       </div>}
 
-      {!loading && step === 2 && <div className="mt-5 space-y-5">
+      {!loading && !recurrenceRecovery && step === 2 && <div className="mt-5 space-y-5">
         <label className="block text-sm font-semibold text-slate-200">Quanto? <span className="text-rose-300">*</span><div className="mt-2 flex min-h-16 items-center rounded-2xl border border-blue-500/40 bg-slate-800 px-4 shadow-sm"><span className="mr-2 text-lg text-slate-400">R$</span><input required inputMode="decimal" type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} onBlur={() => { if (amount && Number.isFinite(Number(amount))) setAmount(Number(amount).toFixed(2)); }} className="min-h-14 w-full bg-transparent text-2xl font-black outline-none" placeholder="0,00" /></div></label>
 
         <fieldset><legend className="text-sm font-semibold text-slate-200">Quem assume esse gasto? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2">{householdMembers.map((member) => <ChoiceButton key={member.id} active={responsibility === member.id} onClick={() => setResponsibility(member.id)} label={member.display_name} />)}<ChoiceButton active={responsibility === 'split'} onClick={() => setResponsibility('split')} label="Dividir igualmente" /><ChoiceButton active={responsibility === 'split-custom'} onClick={() => setResponsibility('split-custom')} label="Divisão personalizada" /><ChoiceButton active={responsibility === 'party'} onClick={() => setResponsibility('party')} label="Outra pessoa envolvida" /></div>
