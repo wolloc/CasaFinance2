@@ -14,10 +14,13 @@ test('mês financeiro usa o read model canônico de compromissos e não a data d
  assert.doesNotMatch(service,/insert\(|update\(|delete\(|\.rpc\(/);
 });
 
-test('visão avançada pela compra lê o fato econômico original sem reescrever nada',()=>{
- assert.match(service,/from\('transactions'\)/);
- assert.match(service,/gte\('transaction_date',monthStart\(month\)\)/);
- assert.match(service,/lt\('transaction_date',nextMonthStart\(month\)\)/);
+test('Gastos realizados combina metadados do fato com o read model econômico canônico',()=>{
+ const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
+ assert.match(economicQuery,/from\('transactions'\)/);
+ assert.match(economicQuery,/gte\('transaction_date',monthStart\(month\)\)/);
+ assert.match(economicQuery,/lt\('transaction_date',nextMonthStart\(month\)\)/);
+ assert.match(economicQuery,/from\('financial_transaction_positions'\)/);
+ assert.match(economicQuery,/household_economic_amount/);
  assert.match(browser,/Gastos realizados/);
  assert.match(browser,/Compras parceladas aparecem uma vez/);
 });
@@ -34,17 +37,23 @@ test('Gastos prioriza o navegador mensal e explica que parcela não é nova desp
 });
 
 test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
- assert.match(browser,/setFinancialRows\(\[\]\);setEconomicRows\(\[\]\);setError\(true\)/);
+ assert.match(browser,/setFinancialRows\(\[\]\);setEconomicRows\(\[\]\)/);
  assert.match(browser,/Nenhum valor antigo foi mantido na tela/);
  assert.match(browser,/setRefreshVersion\(value=>value\+1\)/);
  assert.doesNotMatch(browser,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
-test('gastos realizados excluem forecast e exibem somente a parcela econômica da Casa',()=>{
+test('Gastos realizados mostra somente realized e usa a parcela atribuída aos membros, não o bruto',()=>{
  const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
- assert.match(economicQuery,/\.in\('economic_state',\['confirmed','realized'\]\)/);
- assert.doesNotMatch(economicQuery,/\['forecast','confirmed','realized'\]/);
- assert.match(economicQuery,/economic_allocations\(amount,responsible_member_id,responsible_party_id\)/);
- assert.match(economicQuery,/filter\(allocation=>Boolean\(allocation\.responsible_member_id\)\)/);
- assert.match(economicQuery,/householdAmount\.toFixed\(2\)/);
+ assert.match(economicQuery,/\.eq\('economic_state','realized'\)/);
+ assert.doesNotMatch(economicQuery,/\['confirmed','realized'\]/);
+ assert.match(economicQuery,/positions\.get\(row\.id\)\?\?row\.amount/);
+ assert.doesNotMatch(economicQuery,/economic_allocations\(amount,responsible_member_id,responsible_party_id\)/);
+});
+
+test('salvar uma nova despesa invalida a lente mensal sem remount destrutivo',()=>{
+ assert.match(browser,/refreshKey=0/);
+ assert.match(browser,/\[household\?\.id,month,mode,refreshKey,refreshVersion\]/);
+ assert.match(screen,/<ExpenseMonthBrowser refreshKey=\{expenseListVersion\} \/>/);
+ assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
