@@ -4,10 +4,10 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts } from '../../finance/householdFinancialAccounts.js';
 import { listHouseholdTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
-import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
+import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, recurringExpenseRollingHorizonDate, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
 
 const localDate=()=>{const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;};
-const horizonDate=()=>{const date=new Date();date.setFullYear(date.getFullYear()+1);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
+const horizonDate=()=>recurringExpenseRollingHorizonDate(localDate());
 const money=(value:string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
 export function RecurringExpenseAction({onCreated}:{onCreated?:()=>void}){
