@@ -23,6 +23,25 @@ type RecurringExpenseRuleIdentity = {
   endDate?: string;
 };
 
+const isoDateParts = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error('Data de referência da recorrência inválida.');
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (month < 1 || month > 12 || day < 1 || day > lastDay) throw new Error('Data de referência da recorrência inválida.');
+  return { year, month, day };
+};
+
+export function recurringExpenseRollingHorizonDate(referenceDate: string) {
+  const { year, month, day } = isoDateParts(referenceDate);
+  const targetYear = year + 1;
+  const targetMonthLastDay = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+  const targetDay = Math.min(day, targetMonthLastDay);
+  return `${targetYear}-${String(month).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+}
+
 export async function createRecurringExpenseFromTransaction(client: SupabaseClient, input: RecurringExpenseRuleIdentity) {
   const endDate=input.endDate||null;
   const identity=[input.householdId,input.transactionId,input.frequency,input.intervalCount,input.startDate,endDate] as const;
@@ -113,6 +132,5 @@ export async function closeRecurringExpenseRule(client: SupabaseClient, input: {
   effectiveFrom: string;
   reason: string;
 }) {
-  const reason=input.reason.trim();const identity=[input.householdId,input.ruleId,input.effectiveFrom,reason] as const;
-  return runRetryStableRpc(client,'close-recurring-expense',identity,'close_recurring_expense_rule_idempotent',{p_household_id:input.householdId,p_rule_id:input.ruleId,p_effective_from:input.effectiveFrom,p_reason:reason});
+  const reason=input.reason.trim();const identity=[input.householdId,input.ruleId,input.effectiveFrom,reason] as const;return runRetryStableRpc(client,'close-recurring-expense',identity,'close_recurring_expense_rule_idempotent',{p_household_id:input.householdId,p_rule_id:input.ruleId,p_effective_from:input.effectiveFrom,p_reason:reason});
 }
