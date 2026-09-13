@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(10);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -16,7 +16,7 @@ insert into auth.users (
 ),
 (
   '74000000-0000-4000-8000-000000000002',
-  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-8000-000000000000',
   'authenticated','authenticated','pr-b-guilherme@example.invalid',
   crypt('test-only',gen_salt('bf')),now(),'{}','{"display_name":"Guilherme PR B"}',now(),now()
 );
@@ -56,6 +56,11 @@ insert into public.transactions(
   '74000000-0000-4000-8000-000000000053','74000000-0000-4000-8000-000000000010',
   '74000000-0000-4000-8000-000000000021','74000000-0000-4000-8000-000000000021',
   'expense','paid','PR-B legacy realized',25.00,current_date,date_trunc('month',current_date)::date,now(),'realized',25.00,25.00
+),
+(
+  '74000000-0000-4000-8000-000000000054','74000000-0000-4000-8000-000000000010',
+  '74000000-0000-4000-8000-000000000021','74000000-0000-4000-8000-000000000021',
+  'expense','paid','PR-B external-only responsibility',40.00,current_date,date_trunc('month',current_date)::date,now(),'realized',40.00,40.00
 );
 
 insert into public.economic_allocations(
@@ -64,7 +69,8 @@ insert into public.economic_allocations(
   ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000051','74000000-0000-4000-8000-000000000021',null,1,30.00,30.0000),
   ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000051','74000000-0000-4000-8000-000000000022',null,2,30.00,30.0000),
   ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000051',null,'74000000-0000-4000-8000-000000000041',3,40.00,40.0000),
-  ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000052','74000000-0000-4000-8000-000000000021',null,1,50.00,100.0000);
+  ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000052','74000000-0000-4000-8000-000000000021',null,1,50.00,100.0000),
+  ('74000000-0000-4000-8000-000000000010','74000000-0000-4000-8000-000000000054',null,'74000000-0000-4000-8000-000000000041',1,40.00,100.0000);
 
 select is(
   (select gross_event_amount from public.financial_transaction_positions where transaction_id='74000000-0000-4000-8000-000000000051'),
@@ -102,9 +108,19 @@ select is(
   'B07 legacy transaction without allocations falls back to its gross amount'
 );
 select is(
+  (select household_economic_amount from public.financial_transaction_positions where transaction_id='74000000-0000-4000-8000-000000000054'),
+  0.00::numeric,
+  'B08 an all-third-party realized expense contributes zero to member spending'
+);
+select is(
+  (select third_party_economic_amount from public.financial_transaction_positions where transaction_id='74000000-0000-4000-8000-000000000054'),
+  40.00::numeric,
+  'B09 all-third-party responsibility remains visible separately'
+);
+select is(
   (select count(*) from public.financial_transaction_positions where household_id='74000000-0000-4000-8000-000000000010' and economic_state='realized'),
-  2::bigint,
-  'B08 canonical read model can isolate the two realized facts from the confirmed one'
+  3::bigint,
+  'B10 canonical read model isolates realized facts from the confirmed one'
 );
 
 select * from finish();
