@@ -40,7 +40,7 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
-    <ExpenseMonthBrowser />
+    <ExpenseMonthBrowser refreshKey={expenseListVersion} />
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer font-semibold text-slate-200">Histórico e correções</summary>
       <p className="mt-1 text-xs text-slate-500">Abra para editar ou corrigir lançamentos. A lista não compete com as duas lentes mensais acima.</p>
