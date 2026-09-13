@@ -54,7 +54,7 @@ select is((select sum(m.amount) from public.money_movements m join public.transa
 select is((select count(*) from public.card_invoice_payments p join public.transactions t on t.invoice_id=p.invoice_id where t.description='PR-E A17 full invoice'),1::bigint,'A17 has one canonical invoice payment record');
 select is((select sum(f.amount) from public.funding_events f join public.transactions t on t.id=f.financed_transaction_id where t.description='PR-E A17 full invoice' and f.invoice_id is not null),100.00::numeric,'A17 funding closes underlying card purchase by 100');
 select is((select remaining_amount from public.financial_card_invoice_positions p join public.transactions t on t.invoice_id=p.invoice_id where t.description='PR-E A17 full invoice'),0::numeric,'A17 invoice remaining is zero');
-select is((select state from public.financial_card_invoice_positions p join public.transactions t on t.invoice_id=p.invoice_id where t.description='PR-E A17 full invoice'),'paid'::text,'A17 invoice position is paid');
+select is((select state::text from public.financial_card_invoice_positions p join public.transactions t on t.invoice_id=p.invoice_id where t.description='PR-E A17 full invoice'),'paid'::text,'A17 invoice position is paid');
 select is((select coalesce(sum(remaining_amount),0) from public.financial_commitment_positions where source_transaction_id=(select id from public.transactions where description='PR-E A17 full invoice')),0::numeric,'A17 underlying commitment has no remaining amount');
 
 -- A18: pagamento parcial de fatura mantém somente o saldo ainda não liquidado.
