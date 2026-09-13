@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(50);
 
 insert into auth.users (
   id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -41,11 +41,8 @@ select is((select count(*) from public.transactions where description='PR-D A09 
 select is((select economic_state::text from public.transactions where description='PR-D A09 card single'),'realized'::text,'A09 purchase is a realized economic fact');
 select is((select sum(a.amount) from public.economic_allocations a join public.transactions t on t.id=a.transaction_id where t.description='PR-D A09 card single'),100.00::numeric,'A09 responsibility closes exactly 100');
 select is((select sum(total_amount) from public.card_invoices where card_id='78000000-0000-4000-8000-000000000041' and deleted_at is null),100.00::numeric,'A09 invoice exposure is 100');
-select results_eq(
-  $$select total_exposure,available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000041'$$,
-  $$values(100.00::numeric,9900.00::numeric)$$,
-  'A09 card limit reflects 100 exposure without cash'
-);
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000041'),100.00::numeric,'A09 card exposure is 100');
+select is((select available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000041'),9900.00::numeric,'A09 available limit is 9900');
 
 -- A10: cartão R$120 em 2x.
 select lives_ok($$
@@ -57,19 +54,13 @@ select lives_ok($$
   )
 $$,'A10 two-installment card purchase succeeds');
 select is((select count(*) from public.transactions where description='PR-D A10 card 2x' and type='expense'),1::bigint,'A10 installments do not multiply the economic expense');
-select results_eq(
-  $$select installment_count,total_amount from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A10 card 2x'$$,
-  $$values(2,120.00::numeric)$$,
-  'A10 installment plan records 2x and gross 120'
-);
+select is((select installment_count from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A10 card 2x'),2,'A10 installment plan records 2x');
+select is((select total_amount from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A10 card 2x'),120.00::numeric,'A10 installment plan gross is 120');
 select is((select count(*) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A10 card 2x'),2::bigint,'A10 creates exactly two installments');
 select is((select sum(i.amount) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A10 card 2x'),120.00::numeric,'A10 installment cents close exactly 120');
 select is((select sum(total_amount) from public.card_invoices where card_id='78000000-0000-4000-8000-000000000042' and deleted_at is null),120.00::numeric,'A10 invoices total exactly 120');
-select results_eq(
-  $$select total_exposure,available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000042'$$,
-  $$values(120.00::numeric,9880.00::numeric)$$,
-  'A10 card exposure counts the purchase once'
-);
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000042'),120.00::numeric,'A10 card exposure counts the purchase once');
+select is((select available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000042'),9880.00::numeric,'A10 available limit is 9880');
 
 -- A11: cartão R$1.200 em 12x.
 select lives_ok($$
@@ -81,19 +72,13 @@ select lives_ok($$
   )
 $$,'A11 twelve-installment card purchase succeeds');
 select is((select count(*) from public.transactions where description='PR-D A11 card 12x' and type='expense'),1::bigint,'A11 creates one economic expense');
-select results_eq(
-  $$select installment_count,total_amount from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A11 card 12x'$$,
-  $$values(12,1200.00::numeric)$$,
-  'A11 installment plan records 12x and gross 1200'
-);
+select is((select installment_count from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A11 card 12x'),12,'A11 installment plan records 12x');
+select is((select total_amount from public.installment_plans p join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A11 card 12x'),1200.00::numeric,'A11 installment plan gross is 1200');
 select is((select count(*) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A11 card 12x'),12::bigint,'A11 creates exactly twelve installments');
 select is((select sum(i.amount) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='PR-D A11 card 12x'),1200.00::numeric,'A11 installment cents close exactly 1200');
 select is((select sum(total_amount) from public.card_invoices where card_id='78000000-0000-4000-8000-000000000043' and deleted_at is null),1200.00::numeric,'A11 invoices total exactly 1200');
-select results_eq(
-  $$select total_exposure,available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000043'$$,
-  $$values(1200.00::numeric,8800.00::numeric)$$,
-  'A11 card exposure is 1200, not twelve duplicated expenses'
-);
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000043'),1200.00::numeric,'A11 card exposure is 1200, not twelve duplicated expenses');
+select is((select available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000043'),8800.00::numeric,'A11 available limit is 8800');
 
 -- A12: Pix por cartão R$100 + R$10 de encargos.
 select lives_ok($$
@@ -107,20 +92,14 @@ select lives_ok($$
 $$,'A12 card PIX with one financial charge succeeds');
 select is((select count(*) from public.transactions where description='PR-D A12 card pix' and type='expense'),1::bigint,'A12 preserves one principal expense');
 select is((select count(*) from public.transactions where description='Encargos financeiros PIX no cartão — PR-D A12 card pix' and type='expense'),1::bigint,'A12 records one linked economic charge');
-select results_eq(
-  $$select count(*),sum(l.amount) from public.transaction_links l join public.transactions t on t.id=l.source_transaction_id where t.description='PR-D A12 card pix' and l.kind='fee'$$,
-  $$values(1::bigint,10.00::numeric)$$,
-  'A12 links exactly one R$10 charge to the principal'
-);
+select is((select count(*) from public.transaction_links l join public.transactions t on t.id=l.source_transaction_id where t.description='PR-D A12 card pix' and l.kind='fee'),1::bigint,'A12 has exactly one fee link');
+select is((select sum(l.amount) from public.transaction_links l join public.transactions t on t.id=l.source_transaction_id where t.description='PR-D A12 card pix' and l.kind='fee'),10.00::numeric,'A12 linked fee is exactly 10');
 select is((select count(*) from public.transaction_components c join public.transactions t on t.id=c.transaction_id where t.description in ('PR-D A12 card pix','Encargos financeiros PIX no cartão — PR-D A12 card pix')),2::bigint,'A12 keeps principal and fee components explicit');
 select is((select sum(a.amount) from public.economic_allocations a join public.transactions t on t.id=a.transaction_id where t.description='PR-D A12 card pix'),100.00::numeric,'A12 principal responsibility closes 100');
 select is((select sum(a.amount) from public.economic_allocations a join public.transactions t on t.id=a.transaction_id where t.description='Encargos financeiros PIX no cartão — PR-D A12 card pix'),10.00::numeric,'A12 charge responsibility closes 10');
 select is((select sum(total_amount) from public.card_invoices where card_id='78000000-0000-4000-8000-000000000044' and deleted_at is null),110.00::numeric,'A12 card invoices contain principal plus charge exactly once');
-select results_eq(
-  $$select total_exposure,available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000044'$$,
-  $$values(110.00::numeric,9890.00::numeric)$$,
-  'A12 card limit is committed by total financed 110'
-);
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000044'),110.00::numeric,'A12 card exposure is total financed 110');
+select is((select available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000044'),9890.00::numeric,'A12 available limit is 9890');
 select is((select sum(f.amount) from public.financing_allocations f where f.card_id='78000000-0000-4000-8000-000000000044' and f.mechanism='card_pix'),110.00::numeric,'A12 canonical card_pix financing totals 110');
 
 -- A13: Pix R$100 + R$0,10; principal 99/1. Largest remainder assigns the
@@ -142,11 +121,8 @@ select is((select a.amount from public.economic_allocations a join public.transa
 select is((select count(*) from public.economic_allocations a join public.transactions t on t.id=a.transaction_id where t.description='Encargos financeiros PIX no cartão — PR-D A13 card pix cents' and a.responsible_member_id='78000000-0000-4000-8000-000000000022'),0::bigint,'A13 does not persist a zero-cent 1% charge allocation');
 select is((select count(*) from public.economic_allocations a join public.transactions t on t.id=a.transaction_id where t.description in ('PR-D A13 card pix cents','Encargos financeiros PIX no cartão — PR-D A13 card pix cents') and a.amount<=0),0::bigint,'A13 contains no zero or negative economic allocation');
 select is((select sum(total_amount) from public.card_invoices where card_id='78000000-0000-4000-8000-000000000045' and deleted_at is null),100.10::numeric,'A13 invoice cents close principal plus charge exactly');
-select results_eq(
-  $$select total_exposure,available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000045'$$,
-  $$values(100.10::numeric,9899.90::numeric)$$,
-  'A13 exposure and available limit close to the cent'
-);
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000045'),100.10::numeric,'A13 exposure closes to 100.10');
+select is((select available_limit from public.financial_card_exposure_positions where card_id='78000000-0000-4000-8000-000000000045'),9899.90::numeric,'A13 available limit closes to 9899.90');
 
 -- Global card-creation invariants for A09-A13.
 select is((select count(*) from public.money_movements where household_id='78000000-0000-4000-8000-000000000010'),0::bigint,'A09-A13 create no immediate account cash movement');
