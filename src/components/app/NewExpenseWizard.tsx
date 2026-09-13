@@ -174,7 +174,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!cardPayment && !externalPayment && !accountId) return setError('Selecione o recurso utilizado.');
     if (purchaseMode === 'installments' && cardPayment && installmentCount < 2) return setError('Informe pelo menos 2 parcelas.');
     if (externalPayment && !payerPartyId) return setError('Informe quem pagou.');
-    if (externalPayment && needsRepayment && responsibilityAllocations().some((split) => split.partyId)) return setError('Para planejar uma devolução, a responsabilidade econômica precisa pertencer somente à Casa.');
     if (externalPayment && needsRepayment && !repaymentDueDate) return setError(repaymentMode === 'installments' ? 'Informe a data da primeira devolução.' : 'Informe quando pretende devolver.');
     if (externalPayment && needsRepayment && repaymentDueDate < date) return setError('A devolução não pode ficar antes da data do gasto.');
     if (externalPayment && needsRepayment && repaymentMode === 'installments' && (repaymentInstallmentCount < 2 || repaymentInstallmentCount > 120)) return setError('Informe entre 2 e 120 parcelas para a devolução.');
