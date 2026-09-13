@@ -97,7 +97,19 @@ jobs:
         run: supabase test db supabase/tests/marco3_rls_security.test.sql
 
       - name: Run PR A mixed external responsibility behavior gate
-        run: supabase test db supabase/tests/pr_a_mixed_external_responsibility.test.sql
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_a_mixed_external_responsibility.test.sql 2>&1 | tee pr-a-db-test.log
+
+      - name: Retain PR A database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-a-db-test-log-${{ github.sha }}
+          path: pr-a-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Export local Supabase public connection settings
         run: |
