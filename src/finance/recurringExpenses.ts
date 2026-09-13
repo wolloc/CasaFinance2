@@ -14,19 +14,37 @@ export type RecurringExpenseRule = {
   template_description: string;
 };
 
-export async function createRecurringExpenseFromTransaction(client: SupabaseClient, input: {
+type RecurringExpenseRuleIdentity = {
   householdId: string;
   transactionId: string;
   frequency: RecurringExpenseFrequency;
   intervalCount: number;
   startDate: string;
   endDate?: string;
-}) {
+};
+
+export async function createRecurringExpenseFromTransaction(client: SupabaseClient, input: RecurringExpenseRuleIdentity) {
   const endDate=input.endDate||null;
   const identity=[input.householdId,input.transactionId,input.frequency,input.intervalCount,input.startDate,endDate] as const;
   return runRetryStableRpc(client,'create-recurring-expense',identity,'create_recurring_expense_rule_from_transaction_idempotent',{
     p_household_id:input.householdId,p_template_transaction_id:input.transactionId,p_frequency:input.frequency,p_interval_count:input.intervalCount,p_start_date:input.startDate,p_end_date:endDate,
   });
+}
+
+export async function findRecurringExpenseRuleForTransaction(client: SupabaseClient, input: RecurringExpenseRuleIdentity) {
+  let query = client.from('recurring_rules')
+    .select('id')
+    .eq('household_id', input.householdId)
+    .eq('template_transaction_id', input.transactionId)
+    .eq('frequency', input.frequency)
+    .eq('interval_count', input.intervalCount)
+    .eq('start_date', input.startDate)
+    .is('deactivated_at', null)
+    .is('income_nature', null);
+  query = input.endDate ? query.eq('end_date', input.endDate) : query.is('end_date', null);
+  const response = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (response.error) throw response.error;
+  return response.data?.id ? String(response.data.id) : null;
 }
 
 export async function ensureRecurringExpenseHorizon(client: SupabaseClient, householdId: string, throughDate: string) {
