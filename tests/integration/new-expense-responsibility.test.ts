@@ -16,6 +16,12 @@ test('divisão personalizada fecha em centavos entre membros e terceiros', () =>
     { amount: '33.34', memberId: undefined, partyId: 'party-a' },
   ]);
   assert.throws(() => allocateCustomAmounts('10.00', [{ memberId: 'member-a', value: '10.01' }]), /fechar exatamente/);
+  assert.deepEqual(allocateCustomAmounts('10.00', [
+    { memberId: 'member-a', value: '10.00' },
+    { partyId: 'party-zero', value: '0' },
+  ]).map(({ memberId, partyId }) => ({ memberId, partyId })), [
+    { memberId: 'member-a', partyId: undefined },
+  ]);
 });
 
 test('Nova Despesa mantém responsável terceiro separado do terceiro pagador', () => {
@@ -24,4 +30,7 @@ test('Nova Despesa mantém responsável terceiro separado do terceiro pagador', 
   assert.match(wizard, /Isso define responsabilidade econômica, não quem pagou/);
   assert.match(wizard, /payerPartyId/);
   assert.match(wizard, /allocateCustomAmounts/);
+  assert.match(wizard, /responsiblePartySearch/);
+  assert.match(wizard, /registerPartyInline\('responsible'\)/);
+  assert.doesNotMatch(wizard, /Pessoa responsável<select/);
 });

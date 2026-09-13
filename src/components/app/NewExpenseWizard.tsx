@@ -49,6 +49,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [amount, setAmount] = useState('');
   const [responsibility, setResponsibility] = useState('');
   const [responsiblePartyId, setResponsiblePartyId] = useState('');
+  const [responsiblePartySearch, setResponsiblePartySearch] = useState('');
   const [customResponsibility, setCustomResponsibility] = useState<Record<string, string>>({});
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>('account');
   const [accountId, setAccountId] = useState('');
@@ -84,13 +85,19 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (!query) return parties.slice(0, 6);
     return parties.filter((party) => party.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 6);
   }, [parties, partySearch]);
+  const responsiblePartyMatches = useMemo(() => {
+    const query = responsiblePartySearch.trim().toLocaleLowerCase('pt-BR');
+    if (!query) return parties.slice(0, 6);
+    return parties.filter((party) => party.name.toLocaleLowerCase('pt-BR').includes(query)).slice(0, 6);
+  }, [parties, responsiblePartySearch]);
   const exactParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partySearch.trim().toLocaleLowerCase('pt-BR'));
+  const exactResponsibleParty = parties.some((party) => party.name.trim().toLocaleLowerCase('pt-BR') === responsiblePartySearch.trim().toLocaleLowerCase('pt-BR'));
   const repaymentInstallmentValue = repaymentInstallmentCount > 0 ? Number(amount || 0) / repaymentInstallmentCount : 0;
 
   const reset = () => {
     const memberId = currentMemberId;
     setStep(1); setBuyerMemberId(memberId); setDate(today); setDescription(''); setWhereWithWhom(''); setCategoryId('');
-    setAmount(''); setResponsibility(memberId); setResponsiblePartyId(''); setCustomResponsibility({}); setPaymentChoice('account'); setAccountId(''); setCardId('');
+    setAmount(''); setResponsibility(memberId); setResponsiblePartyId(''); setResponsiblePartySearch(''); setCustomResponsibility({}); setPaymentChoice('account'); setAccountId(''); setCardId('');
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0'); setSharedAccountFunderId(memberId);
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); setError(null);
@@ -139,14 +146,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     ])
     : allocateEqually(amount, responsibilityTargets());
 
-  const registerPartyInline = async () => {
-    if (!supabase || !household || !partySearch.trim()) return;
+  const registerPartyInline = async (role: 'payer' | 'responsible') => {
+    const name = role === 'payer' ? partySearch.trim() : responsiblePartySearch.trim();
+    if (!supabase || !household || !name) return;
     setCreatingParty(true); setError(null);
     try {
-      const id = await createFinancialParty(supabase, household.id, partySearch.trim());
-      const created: FinancialParty = { id, name: partySearch.trim(), kind: 'person', tax_id: null, notes: null };
+      const id = await createFinancialParty(supabase, household.id, name);
+      const created: FinancialParty = { id, name, kind: 'person', tax_id: null, notes: null };
       setParties((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
-      setPayerPartyId(id);
+      if (role === 'payer') setPayerPartyId(id);
+      else setResponsiblePartyId(id);
     } catch (cause) {
       setError(errorMessage(cause, 'Não foi possível cadastrar essa pessoa agora.'));
     } finally { setCreatingParty(false); }
@@ -204,7 +213,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           : [];
         if (chargeSplits.length > 0) {
           const difference = Math.round(Number(financialCharges) * 100) - chargeSplits.reduce((sum, split) => sum + Math.round(Number(split.amount) * 100), 0);
-          chargeSplits[chargeSplits.length - 1].amount = ((Math.round(Number(chargeSplits.at(-1)?.amount ?? 0) * 100) + difference) / 100).toFixed(2);
+          const lastIndex = chargeSplits.length - 1;
+          chargeSplits[lastIndex] = { ...chargeSplits[lastIndex], amount: ((Math.round(Number(chargeSplits[lastIndex]?.amount ?? 0) * 100) + difference) / 100).toFixed(2) };
         }
         await createSimpleCardPixExpense(supabase, {
           householdId: household.id, description, principalAmount: amount, financialChargeAmount: financialCharges || '0',
@@ -250,7 +260,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         <label className="block text-sm font-semibold text-slate-200">Quanto? <span className="text-rose-300">*</span><div className="mt-2 flex min-h-16 items-center rounded-2xl border border-blue-500/40 bg-slate-800 px-4 shadow-sm"><span className="mr-2 text-lg text-slate-400">R$</span><input required inputMode="decimal" type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} onBlur={() => { if (amount && Number.isFinite(Number(amount))) setAmount(Number(amount).toFixed(2)); }} className="min-h-14 w-full bg-transparent text-2xl font-black outline-none" placeholder="0,00" /></div></label>
 
         <fieldset><legend className="text-sm font-semibold text-slate-200">Quem assume esse gasto? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2">{householdMembers.map((member) => <ChoiceButton key={member.id} active={responsibility === member.id} onClick={() => setResponsibility(member.id)} label={member.display_name} />)}<ChoiceButton active={responsibility === 'split'} onClick={() => setResponsibility('split')} label="Dividir igualmente" /><ChoiceButton active={responsibility === 'split-custom'} onClick={() => setResponsibility('split-custom')} label="Divisão personalizada" /><ChoiceButton active={responsibility === 'party'} onClick={() => setResponsibility('party')} label="Outra pessoa envolvida" /></div>
-          {responsibility === 'party' && <label className="mt-3 block text-sm text-slate-300">Pessoa responsável<select required value={responsiblePartyId} onChange={(event) => setResponsiblePartyId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select><span className="mt-1 block text-xs text-slate-500">Isso define responsabilidade econômica, não quem pagou.</span></label>}
+          {responsibility === 'party' && <div className="mt-3 rounded-xl border border-slate-700 p-3"><label className="block text-sm text-slate-300">Pessoa responsável<input value={responsiblePartySearch} onChange={(event) => { setResponsiblePartySearch(event.target.value); setResponsiblePartyId(''); }} placeholder="Busque pelo nome" className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label><div className="mt-2 space-y-2">{responsiblePartyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setResponsiblePartyId(party.id); setResponsiblePartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${responsiblePartyId === party.id ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{responsiblePartySearch.trim() && !exactResponsibleParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('responsible')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-700 text-sm font-semibold text-blue-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{responsiblePartySearch.trim()}”</button>}</div><span className="mt-2 block text-xs text-slate-500">Isso define responsabilidade econômica, não quem pagou.</span></div>}
           {responsibility === 'split-custom' && <div className="mt-3 space-y-2 rounded-xl border border-slate-700 p-3"><p className="text-xs text-slate-400">Informe apenas quem participa. A soma deve fechar exatamente o total.</p>{householdMembers.map((member) => <AllocationField key={`member:${member.id}`} label={member.display_name} value={customResponsibility[`member:${member.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`member:${member.id}`]: value }))} />)}{parties.map((party) => <AllocationField key={`party:${party.id}`} label={party.name} value={customResponsibility[`party:${party.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`party:${party.id}`]: value }))} />)}</div>}
         </fieldset>
 
@@ -263,7 +273,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><label className="block text-sm text-slate-300">Qual cartão?<select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select></label><fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode === 'single'} onClick={() => setPurchaseMode('single')} label="À vista" /><ChoiceButton active={purchaseMode === 'installments'} onClick={() => setPurchaseMode('installments')} label="Parcelado" /></div></fieldset>{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} onBlur={() => { if (financialCharges && Number.isFinite(Number(financialCharges))) setFinancialCharges(Number(financialCharges).toFixed(2)); }} className="min-h-11 w-full bg-transparent outline-none" /></div></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}</div>}
 
         {externalPayment && <div className="space-y-4 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-4">
-          <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
+          <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('payer')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
           <fieldset><legend className="text-sm font-semibold text-slate-200">Você precisa devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!needsRepayment} onClick={() => { setNeedsRepayment(false); setRepaymentDueDate(''); setRepaymentSourceAccountId(''); }} label="Não" /><ChoiceButton active={needsRepayment} onClick={() => setNeedsRepayment(true)} label="Sim" /></div></fieldset>
           {needsRepayment && <div className="space-y-4 border-t border-emerald-900/50 pt-4">
             <fieldset><legend className="text-sm font-semibold text-slate-200">Como pretende devolver?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={repaymentMode === 'one_time'} onClick={() => setRepaymentMode('one_time')} label="Uma vez" /><ChoiceButton active={repaymentMode === 'installments'} onClick={() => setRepaymentMode('installments')} label="Parcelado" /></div></fieldset>
