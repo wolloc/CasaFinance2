@@ -17,7 +17,7 @@ select set_config('request.jwt.claim.sub','7d000000-0000-4000-8000-000000000001'
 
 select lives_ok($$
   select public.create_financial_transaction_idempotent(
-    '7d000000-0000-4000-8000-000000000010','expense','PR-I Netflix',30.00,current_date-1,null,
+    '7d000000-0000-4000-8000-000000000010','expense','PR-I Netflix',30.00,current_date-40,null,
     '7d000000-0000-4000-8000-000000000021','card',null,'7d000000-0000-4000-8000-000000000041',
     '[{"member_id":"7d000000-0000-4000-8000-000000000021","amount":"30.00","percentage":"100.0000"}]'::jsonb,1,null,'pr-i-source'
   )
