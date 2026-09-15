@@ -5,6 +5,7 @@ import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../
 
 const wizard = await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx', import.meta.url), 'utf8');
 const standaloneAction = await readFile(new URL('../../src/components/app/RecurringExpenseAction.tsx', import.meta.url), 'utf8');
+const commitmentCenter = await readFile(new URL('../../src/components/app/RecurringExpenseCommitmentCenter.tsx', import.meta.url), 'utf8');
 
 test('Nova Despesa offers a recurrence only after the current economic fact', () => {
   assert.match(wizard, /Esse gasto se repete\?/);
@@ -33,7 +34,7 @@ test('only the supported simple card recurrence is enabled', () => {
   assert.match(standaloneAction, /row\.payment_instrument\?\.kind==='card'/);
   assert.match(standaloneAction, /row\.invoice_id!==null/);
   assert.match(standaloneAction, /Cada próxima ocorrência é apenas prevista/);
-  assert.match(await readFile(new URL('../../src/components/app/RecurringExpenseCommitmentCenter.tsx', import.meta.url), 'utf8'), /confirmRecurringCardExpenseOccurrence/);
+  assert.match(commitmentCenter, /confirmRecurringCardExpenseOccurrence/);
 });
 
 test('projection horizon is one calendar year after the first occurrence', () => {
