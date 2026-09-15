@@ -10,8 +10,8 @@ const constitution=await readFile(new URL('../../../docs/casa-finance-constituti
 test('Gastos surfaces actionable recurring commitments before generic payment tools',()=>{
   assert.match(screen,/RecurringExpenseCommitmentCenter/);
   assert.ok(screen.indexOf('<RecurringExpenseCommitmentCenter')<screen.indexOf('<DirectExpensePaymentAction'));
-  assert.match(ui,/Contas previstas para pagar/);
-  assert.match(ui,/já entram na previsão do mês/i);
+  assert.match(ui,/Recorrências previstas/);
+  assert.match(ui,/Cobranças recorrentes no cartão só usam limite/);
 });
 
 test('planned account is context and payment can use another real account',()=>{
@@ -26,6 +26,7 @@ test('this month value edit is separate from future months',()=>{
   assert.match(ui,/Conferir valor/);
   assert.match(ui,/vale só para esta conta deste mês; os próximos meses não mudam/i);
   assert.match(service,/rpc\('confirm_recurring_expense_occurrence'/);
+  assert.match(ui,/mode==='pay'&&parsed>Number\(selected\.remaining_amount\)/);
 });
 
 test('payment uses dedicated canonical occurrence settlement command',()=>{

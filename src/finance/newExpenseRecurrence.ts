@@ -14,9 +14,6 @@ export function recurringExpenseBlockReason(context: NewExpenseRecurrenceContext
   if (context.paymentChoice === 'card_pix') {
     return 'A repetição de Pix por cartão precisa preservar principal e encargos como fatos separados; esse fluxo será habilitado pelo comando dedicado.';
   }
-  if (context.paymentChoice === 'card') {
-    return 'A repetição no cartão precisa entrar na fatura correta ao ser confirmada; esse fluxo será habilitado pelo comando dedicado.';
-  }
   if (context.paymentChoice === 'external') {
     return 'Quem paga e uma eventual devolução precisam ser confirmados em cada ocorrência; pagamento por terceiro ainda não pode virar série automaticamente.';
   }
@@ -32,3 +29,4 @@ export function recurringExpenseHorizonDate(startDate: string) {
   const horizon = new Date(Date.UTC(year + 1, month - 1, day));
   return horizon.toISOString().slice(0, 10);
 }
+

@@ -12,6 +12,7 @@ export type RecurringExpenseCommitment = {
   due_date: string;
   economic_state: 'forecast'|'confirmed'|'realized';
   commitment_state: string;
+  payment_instrument_kind: 'account'|'card';
   planned_account_id: string | null;
   planned_account_name: string | null;
   attention_state: 'overdue'|'due_today'|'due_soon'|'upcoming';
@@ -19,7 +20,7 @@ export type RecurringExpenseCommitment = {
 
 export async function listRecurringExpenseCommitments(client: SupabaseClient, householdId: string) {
   const response = await client.from('financial_recurring_expense_attention_positions')
-    .select('household_id, occurrence_id, transaction_id, recurring_rule_id, description, expected_amount, remaining_amount, due_date, economic_state, commitment_state, planned_account_id, planned_account_name, attention_state')
+    .select('household_id, occurrence_id, transaction_id, recurring_rule_id, description, expected_amount, remaining_amount, due_date, economic_state, commitment_state, payment_instrument_kind, planned_account_id, planned_account_name, attention_state')
     .eq('household_id', householdId)
     .order('due_date', { ascending: true });
   if (response.error) throw response.error;
@@ -29,6 +30,11 @@ export async function listRecurringExpenseCommitments(client: SupabaseClient, ho
 export async function confirmRecurringExpenseOccurrence(client: SupabaseClient, householdId: string, occurrenceId: string, amount: string) {
   const identity=[householdId,occurrenceId,amount] as const;
   return runRetryStableRpc(client,'confirm-recurring-expense',identity,'confirm_recurring_expense_occurrence_idempotent',{p_household_id:householdId,p_occurrence_id:occurrenceId,p_confirmed_amount:amount});
+}
+
+export async function confirmRecurringCardExpenseOccurrence(client: SupabaseClient, householdId: string, occurrenceId: string, amount: string) {
+  const identity=[householdId,occurrenceId,amount] as const;
+  return runRetryStableRpc(client,'confirm-recurring-card-expense',identity,'confirm_recurring_card_expense_occurrence_idempotent',{p_household_id:householdId,p_occurrence_id:occurrenceId,p_confirmed_amount:amount});
 }
 
 export async function settleRecurringExpenseOccurrence(client: SupabaseClient, input: { householdId: string; occurrenceId: string; accountId: string; funderMemberId: string; amount: string; paidAt: string }) {

@@ -216,6 +216,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Run PR I recurring card single behavior gate
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_i_recurring_card_single.test.sql 2>&1 | tee pr-i-db-test.log
+
+      - name: Retain PR I database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-i-db-test-log-${{ github.sha }}
+          path: pr-i-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
@@ -240,3 +255,4 @@ jobs:
 
       - name: Run Marco 3 financial isolation HTTP gate
         run: bash supabase/tests/marco3_financial_isolation_http.sh
+
