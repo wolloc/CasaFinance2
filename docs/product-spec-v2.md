@@ -259,6 +259,8 @@ A cor exata pertence ao design system e permanece decisão de UI; o significado 
 
 ### Recorrências em Compromissos
 
+Para cartão, cada ocorrência futura é uma compra independente projetada na fatura correspondente. Ela não reduz limite real nem cria caixa antes da cobrança. Ao confirmar a cobrança, a própria ocorrência passa a ser a compra realizada, entra na fatura e passa a consumir limite; depois é liquidada somente pelo pagamento da fatura. Isso não é parcelamento: parcelamento distribui uma única compra econômica já contratada, enquanto recorrência cria uma compra nova a cada período.
+
 Uma ocorrência recorrente futura é projeção, não despesa econômica já realizada. Ao tocar numa ocorrência esperada, o produto deve permitir conceitualmente:
 
 - confirmar ocorrência;

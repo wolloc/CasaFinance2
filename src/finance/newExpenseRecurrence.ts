@@ -5,18 +5,14 @@ export type NewExpenseRecurrenceContext = {
 };
 
 export function recurringExpenseBlockReason(context: NewExpenseRecurrenceContext) {
-  if (context.paymentChoice === 'benefit') {
-    return 'Gastos em VA/VR/benefício não podem ativar recorrência. Registre cada uso quando ele acontecer.';
-  }
   if (context.purchaseMode === 'installments' && (context.paymentChoice === 'card' || context.paymentChoice === 'card_pix')) {
     return 'Compra parcelada já possui compromissos próprios e não pode ser tratada como recorrência.';
   }
   if (context.paymentChoice === 'card_pix') {
     return 'A repetição de Pix por cartão precisa preservar principal e encargos como fatos separados; esse fluxo será habilitado pelo comando dedicado.';
   }
-  if (context.paymentChoice === 'card') {
-    return 'A repetição no cartão precisa entrar na fatura correta ao ser confirmada; esse fluxo será habilitado pelo comando dedicado.';
-  }
+  // Compra simples no cartão usa o comando dedicado: cada ocorrência futura é
+  // só uma projeção e somente consome limite quando sua cobrança é confirmada.
   if (context.paymentChoice === 'external') {
     return 'Quem paga e uma eventual devolução precisam ser confirmados em cada ocorrência; pagamento por terceiro ainda não pode virar série automaticamente.';
   }
