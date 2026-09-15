@@ -309,13 +309,16 @@ with base as (
     and c.commitment_state not in ('cancelled','reversed')
     and not (pi.kind='card' and c.source_invoice_id is not null)
 )
+-- Preserve the published view column order from migration 046. New card
+-- metadata is appended only, so existing PostgREST consumers remain compatible.
 select household_id,occurrence_id,transaction_id,recurring_rule_id,description,
-       expected_amount,remaining_amount,due_date,financial_due_date,economic_state,commitment_state,
-       payment_instrument_kind,planned_account_id,planned_account_name,planned_card_id,planned_card_name,
+       expected_amount,remaining_amount,due_date,economic_state,commitment_state,
+       planned_account_id,planned_account_name,
        case when due_date<current_date then 'overdue'
             when due_date=current_date then 'due_today'
             when due_date between current_date+1 and current_date+3 then 'due_soon'
-            else 'upcoming' end as attention_state
+            else 'upcoming' end as attention_state,
+       financial_due_date,payment_instrument_kind,planned_card_id,planned_card_name
 from base
 where due_date<=current_date+7;
 
@@ -417,3 +420,4 @@ comment on function public.create_recurring_expense_rule_from_transaction(uuid,u
   'Creates recurring direct-account or one-time-card expense series only. Benefit, installments, card PIX, external payer and third-party responsibility remain unsupported.';
 comment on function public.confirm_recurring_card_expense_occurrence(uuid,uuid,numeric) is
   'Confirms that an existing forecast recurring card charge actually happened. The existing transaction becomes economically realized and is attached exactly once to the canonical invoice; no cash or funding is created.';
+
