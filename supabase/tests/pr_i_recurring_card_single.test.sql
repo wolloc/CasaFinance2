@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(31);
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values ('7d000000-0000-4000-8000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','pr-i-card@example.invalid',crypt('test-only',gen_salt('bf')),now(),'{}','{"display_name":"Cartão PR I"}',now(),now());
@@ -17,7 +17,7 @@ select set_config('request.jwt.claim.sub','7d000000-0000-4000-8000-000000000001'
 
 select lives_ok($$
   select public.create_financial_transaction_idempotent(
-    '7d000000-0000-4000-8000-000000000010','expense','PR-I Netflix',30.00,current_date,null,
+    '7d000000-0000-4000-8000-000000000010','expense','PR-I Netflix',30.00,current_date-1,null,
     '7d000000-0000-4000-8000-000000000021','card',null,'7d000000-0000-4000-8000-000000000041',
     '[{"member_id":"7d000000-0000-4000-8000-000000000021","amount":"30.00","percentage":"100.0000"}]'::jsonb,1,null,'pr-i-source'
   )
@@ -26,10 +26,10 @@ $$,'I00 canonical simple card purchase can be the series template');
 select lives_ok($$
   select public.create_recurring_expense_rule_from_transaction_idempotent(
     '7d000000-0000-4000-8000-000000000010',(select id from public.transactions where description='PR-I Netflix' order by created_at limit 1),
-    'monthly',1,(current_date+interval '30 days')::date,null,'pr-i-rule'
+    'monthly',1,current_date,null,'pr-i-rule'
   )
 $$,'I00b canonical card recurrence rule is accepted');
-select is(public.ensure_household_recurring_expense_horizon('7d000000-0000-4000-8000-000000000010',(current_date+interval '30 days + 2 months')::date),3,'I00c three future occurrences materialize idempotently');
+select is(public.ensure_household_recurring_expense_horizon('7d000000-0000-4000-8000-000000000010',(current_date+interval '2 months')::date),3,'I00c three occurrences materialize idempotently');
 
 select is((select count(*) from public.recurring_occurrences where household_id='7d000000-0000-4000-8000-000000000010'),3::bigint,'I01 three projected occurrences exist');
 select is((select total_exposure from public.financial_card_exposure_positions where card_id='7d000000-0000-4000-8000-000000000041'),30.00::numeric,'I02 future forecasts do not consume real limit');
@@ -39,6 +39,10 @@ select is((select count(*) from public.card_invoices i join public.recurring_occ
 select is((select count(*) from public.funding_events where household_id='7d000000-0000-4000-8000-000000000010'),0::bigint,'I06 forecast creates no funding');
 select is((select count(*) from public.money_movements where household_id='7d000000-0000-4000-8000-000000000010'),0::bigint,'I07 forecast creates no cash movement');
 select is((select count(*) from public.financial_transaction_positions p join public.recurring_occurrences o on o.transaction_id=p.transaction_id where o.household_id='7d000000-0000-4000-8000-000000000010' and p.economic_state='realized'),0::bigint,'I08 forecast is not a realized expense');
+select throws_ok($$
+  select public.confirm_recurring_card_expense_occurrence(
+    '7d000000-0000-4000-8000-000000000010',(select id from public.recurring_occurrences where household_id='7d000000-0000-4000-8000-000000000010' order by competence_date desc limit 1),30.00)
+$$,'22023','future recurring card occurrence cannot be confirmed before its economic date','I08b future occurrence cannot be prematurely realized');
 
 select is(
   public.confirm_recurring_card_expense_occurrence_idempotent(

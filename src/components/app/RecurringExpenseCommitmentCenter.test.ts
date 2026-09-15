@@ -26,6 +26,7 @@ test('this month value edit is separate from future months',()=>{
   assert.match(ui,/Conferir valor/);
   assert.match(ui,/vale só para esta conta deste mês; os próximos meses não mudam/i);
   assert.match(service,/rpc\('confirm_recurring_expense_occurrence'/);
+  assert.match(ui,/mode==='pay'&&parsed>Number\(selected\.remaining_amount\)/);
 });
 
 test('payment uses dedicated canonical occurrence settlement command',()=>{
@@ -33,4 +34,3 @@ test('payment uses dedicated canonical occurrence settlement command',()=>{
   assert.doesNotMatch(service,/from\('money_movements'\)\.insert/);
   assert.doesNotMatch(service,/from\('funding_events'\)\.insert/);
 });
-
