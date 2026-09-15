@@ -43,7 +43,10 @@ test('only simple card recurrence is enabled; unsupported financing remains bloc
   assert.equal(recurringExpenseBlockReason({ paymentChoice: 'account', purchaseMode: 'single', hasPartyResponsibility: false }), null);
   assert.match(standaloneAction, /benefitAccountIds/);
   assert.match(standaloneAction, /account\.type==='meal_benefit'/);
-  assert.match(standaloneAction, /!benefitAccountIds\.has\(row\.payment_instrument\.account_id\?\?''\)/);\n  assert.match(standaloneAction, /row\.payment_instrument\?\.kind==='card'/);\n  assert.match(standaloneAction, /row\.invoice_id!==null/);\n  assert.match(commitmentCenter, /confirmRecurringCardExpenseOccurrence/);
+  assert.match(standaloneAction, /!benefitAccountIds\.has\(row\.payment_instrument\.account_id\?\?''\)/);
+  assert.match(standaloneAction, /row\.payment_instrument\?\.kind==='card'/);
+  assert.match(standaloneAction, /row\.invoice_id!==null/);
+  assert.match(commitmentCenter, /confirmRecurringCardExpenseOccurrence/);
 });
 
 test('projection horizon is one calendar year after the first occurrence', () => {
@@ -51,4 +54,3 @@ test('projection horizon is one calendar year after the first occurrence', () =>
   assert.equal(recurringExpenseHorizonDate('2028-02-29'), '2029-03-01');
   assert.throws(() => recurringExpenseHorizonDate(''), /Data inicial/);
 });
-
