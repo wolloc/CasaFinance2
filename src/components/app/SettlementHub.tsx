@@ -11,7 +11,8 @@ const dateLabel=(value:string|null)=>{if(!value)return 'Sem vencimento';const da
 
 export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIntent)=>void}){
   const{household,householdMembers}=useSupabaseAuth();
-  const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);\n  const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
+  const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
+  const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
   const[thirdPartyRows,setThirdPartyRows]=useState<ThirdPartyObligation[]>([]);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState(false);
@@ -20,7 +21,8 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
   const retry=()=>setRefreshKey(value=>value+1);
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
   const realized=useMemo(()=>memberRows.filter(row=>Number(row.realized_outstanding)>0),[memberRows]);
-  const projected=useMemo(()=>memberRows.filter(row=>Number(row.realized_outstanding)<=0&&Number(row.projected_outstanding)>0),[memberRows]);\n  const eventsFor=(row:MemberSettlementPosition,state:'realized'|'projected')=>memberEvents.filter(event=>event.debtor_member_id===row.debtor_member_id&&event.creditor_member_id===row.creditor_member_id&&event.state===state);
+  const projected=useMemo(()=>memberRows.filter(row=>Number(row.realized_outstanding)<=0&&Number(row.projected_outstanding)>0),[memberRows]);
+  const eventsFor=(row:MemberSettlementPosition,state:'realized'|'projected')=>memberEvents.filter(event=>event.debtor_member_id===row.debtor_member_id&&event.creditor_member_id===row.creditor_member_id&&event.state===state);
   const eventLabel=(event:MemberSettlementEvent)=>event.notes?.trim()||event.source_description|| (event.kind==='explicit_settlement'?'Acerto já registrado':'Despesa ou compromisso que originou este acerto');
   const eventImpact=(event:MemberSettlementEvent)=>event.kind==='explicit_settlement'||event.kind==='correction'?-Number(event.amount):Number(event.amount);
 
