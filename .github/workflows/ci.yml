@@ -231,6 +231,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Run PR J financial onboarding opening position behavior gate
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_j_financial_onboarding_opening_positions.test.sql 2>&1 | tee pr-j-db-test.log
+
+      - name: Retain PR J database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-j-db-test-log-${{ github.sha }}
+          path: pr-j-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env

@@ -6,7 +6,7 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 
 | Conceito | Definição e efeito financeiro |
 | --- | --- |
-| **Casa** | Unidade de isolamento e colaboração (`household`), composta por exatamente dois membros ativos. Dados de Casas distintas nunca se misturam nem se compensam. |
+| **Casa** | Unidade de isolamento, colaboração, segurança e consolidação (`household`), composta por um ou dois membros ativos. Casa não é proprietária de dinheiro, patrimônio, dívida, direito ou obrigação; recursos pertencem a membros ou terceiros. Dados de Casas distintas nunca se misturam nem se compensam. |
 | **Membro** | Pessoa da Casa que pode registrar, comprar, ser titular, responsável ou funder; esses papéis são independentes. |
 | **Evento econômico** | Fato que reconhece receita, despesa, rendimento, perda ou outro efeito econômico uma única vez, independentemente de como e quando será financiado. |
 | **Conta / dinheiro físico** | Recurso transacional cujo saldo realizado compõe o caixa atual. Dinheiro físico tem localização própria; saque e depósito são transferências. |
