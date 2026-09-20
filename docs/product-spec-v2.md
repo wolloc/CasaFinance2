@@ -2,7 +2,7 @@
 
 ## Visão
 
-Casa Finance é um sistema financeiro doméstico para uma Casa composta por **exatamente duas pessoas**. Seu objetivo não é somente registrar gastos: o produto explica onde o dinheiro está, de onde veio, para onde vai, o que já está comprometido, o que ainda deve entrar, quem comprou, quem deve assumir economicamente, quem efetivamente colocou ou colocará o recurso, quem deve acertar dinheiro com quem e como está a saúde financeira da Casa e de cada membro.
+Casa Finance é um sistema financeiro doméstico para uma Casa composta por **uma ou duas pessoas ativas**. Casa é contexto de organização, colaboração, segurança e consolidação; não é proprietária de dinheiro, patrimônio, dívida, direito ou obrigação. Seu objetivo não é somente registrar gastos: o produto explica onde o dinheiro está, de onde veio, para onde vai, o que já está comprometido, o que ainda deve entrar, quem comprou, quem deve assumir economicamente, quem efetivamente colocou ou colocará o recurso, quem deve acertar dinheiro com quem e como está a saúde financeira da Casa e de cada membro.
 
 > **Princípio de UX:** “O usuário conta o que aconteceu; o Casa interpreta financeiramente o acontecimento.”
 
