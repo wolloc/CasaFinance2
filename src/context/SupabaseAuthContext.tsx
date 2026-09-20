@@ -7,7 +7,7 @@ import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitatio
 
 type Credentials = { email: string; password: string };
 type AuthResult = { success: boolean; confirmationRequired?: boolean };
-type HouseholdMember = { id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string; display_name_confirmed_at: string | null };
+type HouseholdMember = { id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string; display_name_confirmed_at: string | null; financial_onboarding_completed_at: string | null };
 
 type SupabaseAuthValue = {
   session: Session | null;
@@ -22,6 +22,7 @@ type SupabaseAuthValue = {
   householdMembersError: string | null;
   retryHouseholdMembers: () => void;
   confirmDisplayName: (displayName: string) => Promise<boolean>;
+  completeFinancialOnboarding: () => Promise<boolean>;
   createHousehold: (householdName: string, displayName: string) => Promise<BootstrapHouseholdResult | null>;
   createInvitation: (invitedEmail?: string) => Promise<HouseholdInvitation | null>;
   acceptInvitation: (token: string) => Promise<AcceptInvitationResult | null>;
@@ -98,7 +99,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const loadHouseholdMembers = async () => {
       try {
         const membershipResponse = await supabase.from('household_members')
-          .select('id, household_id, profile_id, role, profiles(display_name, display_name_confirmed_at)')
+          .select('id, household_id, profile_id, role, profiles(display_name, display_name_confirmed_at, financial_onboarding_completed_at)')
           .eq('profile_id', session.user.id)
           .is('deactivated_at', null)
           .maybeSingle();
@@ -112,7 +113,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
         const membership = membershipResponse.data as { household_id: string };
         const response = await supabase.from('household_members')
-          .select('id, profile_id, role, profiles(display_name, display_name_confirmed_at)')
+          .select('id, profile_id, role, profiles(display_name, display_name_confirmed_at, financial_onboarding_completed_at)')
           .eq('household_id', membership.household_id)
           .is('deactivated_at', null)
           .order('joined_at');
@@ -125,6 +126,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           role: member.role as 'owner' | 'member' | 'viewer',
           display_name: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name ?? 'Membro',
           display_name_confirmed_at: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name_confirmed_at?: string | null } | null)?.display_name_confirmed_at ?? null,
+          financial_onboarding_completed_at: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { financial_onboarding_completed_at?: string | null } | null)?.financial_onboarding_completed_at ?? null,
         })));
         setHouseholdMembersError(null);
       } catch {
@@ -180,6 +182,19 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         return true;
       } catch {
         setError('Não foi possível salvar seu nome agora. Tente novamente.');
+        return false;
+      } finally { setIsSubmitting(false); }
+    },
+    completeFinancialOnboarding: async () => {
+      if (!supabase || !session) return false;
+      setIsSubmitting(true); setError(null);
+      try {
+        const response = await supabase.rpc('complete_my_financial_onboarding');
+        if (response.error) throw response.error;
+        setHouseholdMembersRefreshVersion((version) => version + 1);
+        return true;
+      } catch {
+        setError('Não foi possível concluir sua preparação agora. Tente novamente.');
         return false;
       } finally { setIsSubmitting(false); }
     },
