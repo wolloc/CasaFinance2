@@ -347,7 +347,7 @@ begin
    exit when remaining=0;
  end loop;
  if remaining<>0 then raise exception 'invoice purchases do not support requested funding' using errcode='23514'; end if;
- update public.card_invoices set settled_amount=settled_amount+p_amount,status=case when settled_amount+opening_settled_amount+p_amount=total_amount then 'paid' else status end,settled_at=case when settled_amount+p_amount=total_amount then p_paid_at else null end,updated_at=now() where id=p_invoice_id;
+ update public.card_invoices set settled_amount=settled_amount+p_amount,status=case when settled_amount+opening_settled_amount+p_amount=total_amount then 'paid' else status end,settled_at=case when settled_amount+opening_settled_amount+p_amount=total_amount then p_paid_at else null end,updated_at=now() where id=p_invoice_id;
  return payment_tx;
 end
 $function$
