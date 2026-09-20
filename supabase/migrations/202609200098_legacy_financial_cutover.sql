@@ -166,12 +166,35 @@ begin
       raise exception 'one or two account owners are required' using errcode='22023';
     end if;
 
-    select coalesce(current_balance,0)::numeric(19,2)
-      into prior_canonical_balance
-    from public.financial_account_balances
-    where household_id=p_household_id and account_id=v_account_id;
-
-    prior_canonical_balance:=coalesce(prior_canonical_balance,0);
+    select (
+      coalesce((
+        select sum(e.amount)
+        from public.account_balance_events e
+        where e.household_id=p_household_id
+          and e.account_id=v_account_id
+          and e.reversed_at is null
+          and e.effective_date<p_started_on
+      ),0)
+      + coalesce((
+        select sum(leg.amount)
+        from (
+          select m.amount
+          from public.money_movements m
+          where m.household_id=p_household_id
+            and m.destination_account_id=v_account_id
+            and m.state='realized'
+            and m.movement_date<p_started_on
+          union all
+          select -m.amount
+          from public.money_movements m
+          where m.household_id=p_household_id
+            and m.source_account_id=v_account_id
+            and m.state='realized'
+            and m.movement_date<p_started_on
+        ) leg
+      ),0)
+    )::numeric(19,2)
+      into prior_canonical_balance;
 
     perform public.set_account_ownerships(p_household_id,v_account_id,owner_ids);
     perform public.record_account_opening_position(
@@ -221,4 +244,4 @@ revoke all on function public.reconcile_existing_accounts_at_cutoff_idempotent(u
 grant execute on function public.reconcile_existing_accounts_at_cutoff_idempotent(uuid,date,jsonb,text) to authenticated;
 
 comment on function public.reconcile_existing_accounts_at_cutoff(uuid,date,jsonb) is
-  'Reconcilia atomicamente contas legadas na data de corte usando saldos e titulares confirmados pelo usuário. Não copia opening_balance/owner_member_id e neutraliza apenas o efeito canônico já existente antes do corte.';
+  'Reconcilia atomicamente contas legadas na data de corte usando saldos e titulares confirmados pelo usuário. Não copia opening_balance/owner_member_id e neutraliza somente eventos e movimentos canônicos anteriores ao corte, preservando o próprio dia de início e tudo que veio depois.';
