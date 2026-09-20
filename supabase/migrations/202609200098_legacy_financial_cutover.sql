@@ -43,7 +43,9 @@ begin
 
   return current_start;
 end
-$$;
+$;
+
+revoke all on function public.set_household_financial_tracking_start(uuid,date) from public,anon,authenticated;
 
 create or replace view public.financial_account_balances with (security_invoker=true) as
 with balance_events as (
