@@ -23,7 +23,8 @@ values
 insert into public.accounts(id,household_id,owner_member_id,name,type,institution,opening_balance)
 values
  ('8b000000-0000-4000-8000-000000000031','8b000000-0000-4000-8000-000000000010','8b000000-0000-4000-8000-000000000021','Conta legado A','checking','Banco A',999),
- ('8b000000-0000-4000-8000-000000000032','8b000000-0000-4000-8000-000000000010','8b000000-0000-4000-8000-000000000022','Conta legado B','checking','Banco B',777);
+ ('8b000000-0000-4000-8000-000000000032','8b000000-0000-4000-8000-000000000010','8b000000-0000-4000-8000-000000000022','Conta legado B','checking','Banco B',777),
+ ('8b000000-0000-4000-8000-000000000033','8b000000-0000-4000-8000-000000000011','8b000000-0000-4000-8000-000000000023','Conta datas','checking','Banco Datas',555);
 
 -- Efeitos canônicos antigos já existentes no Staging antes do corte.
 insert into public.account_balance_events(
@@ -168,13 +169,15 @@ select is(
 select set_config('request.jwt.claim.sub','8b000000-0000-4000-8000-000000000003',true);
 
 select throws_ok(
-  $$select public.set_household_financial_tracking_start(
+  $select public.reconcile_existing_accounts_at_cutoff_idempotent(
     '8b000000-0000-4000-8000-000000000011',
-    ((current_timestamp at time zone 'America/Sao_Paulo')::date + 1)
-  )$$,
+    ((current_timestamp at time zone 'America/Sao_Paulo')::date + 1),
+    '[{"account_id":"8b000000-0000-4000-8000-000000000033","opening_amount":"300.00","owner_member_ids":["8b000000-0000-4000-8000-000000000023"]}]'::jsonb,
+    'k-future-cutoff'
+  )$,
   '22023',
   'financial tracking start must be today or earlier in household timezone',
-  'K18 backend rejeita data futura no fuso financeiro da Casa'
+  'K18 comando público rejeita data futura no fuso financeiro da Casa'
 );
 
 reset role;
