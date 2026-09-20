@@ -11,7 +11,7 @@ const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', i
 test('income creation uses its dedicated canonical RPC instead of the generic transaction creator', () => {
   assert.match(serviceSource, /rpc\('create_income_fact'/);
   assert.doesNotMatch(serviceSource, /create_financial_transaction|createHouseholdTransaction/);
-  assert.match(transactionsScreenSource, /if \(mode === 'income'\) return <IncomeLedgerScreen/);
+  assert.match(transactionsScreenSource, /if \(mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
   assert.doesNotMatch(transactionsScreenSource, /mode === 'income'.*HouseholdTransactionsSetup/s);
 });
 
