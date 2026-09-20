@@ -62,11 +62,11 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
       const wantsObject = (request.headers()['accept'] ?? '').includes('application/vnd.pgrst.object');
       if (table === 'household_members') {
         if (select === 'household_id,profile_id') return fulfill({ household_id: householdId, profile_id: userId });
-        if (select.includes('id,household_id,profile_id,role,profiles(display_name)')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } });
-        if (options.failMemberList && select.includes('profiles(display_name)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
+        if (select.includes('id,household_id,profile_id,role,profiles(display_name,display_name_confirmed_at)')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace', display_name_confirmed_at: now } });
+        if (options.failMemberList && select.includes('profiles(display_name,display_name_confirmed_at)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
         return fulfill([
-          { id: 'm1', profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace' } },
-          { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', profiles: { display_name: 'Guilherme' } },
+          { id: 'm1', profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace', display_name_confirmed_at: now } },
+          { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', profiles: { display_name: 'Guilherme', display_name_confirmed_at: now } },
         ]);
       }
       if (table === 'households') return fulfill({ id: householdId, name: 'Casa Teste' });
