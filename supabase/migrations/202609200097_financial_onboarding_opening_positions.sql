@@ -363,13 +363,13 @@ create or replace view public.financial_invoice_positions with (security_invoker
     i.status,
     i.total_amount,
     i.settled_amount,
-    i.opening_settled_amount,
-    (i.settled_amount + i.opening_settled_amount)::numeric(19,2) AS paid_amount,
     GREATEST(i.total_amount - i.settled_amount - i.opening_settled_amount - i.financed_balance, 0::numeric) AS outstanding_amount,
     i.financed_balance,
     i.minimum_payment_amount,
     i.due_date < CURRENT_DATE AND (i.status <> ALL (ARRAY['paid'::invoice_state, 'cancelled'::invoice_state])) AND i.total_amount > (i.settled_amount + i.opening_settled_amount + i.financed_balance) AS is_overdue,
-    c.default_payment_account_id AS planned_payment_account_id
+    c.default_payment_account_id AS planned_payment_account_id,
+    i.opening_settled_amount,
+    (i.settled_amount + i.opening_settled_amount)::numeric(19,2) AS paid_amount
    FROM card_invoices i
      JOIN cards c ON c.id = i.card_id AND c.household_id = i.household_id
   WHERE i.deleted_at IS NULL;;
@@ -384,13 +384,13 @@ create or replace view public.financial_card_invoice_positions with (security_in
     i.due_date,
     i.total_amount AS known_invoice_amount,
     (i.settled_amount + i.opening_settled_amount)::numeric(19,2) AS paid_amount,
-    i.opening_settled_amount,
     GREATEST(i.total_amount - i.settled_amount - i.opening_settled_amount - i.financed_balance, 0::numeric)::numeric(19,2) AS remaining_amount,
     i.status AS state,
     i.due_date < CURRENT_DATE AND (i.status <> ALL (ARRAY['paid'::invoice_state, 'cancelled'::invoice_state])) AND i.total_amount > (i.settled_amount + i.opening_settled_amount + i.financed_balance) AS is_overdue,
     i.competence_date = date_trunc('month'::text, CURRENT_DATE::timestamp with time zone)::date AS is_current_invoice,
     i.competence_date > date_trunc('month'::text, CURRENT_DATE::timestamp with time zone)::date AS is_future_invoice,
-    i.due_date - CURRENT_DATE AS days_until_due
+    i.due_date - CURRENT_DATE AS days_until_due,
+    i.opening_settled_amount
    FROM card_invoices i
      JOIN cards c ON c.id = i.card_id AND c.household_id = i.household_id
   WHERE i.deleted_at IS NULL AND c.deactivated_at IS NULL;;
