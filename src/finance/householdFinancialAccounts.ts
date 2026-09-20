@@ -13,6 +13,7 @@ export type HouseholdAccount = {
   institution: string | null;
   opening_balance: string;
   opened_at: string | null;
+  owner_member_ids?: string[];
 };
 
 export type AccountOwnership = { account_id: string; member_id: string };
@@ -48,7 +49,7 @@ export async function listHouseholdFinancialAccounts(client: SupabaseClient, hou
   if (openings.error) throw openings.error;
   if (ownerships.error) throw ownerships.error;
   return {
-    accounts: (accounts.data ?? []) as HouseholdAccount[],
+    accounts: ((accounts.data ?? []) as HouseholdAccount[]).map((account) => ({ ...account, owner_member_ids: ((ownerships.data ?? []) as AccountOwnership[]).filter((ownership) => ownership.account_id === account.id).map((ownership) => ownership.member_id) })),
     cards: (cards.data ?? []) as HouseholdCard[],
     financialTrackingStartedOn: household.data?.financial_tracking_started_on ?? null,
     openingAccountIds: (openings.data ?? []).map((row) => row.account_id as string),
