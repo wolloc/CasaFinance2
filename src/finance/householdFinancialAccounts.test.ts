@@ -5,9 +5,14 @@ import { test } from 'node:test';
 const serviceSource = await readFile(new URL('./householdFinancialAccounts.ts', import.meta.url), 'utf8');
 const migrationSource = await readFile(new URL('../../supabase/migrations/202609030011_accounts_cards_rls.sql', import.meta.url), 'utf8');
 const screenSource = await readFile(new URL('../components/auth/HouseholdFinancialSetup.tsx', import.meta.url), 'utf8');
+const openingCardModalSource = await readFile(new URL('../components/auth/OpeningCardCommitmentsModal.tsx', import.meta.url), 'utf8');
 
-test('financial service derives writes from the authenticated household context', () => {
-  assert.match(serviceSource, /household_id: householdId/);
+test('financial onboarding derives writes from the authenticated household context and canonical commands', () => {
+  assert.match(serviceSource, /p_household_id: householdId/);
+  assert.match(serviceSource, /create_account_with_opening_position_idempotent/);
+  assert.match(serviceSource, /record_opening_card_purchase_idempotent/);
+  assert.match(serviceSource, /record_opening_card_balance_adjustment_idempotent/);
+  assert.doesNotMatch(serviceSource, /from\('accounts'\)\.insert/);
   assert.doesNotMatch(serviceSource, /user_id|owner_user_id/);
   assert.match(screenSource, /household\.id/);
   assert.match(screenSource, /useSupabaseAuth/);
@@ -32,7 +37,9 @@ test('card ownership is not transaction responsibility', () => {
   assert.match(screenSource, /Titular do cartão/);
   assert.match(screenSource, /Quem compra, quem fica responsável pelo gasto e quem paga a fatura continuam sendo escolhas separadas/);
   assert.match(screenSource, /O titular do cartão não define comprador, responsável pelo gasto ou pagador/);
-  assert.doesNotMatch(serviceSource, /buyer_member_id|responsible_member_id|funder_member_id/);
+  const cardRegistrationSource = serviceSource.slice(0, serviceSource.indexOf('export async function recordOpeningCardPurchase'));
+  assert.doesNotMatch(cardRegistrationSource, /buyer_member_id|responsible_member_id|funder_member_id/);
+  assert.match(serviceSource, /p_buyer_member_id/);
 });
 
 test('legacy DatabaseStore remains outside the Supabase financial path', () => {
@@ -46,4 +53,20 @@ test('household experience remains available and card default owner follows the 
   assert.match(householdScreen, /Contas e cartões/);
   assert.match(screenSource, /member\.profile_id === user\?\.id/);
   assert.doesNotMatch(screenSource, /householdMembers\[0\]/);
+});
+
+test('opening positions stay separate from ordinary financial registration UX', () => {
+  assert.match(screenSource, /A partir de que data você começa a acompanhar suas finanças/);
+  assert.match(screenSource, /OpeningCardCommitmentsModal/);
+  assert.match(screenSource, /Já existem compras neste cartão/);
+  assert.doesNotMatch(screenSource, /Da Casa \/ compartilhada/);
+});
+
+test('opening card UX preserves detailed facts or explicitly keeps history aggregated', () => {
+  assert.match(openingCardModalSource, /recordOpeningCardPurchase/);
+  assert.match(openingCardModalSource, /recordOpeningCardBalance/);
+  assert.match(openingCardModalSource, /Quem fez a compra/);
+  assert.match(openingCardModalSource, /Quem fica responsável economicamente/);
+  assert.match(openingCardModalSource, /não inventará quem comprou, categoria ou responsabilidade/);
+  assert.match(openingCardModalSource, /pelo menos uma parcela em aberto/);
 });
