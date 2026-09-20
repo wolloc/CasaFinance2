@@ -61,7 +61,7 @@ select is((select available_limit from public.financial_card_exposure_positions 
 select lives_ok($$
   select public.record_opening_card_purchase_idempotent(
     '8a000000-0000-4000-8000-000000000010','8a000000-0000-4000-8000-000000000042',
-    'Compra histórica parcelada',current_date-interval '4 months',1000,null,
+    'Compra histórica parcelada',(current_date-interval '4 months')::date,1000,null,
     '8a000000-0000-4000-8000-000000000021',
     '[{"member_id":"8a000000-0000-4000-8000-000000000021","amount":"1000.00","percentage":"100.0000"}]'::jsonb,
     4,2,'Compra anterior ao uso do Casa','j-card-history'
