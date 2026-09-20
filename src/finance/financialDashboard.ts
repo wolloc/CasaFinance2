@@ -10,6 +10,7 @@ export type MemberMonthlyProjection = { household_id:string; member_id:string; r
 export type CardHealthPosition = { card_id:string; card_name:string; credit_limit:number; current_invoice_remaining:number; future_known_commitments:number; available_limit:number; utilization_ratio:number|null; over_limit_amount:number; next_due_date:string|null; card_health:'green'|'yellow'|'red'; };
 export type MemberSettlementPosition = { debtor_member_id:string; creditor_member_id:string; realized_outstanding:number; projected_outstanding:number; scheduled_settlement_amount:number; net_position:number; };
 export type ResourceSummary = { availableCash:number; benefits:number; reserves:number; investments:number; };
+export type FinancialDashboardAvailability = { household:boolean; members:boolean; health:boolean; confidence:boolean; attention:boolean; projection:boolean; cards:boolean; settlements:boolean; resources:boolean; guidance:boolean; };
 export type LiquidityGuidance = { household_id:string; current_cash:number; committed_before_new_income:number; free_cash_after_commitments:number; reliable_income_remaining:number; projected_ending_cash:number; coverage_gap:number; reserve_balance:number; investment_balance:number; overdraft_used:number; guidance_state:'covered'|'covered_by_expected_income'|'needs_resource_reallocation'|'needs_funding_plan'; guidance_title:string; };
 type AccountBalanceRow = { type:string; resource_restriction:string|null; current_balance:number|string; is_restricted:boolean; is_investment:boolean; };
 
@@ -31,6 +32,35 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     client.from('financial_account_balances').select('type,resource_restriction,current_balance,is_restricted,is_investment').eq('household_id',householdId),
     client.rpc('financial_liquidity_guidance',{p_household_id:householdId}),
   ]);
-  for(const response of[household,members,health,confidence,attention,projection,cards,settlements,accountBalances,guidance])if(response.error)throw response.error;
-  return { household:household.data as HouseholdFinancialPosition|null,members:(members.data??[])as MemberFinancialPosition[],health:((health.data??[])[0]??null)as HouseholdHealthPosition|null,confidence:confidence.data as ProjectionConfidence|null,attention:(attention.data??[])as AttentionItem[],projection:(projection.data??[])as MonthlyProjection[],cards:(cards.data??[])as CardHealthPosition[],settlements:(settlements.data??[])as MemberSettlementPosition[],resources:summarizeResources((accountBalances.data??[])as AccountBalanceRow[]),guidance:((guidance.data??[])[0]??null)as LiquidityGuidance|null };
+
+  const availability:FinancialDashboardAvailability={
+    household:!household.error,
+    members:!members.error,
+    health:!health.error,
+    confidence:!confidence.error,
+    attention:!attention.error,
+    projection:!projection.error,
+    cards:!cards.error,
+    settlements:!settlements.error,
+    resources:!accountBalances.error,
+    guidance:!guidance.error,
+  };
+
+  if(!Object.values(availability).some(Boolean)){
+    throw new Error('Não foi possível carregar nenhuma fonte canônica da posição financeira.');
+  }
+
+  return {
+    household:availability.household?household.data as HouseholdFinancialPosition|null:null,
+    members:availability.members?(members.data??[])as MemberFinancialPosition[]:[],
+    health:availability.health?((health.data??[])[0]??null)as HouseholdHealthPosition|null:null,
+    confidence:availability.confidence?confidence.data as ProjectionConfidence|null:null,
+    attention:availability.attention?(attention.data??[])as AttentionItem[]:[],
+    projection:availability.projection?(projection.data??[])as MonthlyProjection[]:[],
+    cards:availability.cards?(cards.data??[])as CardHealthPosition[]:[],
+    settlements:availability.settlements?(settlements.data??[])as MemberSettlementPosition[]:[],
+    resources:availability.resources?summarizeResources((accountBalances.data??[])as AccountBalanceRow[]):null,
+    guidance:availability.guidance?((guidance.data??[])[0]??null)as LiquidityGuidance|null:null,
+    availability,
+  };
 }
