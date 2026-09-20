@@ -7,7 +7,7 @@ import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitatio
 
 type Credentials = { email: string; password: string };
 type AuthResult = { success: boolean; confirmationRequired?: boolean };
-type HouseholdMember = { id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string };
+type HouseholdMember = { id: string; profile_id: string; role: 'owner' | 'member' | 'viewer'; display_name: string; display_name_confirmed_at: string | null };
 
 type SupabaseAuthValue = {
   session: Session | null;
@@ -21,6 +21,7 @@ type SupabaseAuthValue = {
   householdMembersLoading: boolean;
   householdMembersError: string | null;
   retryHouseholdMembers: () => void;
+  confirmDisplayName: (displayName: string) => Promise<boolean>;
   createHousehold: (householdName: string, displayName: string) => Promise<BootstrapHouseholdResult | null>;
   createInvitation: (invitedEmail?: string) => Promise<HouseholdInvitation | null>;
   acceptInvitation: (token: string) => Promise<AcceptInvitationResult | null>;
@@ -97,7 +98,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const loadHouseholdMembers = async () => {
       try {
         const membershipResponse = await supabase.from('household_members')
-          .select('id, household_id, profile_id, role, profiles(display_name)')
+          .select('id, household_id, profile_id, role, profiles(display_name, display_name_confirmed_at)')
           .eq('profile_id', session.user.id)
           .is('deactivated_at', null)
           .maybeSingle();
@@ -111,7 +112,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
         const membership = membershipResponse.data as { household_id: string };
         const response = await supabase.from('household_members')
-          .select('id, profile_id, role, profiles(display_name)')
+          .select('id, profile_id, role, profiles(display_name, display_name_confirmed_at)')
           .eq('household_id', membership.household_id)
           .is('deactivated_at', null)
           .order('joined_at');
@@ -123,6 +124,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           profile_id: member.profile_id,
           role: member.role as 'owner' | 'member' | 'viewer',
           display_name: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name ?? 'Membro',
+          display_name_confirmed_at: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name_confirmed_at?: string | null } | null)?.display_name_confirmed_at ?? null,
         })));
         setHouseholdMembersError(null);
       } catch {
@@ -168,6 +170,19 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     householdMembersLoading,
     householdMembersError,
     retryHouseholdMembers: () => setHouseholdMembersRefreshVersion((version) => version + 1),
+    confirmDisplayName: async (displayName) => {
+      if (!supabase || !session) return false;
+      setIsSubmitting(true); setError(null);
+      try {
+        const response = await supabase.rpc('confirm_my_display_name', { display_name: displayName.trim() });
+        if (response.error) throw response.error;
+        setHouseholdMembersRefreshVersion((version) => version + 1);
+        return true;
+      } catch {
+        setError('Não foi possível salvar seu nome agora. Tente novamente.');
+        return false;
+      } finally { setIsSubmitting(false); }
+    },
     createHousehold: async (householdName, displayName) => {
       if (!supabase || !session) {
         setError('Sessão expirada. Entre novamente para continuar.');
