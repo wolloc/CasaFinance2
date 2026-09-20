@@ -24,7 +24,7 @@ export function MemberIdentityOnboarding() {
           <input autoFocus required maxLength={80} value={name} onChange={(event)=>setName(event.target.value)} placeholder="Ex.: Guilherme" className="mt-2 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 text-base outline-none focus:border-emerald-500"/>
         </label>
         {error&&<p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</p>}
-        <button type="submit" disabled={isSubmitting||!name.trim()} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white disabled:opacity-60">{isSubmitting&&<LoaderCircle className="h-4 w-4 animate-spin"/>Continuar</button>
+        <button type="submit" disabled={isSubmitting||!name.trim()} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white disabled:opacity-60">{isSubmitting&&<LoaderCircle className="h-4 w-4 animate-spin"/>}Continuar</button>
       </form>
       <button type="button" onClick={signOut} disabled={isSubmitting} className="mt-3 min-h-11 w-full text-sm font-semibold text-slate-500">Sair</button>
     </section>
