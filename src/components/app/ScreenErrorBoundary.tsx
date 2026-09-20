@@ -4,6 +4,8 @@ type Props={children:ReactNode;screenName:string;onRetry?:()=>void};
 type State={failed:boolean};
 
 export class ScreenErrorBoundary extends Component<Props,State>{
+  declare props:Props;
+  declare setState:(state:State|((previous:State)=>State))=>void;
   state:State={failed:false};
   static getDerivedStateFromError():State{return{failed:true};}
   componentDidCatch(error:Error,info:ErrorInfo){console.error(`Casa Finance: falha ao renderizar ${this.props.screenName}`,error,info);}
