@@ -176,7 +176,8 @@ begin
   if p_original_purchase_date is null or p_original_purchase_date>=tracking_start
      or p_amount is null or p_amount<=0 or nullif(trim(p_description),'') is null
      or p_installment_count is null or p_installment_count<1
-     or p_paid_installment_count is null or p_paid_installment_count<0 or p_paid_installment_count>p_installment_count then
+     or p_paid_installment_count is null or p_paid_installment_count<0 or p_paid_installment_count>p_installment_count
+     or (p_installment_count=1 and p_paid_installment_count<>0) then
     raise exception 'invalid historical card purchase opening' using errcode='22023';
   end if;
   if not exists(select 1 from public.cards where id=p_card_id and household_id=p_household_id and deactivated_at is null) then
@@ -362,7 +363,7 @@ create or replace view public.financial_invoice_positions with (security_invoker
     i.due_date,
     i.status,
     i.total_amount,
-    i.settled_amount,
+    (i.settled_amount + i.opening_settled_amount)::numeric(19,2) AS settled_amount,
     GREATEST(i.total_amount - i.settled_amount - i.opening_settled_amount - i.financed_balance, 0::numeric) AS outstanding_amount,
     i.financed_balance,
     i.minimum_payment_amount,
