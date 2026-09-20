@@ -6,8 +6,12 @@ const serviceSource = await readFile(new URL('./householdFinancialAccounts.ts', 
 const migrationSource = await readFile(new URL('../../supabase/migrations/202609030011_accounts_cards_rls.sql', import.meta.url), 'utf8');
 const screenSource = await readFile(new URL('../components/auth/HouseholdFinancialSetup.tsx', import.meta.url), 'utf8');
 
-test('financial service derives writes from the authenticated household context', () => {
-  assert.match(serviceSource, /household_id: householdId/);
+test('financial onboarding derives writes from the authenticated household context and canonical commands', () => {
+  assert.match(serviceSource, /p_household_id: householdId/);
+  assert.match(serviceSource, /create_account_with_opening_position_idempotent/);
+  assert.match(serviceSource, /record_opening_card_purchase_idempotent/);
+  assert.match(serviceSource, /record_opening_card_balance_adjustment_idempotent/);
+  assert.doesNotMatch(serviceSource, /from\('accounts'\)\.insert/);
   assert.doesNotMatch(serviceSource, /user_id|owner_user_id/);
   assert.match(screenSource, /household\.id/);
   assert.match(screenSource, /useSupabaseAuth/);
@@ -46,4 +50,11 @@ test('household experience remains available and card default owner follows the 
   assert.match(householdScreen, /Contas e cartões/);
   assert.match(screenSource, /member\.profile_id === user\?\.id/);
   assert.doesNotMatch(screenSource, /householdMembers\[0\]/);
+});
+
+test('opening positions stay separate from ordinary financial registration UX', () => {
+  assert.match(screenSource, /A partir de que data você começa a acompanhar suas finanças/);
+  assert.match(screenSource, /OpeningCardCommitmentsModal/);
+  assert.match(screenSource, /Já existem compras neste cartão/);
+  assert.doesNotMatch(screenSource, /Da Casa \/ compartilhada/);
 });
