@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(27);
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values ('8a000000-0000-4000-8000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','pr-j-opening@example.invalid',crypt('test-only',gen_salt('bf')),now(),'{}','{"display_name":"Abertura PR J"}',now(),now());
@@ -92,6 +92,17 @@ select lives_ok($$
   )
 $$,'J24 pagamento posterior da fatura de abertura usa a liquidação canônica');
 select is((select total_exposure from public.financial_card_exposure_positions where card_id='8a000000-0000-4000-8000-000000000043'),200::numeric,'J25 pagamento parcial libera somente o limite pago');
+
+select lives_ok($
+  select public.record_opening_card_purchase_idempotent(
+    '8a000000-0000-4000-8000-000000000010','8a000000-0000-4000-8000-000000000042',
+    'Compra histórica parcelada',(current_date-interval '4 months')::date,1000,null,
+    '8a000000-0000-4000-8000-000000000021',
+    '[{"member_id":"8a000000-0000-4000-8000-000000000021","amount":"1000.00","percentage":"100.0000"}]'::jsonb,
+    4,2,'Compra anterior ao uso do Casa','j-card-history'
+  )
+$,'J26 repetição idempotente da abertura não cria outra compra');
+select is((select count(*) from public.transactions where household_id='8a000000-0000-4000-8000-000000000010' and description='Compra histórica parcelada' and type='expense'),1::bigint,'J27 abertura histórica não duplica despesa econômica');
 
 reset role;
 select * from finish();
