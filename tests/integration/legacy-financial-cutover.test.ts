@@ -6,11 +6,13 @@ const migration = await readFile(new URL('../../supabase/migrations/202609200098
 const service = await readFile(new URL('../../src/finance/householdFinancialAccounts.ts', import.meta.url), 'utf8');
 const setup = await readFile(new URL('../../src/components/auth/HouseholdFinancialSetup.tsx', import.meta.url), 'utf8');
 const cutover = await readFile(new URL('../../src/components/auth/LegacyFinancialCutover.tsx', import.meta.url), 'utf8');
+const expenseWizard = await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx', import.meta.url), 'utf8');
 
 test('legacy cutover uses the household financial timezone and keeps the cutoff immutable', () => {
   assert.match(migration, /current_timestamp at time zone household_timezone/);
   assert.match(migration, /financial tracking start must be today or earlier in household timezone/);
   assert.match(migration, /financial tracking start is immutable after configuration/);
+  assert.match(migration, /revoke all on function public\.set_household_financial_tracking_start\(uuid,date\) from public,anon,authenticated/);
 });
 
 test('canonical account balances ignore only effects before the configured cutoff', () => {
@@ -54,4 +56,11 @@ test('cutover UX asks for confirmed values instead of displaying the legacy open
   assert.match(cutover, /Compartilhada entre/);
   assert.match(cutover, /não copiará automaticamente o saldo antigo cadastrado/);
   assert.doesNotMatch(cutover, /opening_balance/);
+});
+
+
+test('direct account expenses require explicit funding and never infer funder from account ownership', () => {
+  assert.doesNotMatch(expenseWizard, /selectedAccount\??\.owner_member_id/);
+  assert.match(expenseWizard, /Quem bancou esta saída/);
+  assert.match(expenseWizard, /accountFunderMemberId/);
 });
