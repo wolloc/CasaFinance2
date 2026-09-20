@@ -121,7 +121,7 @@ export async function runRetryStableRpc(
   }
 
   if (isAmbiguousFailure(message)) {
-    throw new Error('Não foi possível confirmar a resposta do Casa. Não registre a despesa novamente; aguarde e confira em Gastos.');
+    throw new Error('Não foi possível confirmar a resposta do Casa. Não repita esta ação com outros dados; mantenha os mesmos valores e tente novamente. O Casa reutilizará a mesma operação para evitar duplicidade.');
   }
   throw result.error;
 }
