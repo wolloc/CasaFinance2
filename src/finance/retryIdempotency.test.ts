@@ -30,7 +30,7 @@ test('statement timeout não faz retry cego nem incentiva novo lançamento', asy
   const client = { rpc: async () => { calls += 1; return { data: null, error: { message: 'canceling statement due to statement timeout' } }; } };
   await assert.rejects(
     runRetryStableRpc(client as never, 'expense-timeout', ['same-intent'], 'expense_rpc', {}),
-    /Não registre a despesa novamente/,
+    /mantenha os mesmos valores e tente novamente/,
   );
   assert.equal(calls, 1);
 });
@@ -40,7 +40,7 @@ test('dupla falha de transporte não incentiva novo lançamento', async () => {
   const client = { rpc: async () => { calls += 1; return { data: null, error: { message: 'Failed to fetch' } }; } };
   await assert.rejects(
     runRetryStableRpc(client as never, 'expense-uncertain', ['same-intent'], 'expense_rpc', {}),
-    /Não registre a despesa novamente/,
+    /mantenha os mesmos valores e tente novamente/,
   );
   assert.equal(calls, 2);
 });
@@ -102,7 +102,7 @@ test('reconciliação vazia após timeout continua sem retry cego', async () => 
       'create_financial_transaction_idempotent',
       { p_household_id: 'household-1' },
     ),
-    /Não registre a despesa novamente/,
+    /mantenha os mesmos valores e tente novamente/,
   );
   assert.equal(calls, 1);
 });
