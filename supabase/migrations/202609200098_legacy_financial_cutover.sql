@@ -43,7 +43,45 @@ begin
 
   return current_start;
 end
-$$;
+$;
+
+create or replace view public.financial_account_balances with (security_invoker=true) as
+with balance_events as (
+  select e.household_id,e.account_id,sum(e.amount) amount
+  from public.account_balance_events e
+  join public.households h on h.id=e.household_id
+  where e.reversed_at is null
+    and (h.financial_tracking_started_on is null or e.effective_date>=h.financial_tracking_started_on)
+  group by e.household_id,e.account_id
+), movements as (
+  select household_id,account_id,sum(amount) amount from (
+    select m.household_id,m.destination_account_id account_id,m.amount
+    from public.money_movements m
+    join public.households h on h.id=m.household_id
+    where m.state='realized'
+      and m.destination_account_id is not null
+      and (h.financial_tracking_started_on is null or m.movement_date>=h.financial_tracking_started_on)
+    union all
+    select m.household_id,m.source_account_id account_id,-m.amount
+    from public.money_movements m
+    join public.households h on h.id=m.household_id
+    where m.state='realized'
+      and m.source_account_id is not null
+      and (h.financial_tracking_started_on is null or m.movement_date>=h.financial_tracking_started_on)
+  ) legs
+  group by household_id,account_id
+)
+select a.household_id,a.id account_id,a.name,a.type,a.resource_restriction,a.cash_location,
+       coalesce(b.amount,0)+coalesce(m.amount,0) current_balance,
+       case when a.resource_restriction is not null or a.type='meal_benefit' then true else false end is_restricted,
+       case when a.type='investment' then true else false end is_investment
+from public.accounts a
+left join balance_events b on b.account_id=a.id and b.household_id=a.household_id
+left join movements m on m.account_id=a.id and m.household_id=a.household_id
+where a.deactivated_at is null;
+
+revoke all on public.financial_account_balances from public,anon;
+grant select on public.financial_account_balances to authenticated;
 
 create or replace function public.reconcile_existing_accounts_at_cutoff(
   p_household_id uuid,
@@ -63,7 +101,6 @@ declare
   v_account_id uuid;
   opening_amount numeric(19,2);
   owner_ids uuid[];
-  prior_canonical_balance numeric(19,2);
 begin
   caller:=public.require_active_member(p_household_id);
 
@@ -166,49 +203,11 @@ begin
       raise exception 'one or two account owners are required' using errcode='22023';
     end if;
 
-    select (
-      coalesce((
-        select sum(e.amount)
-        from public.account_balance_events e
-        where e.household_id=p_household_id
-          and e.account_id=v_account_id
-          and e.reversed_at is null
-          and e.effective_date<p_started_on
-      ),0)
-      + coalesce((
-        select sum(leg.amount)
-        from (
-          select m.amount
-          from public.money_movements m
-          where m.household_id=p_household_id
-            and m.destination_account_id=v_account_id
-            and m.state='realized'
-            and m.movement_date<p_started_on
-          union all
-          select -m.amount
-          from public.money_movements m
-          where m.household_id=p_household_id
-            and m.source_account_id=v_account_id
-            and m.state='realized'
-            and m.movement_date<p_started_on
-        ) leg
-      ),0)
-    )::numeric(19,2)
-      into prior_canonical_balance;
-
     perform public.set_account_ownerships(p_household_id,v_account_id,owner_ids);
     perform public.record_account_opening_position(
       p_household_id,v_account_id,opening_amount,p_started_on,'Posição inicial confirmada no corte'
     );
 
-    if prior_canonical_balance<>0 then
-      insert into public.account_balance_events(
-        household_id,account_id,created_by_member_id,kind,amount,effective_date,description
-      ) values(
-        p_household_id,v_account_id,caller.id,'adjustment',-prior_canonical_balance,p_started_on,
-        'Neutralização do histórico canônico anterior ao corte'
-      );
-    end if;
   end loop;
 
   return p_household_id;
@@ -244,4 +243,4 @@ revoke all on function public.reconcile_existing_accounts_at_cutoff_idempotent(u
 grant execute on function public.reconcile_existing_accounts_at_cutoff_idempotent(uuid,date,jsonb,text) to authenticated;
 
 comment on function public.reconcile_existing_accounts_at_cutoff(uuid,date,jsonb) is
-  'Reconcilia atomicamente contas legadas na data de corte usando saldos e titulares confirmados pelo usuário. Não copia opening_balance/owner_member_id e neutraliza somente eventos e movimentos canônicos anteriores ao corte, preservando o próprio dia de início e tudo que veio depois.';
+  'Reconcilia atomicamente contas legadas na data de corte usando saldos e titulares confirmados pelo usuário. Não copia opening_balance/owner_member_id; o read model de saldo ignora efeitos anteriores ao corte e preserva o próprio dia de início e tudo que veio depois.';
