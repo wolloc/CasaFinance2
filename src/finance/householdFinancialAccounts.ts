@@ -15,6 +15,8 @@ export type HouseholdAccount = {
   opened_at: string | null;
 };
 
+export type AccountOwnership = { account_id: string; member_id: string };
+
 export type HouseholdCard = {
   id: string;
   household_id: string;
@@ -33,19 +35,48 @@ const cardColumns = 'id, household_id, owner_member_id, name, institution, last_
 const requestKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 
 export async function listHouseholdFinancialAccounts(client: SupabaseClient, householdId: string) {
-  const [accounts, cards, household] = await Promise.all([
+  const [accounts, cards, household, openings, ownerships] = await Promise.all([
     client.from('accounts').select(accountColumns).eq('household_id', householdId).is('deactivated_at', null).order('name'),
     client.from('cards').select(cardColumns).eq('household_id', householdId).is('deactivated_at', null).order('name'),
     client.from('households').select('financial_tracking_started_on').eq('id', householdId).maybeSingle(),
+    client.from('account_balance_events').select('account_id').eq('household_id', householdId).eq('kind', 'opening').is('reversed_at', null),
+    client.from('account_ownerships').select('account_id,member_id').eq('household_id', householdId),
   ]);
   if (accounts.error) throw accounts.error;
   if (cards.error) throw cards.error;
   if (household.error) throw household.error;
+  if (openings.error) throw openings.error;
+  if (ownerships.error) throw ownerships.error;
   return {
     accounts: (accounts.data ?? []) as HouseholdAccount[],
     cards: (cards.data ?? []) as HouseholdCard[],
     financialTrackingStartedOn: household.data?.financial_tracking_started_on ?? null,
+    openingAccountIds: (openings.data ?? []).map((row) => row.account_id as string),
+    accountOwnerships: (ownerships.data ?? []) as AccountOwnership[],
   };
+}
+
+export async function reconcileExistingHouseholdAccounts(client: SupabaseClient, householdId: string, input: {
+  startedOn: string;
+  accounts: Array<{ accountId: string; openingAmount: string; ownerMemberIds: string[] }>;
+}) {
+  const normalized = input.accounts
+    .map((account) => ({
+      accountId: account.accountId,
+      openingAmount: account.openingAmount.trim(),
+      ownerMemberIds: [...account.ownerMemberIds].sort(),
+    }))
+    .sort((left, right) => left.accountId.localeCompare(right.accountId));
+  const identity = [householdId, input.startedOn, normalized] as const;
+  return runRetryStableRpc(client, 'legacy-financial-cutover', identity, 'reconcile_existing_accounts_at_cutoff_idempotent', {
+    p_household_id: householdId,
+    p_started_on: input.startedOn,
+    p_accounts: normalized.map((account) => ({
+      account_id: account.accountId,
+      opening_amount: account.openingAmount,
+      owner_member_ids: account.ownerMemberIds,
+    })),
+  });
 }
 
 export async function createHouseholdAccount(client: SupabaseClient, householdId: string, input: {

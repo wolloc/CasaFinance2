@@ -12,9 +12,9 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','8a000000-0000-4000-8000-000000000001',true);
 
 select is(
-  public.set_household_financial_tracking_start('8a000000-0000-4000-8000-000000000010',current_date),
-  current_date,
-  'J01 data de corte fica definida na Casa'
+  has_function_privilege('authenticated','public.set_household_financial_tracking_start(uuid,date)','EXECUTE'),
+  false,
+  'J01 data de corte só pode ser definida por comandos atômicos de onboarding'
 );
 
 select lives_ok($$
