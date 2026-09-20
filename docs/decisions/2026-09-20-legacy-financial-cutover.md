@@ -39,6 +39,6 @@ A reconciliação é atômica e idempotente. Um retry da mesma intenção não c
 
 ## Funding após a reconciliação
 
-A titularidade confirmada em `account_ownerships` descreve de quem é o recurso, mas não determina automaticamente quem bancou uma despesa. Em gastos pagos por conta, carteira ou benefício, a jornada continua exigindo um `funder_member_id` explícito; o usuário atual pode aparecer como sugestão inicial, mas a escolha é confirmável e independente da titularidade.
+**DEPRECADO:** a jornada não pergunta mais manualmente `funder_member_id` quando uma saída imediata usa conta, carteira ou benefício com titularidade canônica confirmada. Nesses casos, o recurso utilizado já informa a origem econômica do dinheiro: recurso individual atribui o funding ao único titular; recurso com exatamente dois titulares usa a convenção canônica de liquidez conjunta 50/50 no motor de acertos. A escolha manual permanece apenas onde a origem do dinheiro não é determinada pelo recurso/fato registrado.
 
 O setter de `financial_tracking_started_on` não faz parte da superfície pública do cliente. A data de corte só pode ser fixada por comandos atômicos de onboarding/reconciliação, para evitar Casa parcialmente configurada.

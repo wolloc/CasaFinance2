@@ -59,8 +59,9 @@ test('cutover UX asks for confirmed values instead of displaying the legacy open
 });
 
 
-test('direct account expenses require explicit funding and never infer funder from account ownership', () => {
-  assert.doesNotMatch(expenseWizard, /selectedAccount\??\.owner_member_id/);
-  assert.match(expenseWizard, /Quem bancou esta saída/);
-  assert.match(expenseWizard, /accountFunderMemberId/);
+test('direct account expenses infer funding from canonical resource ownership without asking the user', () => {
+  assert.match(expenseWizard, /selectedAccount\?\.owner_member_ids/);
+  assert.doesNotMatch(expenseWizard, /Quem bancou esta saída\?/);
+  assert.doesNotMatch(expenseWizard, /accountFunderMemberId/);
+  assert.match(expenseWizard, /recurso é compartilhado/);
 });
