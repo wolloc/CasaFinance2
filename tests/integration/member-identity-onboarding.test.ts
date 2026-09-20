@@ -15,7 +15,7 @@ test('invited member identity is explicitly confirmed before financial app',()=>
 });
 
 test('member confirmation refreshes canonical household names',()=>{
-  assert.match(context,/profiles\(display_name, display_name_confirmed_at\)/);
+  assert.match(context,/profiles\(display_name, display_name_confirmed_at, financial_onboarding_completed_at\)/);
   assert.match(context,/confirm_my_display_name/);
   assert.match(context,/setHouseholdMembersRefreshVersion/);
 });
