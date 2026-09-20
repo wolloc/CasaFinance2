@@ -60,7 +60,7 @@ declare
   active_account_count integer;
   supplied_account_count integer;
   item jsonb;
-  account_id uuid;
+  v_account_id uuid;
   opening_amount numeric(19,2);
   owner_ids uuid[];
   prior_canonical_balance numeric(19,2);
@@ -148,7 +148,7 @@ begin
 
   for item in select value from jsonb_array_elements(p_accounts)
   loop
-    account_id:=(item->>'account_id')::uuid;
+    v_account_id:=(item->>'account_id')::uuid;
     opening_amount:=(item->>'opening_amount')::numeric(19,2);
 
     if opening_amount is null then
@@ -169,20 +169,20 @@ begin
     select coalesce(current_balance,0)::numeric(19,2)
       into prior_canonical_balance
     from public.financial_account_balances
-    where household_id=p_household_id and account_id=account_id;
+    where household_id=p_household_id and account_id=v_account_id;
 
     prior_canonical_balance:=coalesce(prior_canonical_balance,0);
 
-    perform public.set_account_ownerships(p_household_id,account_id,owner_ids);
+    perform public.set_account_ownerships(p_household_id,v_account_id,owner_ids);
     perform public.record_account_opening_position(
-      p_household_id,account_id,opening_amount,p_started_on,'Posição inicial confirmada no corte'
+      p_household_id,v_account_id,opening_amount,p_started_on,'Posição inicial confirmada no corte'
     );
 
     if prior_canonical_balance<>0 then
       insert into public.account_balance_events(
         household_id,account_id,created_by_member_id,kind,amount,effective_date,description
       ) values(
-        p_household_id,account_id,caller.id,'adjustment',-prior_canonical_balance,p_started_on,
+        p_household_id,v_account_id,caller.id,'adjustment',-prior_canonical_balance,p_started_on,
         'Neutralização do histórico canônico anterior ao corte'
       );
     end if;
