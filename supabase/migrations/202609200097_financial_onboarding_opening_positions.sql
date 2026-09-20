@@ -202,9 +202,9 @@ begin
     select id into plan_id from public.installment_plans
       where household_id=p_household_id and purchase_transaction_id=tx_id;
     for row_installment in
-      select id,invoice_id,number,amount from public.installments
-       where household_id=p_household_id and installment_plan_id=plan_id and number<=p_paid_installment_count
-       order by number
+      select i.id,i.invoice_id,i.number,i.amount from public.installments i
+       where i.household_id=p_household_id and i.installment_plan_id=plan_id and i.number<=p_paid_installment_count
+       order by i.number
     loop
       update public.installments
          set opening_settled_amount=amount,status='paid',settled_at=null
