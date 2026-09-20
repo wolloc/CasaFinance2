@@ -5,6 +5,7 @@ import { test } from 'node:test';
 const serviceSource = await readFile(new URL('./householdFinancialAccounts.ts', import.meta.url), 'utf8');
 const migrationSource = await readFile(new URL('../../supabase/migrations/202609030011_accounts_cards_rls.sql', import.meta.url), 'utf8');
 const screenSource = await readFile(new URL('../components/auth/HouseholdFinancialSetup.tsx', import.meta.url), 'utf8');
+const openingCardModalSource = await readFile(new URL('../components/auth/OpeningCardCommitmentsModal.tsx', import.meta.url), 'utf8');
 
 test('financial onboarding derives writes from the authenticated household context and canonical commands', () => {
   assert.match(serviceSource, /p_household_id: householdId/);
@@ -57,4 +58,13 @@ test('opening positions stay separate from ordinary financial registration UX', 
   assert.match(screenSource, /OpeningCardCommitmentsModal/);
   assert.match(screenSource, /Já existem compras neste cartão/);
   assert.doesNotMatch(screenSource, /Da Casa \/ compartilhada/);
+});
+
+test('opening card UX preserves detailed facts or explicitly keeps history aggregated', () => {
+  assert.match(openingCardModalSource, /recordOpeningCardPurchase/);
+  assert.match(openingCardModalSource, /recordOpeningCardBalance/);
+  assert.match(openingCardModalSource, /Quem fez a compra/);
+  assert.match(openingCardModalSource, /Quem fica responsável economicamente/);
+  assert.match(openingCardModalSource, /não inventará quem comprou, categoria ou responsabilidade/);
+  assert.match(openingCardModalSource, /pelo menos uma parcela em aberto/);
 });
