@@ -35,3 +35,10 @@ O cadastro do cartão existente é preservado. Depois de confirmar as contas e a
 ## Segurança operacional
 
 A reconciliação é atômica e idempotente. Um retry da mesma intenção não cria segunda posição inicial. Se houver abertura canônica sem data de corte, o fluxo bloqueia novos cadastros e exige revisão em vez de reinterpretar os dados automaticamente.
+
+
+## Funding após a reconciliação
+
+A titularidade confirmada em `account_ownerships` descreve de quem é o recurso, mas não determina automaticamente quem bancou uma despesa. Em gastos pagos por conta, carteira ou benefício, a jornada continua exigindo um `funder_member_id` explícito; o usuário atual pode aparecer como sugestão inicial, mas a escolha é confirmável e independente da titularidade.
+
+O setter de `financial_tracking_started_on` não faz parte da superfície pública do cliente. A data de corte só pode ser fixada por comandos atômicos de onboarding/reconciliação, para evitar Casa parcialmente configurada.
