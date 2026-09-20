@@ -38,8 +38,8 @@ export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementA
  const selectedMember=householdMembers.find(m=>m.id===perspective)??null;
  const{household:position,health,confidence,attention,projection,cards,resources,guidance,availability}=dashboard;
  const currentMonth=availability.projection?projection[0]:undefined;
- const currentCash=health?Number(health.current_cash):resources?resources.availableCash:null;
- const projectedEndingCash=health?Number(health.projected_ending_cash):position?Number(position.projected_balance):null;
+ const currentCash=health?.current_cash!=null?Number(health.current_cash):resources?resources.availableCash:null;
+ const projectedEndingCash=health?.projected_ending_cash!=null?Number(health.projected_ending_cash):position?Number(position.projected_balance):null;
  const gap=guidance?Number(guidance.coverage_gap):null;
  const hasPartialFailure=Object.values(availability).some(value=>!value);
  const selector=<div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-1"><button onClick={()=>setPerspective('household')} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective==='household'?'bg-blue-600':'text-slate-400'}`}>Nossa Casa</button>{householdMembers.slice(0,2).map(m=><button key={m.id} onClick={()=>setPerspective(m.id)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective===m.id?'bg-blue-600':'text-slate-400'}`}>{m.display_name}</button>)}</div>;
