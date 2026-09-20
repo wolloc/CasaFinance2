@@ -37,7 +37,9 @@ test('card ownership is not transaction responsibility', () => {
   assert.match(screenSource, /Titular do cartão/);
   assert.match(screenSource, /Quem compra, quem fica responsável pelo gasto e quem paga a fatura continuam sendo escolhas separadas/);
   assert.match(screenSource, /O titular do cartão não define comprador, responsável pelo gasto ou pagador/);
-  assert.doesNotMatch(serviceSource, /buyer_member_id|responsible_member_id|funder_member_id/);
+  const cardRegistrationSource = serviceSource.slice(0, serviceSource.indexOf('export async function recordOpeningCardPurchase'));
+  assert.doesNotMatch(cardRegistrationSource, /buyer_member_id|responsible_member_id|funder_member_id/);
+  assert.match(serviceSource, /p_buyer_member_id/);
 });
 
 test('legacy DatabaseStore remains outside the Supabase financial path', () => {
