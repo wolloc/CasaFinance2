@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { runRetryStableRpc } from './retryIdempotency.js';
 
 export const ACCOUNT_TYPES = ['cash', 'checking', 'savings', 'investment', 'meal_benefit', 'digital_wallet'] as const;
 export type HouseholdAccountType = typeof ACCOUNT_TYPES[number];
@@ -98,51 +99,20 @@ export async function createHouseholdCard(client: SupabaseClient, householdId: s
 }
 
 export async function recordOpeningCardPurchase(client: SupabaseClient, householdId: string, input: {
-  cardId: string;
-  description: string;
-  originalPurchaseDate: string;
-  amount: string;
-  buyerMemberId: string;
-  responsibleMemberId: string;
-  installmentCount: number;
-  paidInstallmentCount: number;
-  requestKey?: string;
+  cardId: string; description: string; originalPurchaseDate: string; amount: string;
+  buyerMemberId: string; responsibleMemberId: string; installmentCount: number; paidInstallmentCount: number; requestKey?: string;
 }) {
-  const response = await client.rpc('record_opening_card_purchase_idempotent', {
-    p_household_id: householdId,
-    p_card_id: input.cardId,
-    p_description: input.description.trim(),
-    p_original_purchase_date: input.originalPurchaseDate,
-    p_amount: input.amount,
-    p_category_id: null,
-    p_buyer_member_id: input.buyerMemberId,
-    p_splits: [{
-      member_id: input.responsibleMemberId,
-      amount: input.amount,
-      percentage: '100.0000',
-    }],
-    p_installment_count: input.installmentCount,
-    p_paid_installment_count: input.paidInstallmentCount,
-    p_notes: 'Compra anterior ao início do controle',
-    p_request_key: input.requestKey ?? requestKey('opening-card-purchase'),
+  const identity=[householdId,input.cardId,input.description.trim(),input.originalPurchaseDate,input.amount,input.buyerMemberId,input.responsibleMemberId,input.installmentCount,input.paidInstallmentCount] as const;
+  return runRetryStableRpc(client,'opening-card-purchase',identity,'record_opening_card_purchase_idempotent',{
+    p_household_id: householdId,p_card_id: input.cardId,p_description: input.description.trim(),p_original_purchase_date: input.originalPurchaseDate,p_amount: input.amount,p_category_id: null,p_buyer_member_id: input.buyerMemberId,
+    p_splits: [{ member_id: input.responsibleMemberId, amount: input.amount, percentage: '100.0000' }],
+    p_installment_count: input.installmentCount,p_paid_installment_count: input.paidInstallmentCount,p_notes:'Compra anterior ao início do controle',
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }
 
-export async function recordOpeningCardBalance(client: SupabaseClient, householdId: string, input: {
-  cardId: string;
-  amount: string;
-  description: string;
-  requestKey?: string;
-}) {
-  const response = await client.rpc('record_opening_card_balance_adjustment_idempotent', {
-    p_household_id: householdId,
-    p_card_id: input.cardId,
-    p_amount: input.amount,
-    p_description: input.description.trim(),
-    p_request_key: input.requestKey ?? requestKey('opening-card-balance'),
+export async function recordOpeningCardBalance(client: SupabaseClient, householdId: string, input: { cardId: string; amount: string; description: string; requestKey?: string; }) {
+  const identity=[householdId,input.cardId,input.amount,input.description.trim()] as const;
+  return runRetryStableRpc(client,'opening-card-balance',identity,'record_opening_card_balance_adjustment_idempotent',{
+    p_household_id:householdId,p_card_id:input.cardId,p_amount:input.amount,p_description:input.description.trim(),
   });
-  if (response.error) throw response.error;
-  return response.data as string;
 }
