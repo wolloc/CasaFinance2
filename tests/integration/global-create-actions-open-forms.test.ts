@@ -33,6 +33,6 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
 
 test('Nova entrada leva ao fluxo canônico de entradas',()=>{
  assert.match(app,/onIncome=\{\(\)=>setScreen\('income'\)\}/);
- assert.match(screen,/mode === 'income'\) return <IncomeLedgerScreen/);
+ assert.match(screen,/mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
  assert.match(income,/<IncomeCreationAction onCreated=\{refresh\}\/>/);
 });

@@ -19,6 +19,7 @@ import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
 import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 import { NewExpenseWizard } from './NewExpenseWizard.js';
+import { ScreenErrorBoundary } from './ScreenErrorBoundary.js';
 
 export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: TransactionKind; createRequestId?: number; onGrantLoan?:()=>void }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
@@ -29,7 +30,7 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
   const [expenseListVersion, setExpenseListVersion] = useState(0);
   const [expenseSaved, setExpenseSaved] = useState(false);
 
-  if (mode === 'income') return <IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} />;
+  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} /></ScreenErrorBoundary>;
 
   return <div className="space-y-4">
     <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); }} />
