@@ -169,12 +169,12 @@ select is(
 select set_config('request.jwt.claim.sub','8b000000-0000-4000-8000-000000000003',true);
 
 select throws_ok(
-  $select public.reconcile_existing_accounts_at_cutoff_idempotent(
+  $$select public.reconcile_existing_accounts_at_cutoff_idempotent(
     '8b000000-0000-4000-8000-000000000011',
     ((current_timestamp at time zone 'America/Sao_Paulo')::date + 1),
     '[{"account_id":"8b000000-0000-4000-8000-000000000033","opening_amount":"300.00","owner_member_ids":["8b000000-0000-4000-8000-000000000023"]}]'::jsonb,
     'k-future-cutoff'
-  )$,
+  )$$,
   '22023',
   'financial tracking start must be today or earlier in household timezone',
   'K18 comando público rejeita data futura no fuso financeiro da Casa'
