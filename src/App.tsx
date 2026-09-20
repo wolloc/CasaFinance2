@@ -3,6 +3,7 @@ import { AuthScreen } from './components/auth/AuthScreen.js';
 import { HouseholdOnboarding } from './components/auth/HouseholdOnboarding.js';
 import { CasaFinanceApp } from './components/app/CasaFinanceApp.js';
 import { MemberIdentityOnboarding } from './components/auth/MemberIdentityOnboarding.js';
+import { MemberFinancialPreparation } from './components/auth/MemberFinancialPreparation.js';
 
 function AuthenticatedAppBoundary() {
   const { user, isLoading, household, householdLoading, householdMembers, householdMembersLoading } = useSupabaseAuth();
@@ -32,7 +33,9 @@ function AuthenticatedAppBoundary() {
   }
 
   const currentMember = householdMembers.find((member) => member.profile_id === user.id);
-  if (currentMember && !currentMember.display_name_confirmed_at) return <MemberIdentityOnboarding />;
+  if (!currentMember) return <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-4 text-center text-slate-300">Não foi possível confirmar seu vínculo com esta Casa. Tente novamente antes de continuar.</div>;
+  if (!currentMember.display_name_confirmed_at) return <MemberIdentityOnboarding />;
+  if (!currentMember.financial_onboarding_completed_at) return <MemberFinancialPreparation />;
 
   return <CasaFinanceApp />;
 }
