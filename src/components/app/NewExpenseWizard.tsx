@@ -64,7 +64,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [purchaseMode, setPurchaseMode] = useState<PurchaseMode>('single');
   const [installmentCount, setInstallmentCount] = useState(2);
   const [financialCharges, setFinancialCharges] = useState('0');
-  const [accountFunderMemberId, setAccountFunderMemberId] = useState('');
   const [partySearch, setPartySearch] = useState('');
   const [payerPartyId, setPayerPartyId] = useState('');
   const [needsRepayment, setNeedsRepayment] = useState(false);
@@ -116,7 +115,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     const memberId = currentMemberId;
     setStep(1); setBuyerMemberId(memberId); setDate(today); setDescription(''); setWhereWithWhom(''); setCategoryId('');
     setAmount(''); setResponsibility(memberId); setResponsiblePartyId(''); setResponsiblePartySearch(''); setCustomResponsibility({}); setPaymentChoice('account'); setAccountId(''); setCardId('');
-    setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0'); setAccountFunderMemberId(memberId);
+    setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0');
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
     setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringEndDate('');
@@ -291,8 +290,11 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           installmentCount: appliedInstallmentCount, notes: whereWithWhom,
         }));
       } else if (!savedTransactionId && instrumentKind === 'account') {
-        const funderMemberId = accountFunderMemberId || currentMemberId;
-        if (!funderMemberId) throw new Error('Não foi possível identificar quem bancou esta saída.');
+        const owners = selectedAccount?.owner_member_ids ?? [];
+        if (owners.length < 1 || owners.length > 2) throw new Error('Não foi possível identificar com segurança de quem é este recurso. Confira a titularidade em Ajustes.');
+        // The settlement engine already attributes exactly-two-owner joint liquidity 50/50.
+        // The RPC still requires one valid funder id, so use the sole owner or a deterministic owner for joint resources.
+        const funderMemberId = owners.length === 1 ? owners[0] : [...owners].sort()[0];
         savedTransactionId = String(splits.some((split) => split.partyId)
           ? await createAndSettleSharedExpense(supabase, household.id, input, funderMemberId, null)
           : await createAndSettleDirectExpense(supabase, household.id, input, funderMemberId, paidAtForDate(date)));
@@ -382,7 +384,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
         {!cardPayment && !externalPayment && <label className="block text-sm text-slate-300">Qual recurso foi usado?<select required value={accountId} onChange={(event) => { setAccountId(event.target.value); setAccountFunderMemberId(currentMemberId); }} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{accountChoices.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>{accountChoices.length === 0 && <span className="mt-1 block text-xs text-amber-300">Nenhum recurso desse tipo está cadastrado na Casa.</span>}</label>}
 
-        {!cardPayment && !externalPayment && selectedAccount && <label className="block text-sm text-slate-300">Quem bancou esta saída?<select required value={accountFunderMemberId} onChange={(event) => setAccountFunderMemberId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3">{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>}
+        {!cardPayment && !externalPayment && selectedAccount && <p className="rounded-xl bg-emerald-950/30 p-3 text-xs text-emerald-200">{(selectedAccount.owner_member_ids?.length ?? 0) === 1 ? `O dinheiro sai de ${selectedAccount.name}. O Casa identifica automaticamente quem bancou pela titularidade confirmada desse recurso.` : `O dinheiro sai de ${selectedAccount.name}. Como o recurso é compartilhado, o Casa usa a participação dos titulares para calcular os acertos.`}</p>}
 
         {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><label className="block text-sm text-slate-300">Qual cartão?<select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select></label><fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode === 'single'} onClick={() => setPurchaseMode('single')} label="À vista" /><ChoiceButton active={purchaseMode === 'installments'} onClick={() => setPurchaseMode('installments')} label="Parcelado" /></div></fieldset>{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} onBlur={() => { if (financialCharges && Number.isFinite(Number(financialCharges))) setFinancialCharges(Number(financialCharges).toFixed(2)); }} className="min-h-11 w-full bg-transparent outline-none" /></div></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}</div>}
 
