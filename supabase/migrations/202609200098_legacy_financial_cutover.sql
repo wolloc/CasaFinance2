@@ -43,7 +43,7 @@ begin
 
   return current_start;
 end
-$;
+$$;
 
 create or replace view public.financial_account_balances with (security_invoker=true) as
 with balance_events as (
