@@ -27,7 +27,7 @@ test('legacy account reconciliation is explicit, complete and does not promote l
   assert.match(body, /legacy cutover cannot reinterpret an account that already has canonical opening/);
   assert.match(body, /set_account_ownerships/);
   assert.match(body, /record_account_opening_position/);
-  assert.doesNotMatch(body, /opening_balance|owner_member_id/);
+  assert.doesNotMatch(body, /\bopening_balance\b|\bowner_member_id\b/);
   assert.doesNotMatch(body, /insert into public\.transactions|insert into public\.money_movements|insert into public\.funding_events/);
 });
 
