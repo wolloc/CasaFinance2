@@ -57,6 +57,28 @@ export async function listHouseholdFinancialAccounts(client: SupabaseClient, hou
   };
 }
 
+export type HouseholdFinancialSetupReadiness = 'ready' | 'needs_legacy_cutover' | 'inconsistent_opening_without_cutoff';
+
+export async function getHouseholdFinancialSetupReadiness(client: SupabaseClient, householdId: string): Promise<HouseholdFinancialSetupReadiness> {
+  const [household, accounts, openings] = await Promise.all([
+    client.from('households').select('financial_tracking_started_on').eq('id', householdId).maybeSingle(),
+    client.from('accounts').select('id').eq('household_id', householdId).is('deactivated_at', null),
+    client.from('account_balance_events').select('account_id').eq('household_id', householdId).eq('kind', 'opening').is('reversed_at', null),
+  ]);
+  if (household.error) throw household.error;
+  if (accounts.error) throw accounts.error;
+  if (openings.error) throw openings.error;
+
+  const financialTrackingStartedOn = household.data?.financial_tracking_started_on ?? null;
+  const activeAccountIds = new Set((accounts.data ?? []).map((row) => row.id as string));
+  const activeOpeningCount = (openings.data ?? []).filter((row) => activeAccountIds.has(row.account_id as string)).length;
+  const activeAccountCount = activeAccountIds.size;
+
+  if (!financialTrackingStartedOn && activeAccountCount > 0 && activeOpeningCount === 0) return 'needs_legacy_cutover';
+  if (!financialTrackingStartedOn && activeOpeningCount > 0) return 'inconsistent_opening_without_cutoff';
+  return 'ready';
+}
+
 export async function reconcileExistingHouseholdAccounts(client: SupabaseClient, householdId: string, input: {
   startedOn: string;
   accounts: Array<{ accountId: string; openingAmount: string; ownerMemberIds: string[] }>;
