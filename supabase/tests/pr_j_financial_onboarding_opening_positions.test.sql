@@ -93,7 +93,7 @@ select lives_ok($$
 $$,'J24 pagamento posterior da fatura de abertura usa a liquidação canônica');
 select is((select total_exposure from public.financial_card_exposure_positions where card_id='8a000000-0000-4000-8000-000000000043'),200::numeric,'J25 pagamento parcial libera somente o limite pago');
 
-select lives_ok($
+select lives_ok($$
   select public.record_opening_card_purchase_idempotent(
     '8a000000-0000-4000-8000-000000000010','8a000000-0000-4000-8000-000000000042',
     'Compra histórica parcelada',(current_date-interval '4 months')::date,1000,null,
