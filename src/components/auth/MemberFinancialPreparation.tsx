@@ -7,12 +7,12 @@ export function MemberFinancialPreparation() {
   const { household, householdMembers, user, completeFinancialOnboarding, isSubmitting, error } = useSupabaseAuth();
   const [resources, setResources] = useState(false);
   const me=householdMembers.find(member=>member.profile_id===user?.id);
-  if(resources) return <div className="min-h-[100dvh] bg-slate-950"><button type="button" onClick={()=>setResources(false)} className="fixed left-4 top-4 z-20 min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200">Voltar à preparação</button><HouseholdFinancialSetup /></div>;
+  if(resources) return <div className="min-h-[100dvh] bg-slate-950"><button type="button" onClick={()=>setResources(false)} className="fixed left-4 top-4 z-20 min-h-11 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200">Voltar à preparação</button><HouseholdFinancialSetup memberOnboarding /></div>;
   return <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-4 py-8 text-slate-100">
     <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6">
       <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">{household?.name}</p>
       <h1 className="mt-2 text-2xl font-black">Tudo certo, {me?.display_name}. Vamos preparar seu Casa.</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-400">A Casa já existe. Você só precisa incluir os recursos que quer acompanhar a partir de agora. Não vamos pedir novamente os saldos das contas de outras pessoas.</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">A Casa já existe. Agora você pode incluir o que é seu e quer acompanhar. O restante da Casa continua como já está. Você não precisa revisar nem confirmar saldos de outra pessoa.</p>
       <button type="button" onClick={()=>setResources(true)} className="mt-6 flex min-h-14 w-full items-center gap-3 rounded-2xl border border-blue-800 bg-blue-950/30 px-4 text-left">
         <WalletCards className="h-5 w-5 text-blue-300"/><span className="flex-1"><strong className="block">Adicionar meus recursos</strong><small className="text-slate-400">Contas, dinheiro, benefícios, investimentos e cartões.</small></span><ChevronRight className="h-5 w-5"/>
       </button>
