@@ -20,6 +20,40 @@ export async function listMemberSettlementPositions(client: SupabaseClient, hous
   return (response.data ?? []) as MemberSettlementPosition[];
 }
 
+export type MemberSettlementEvent = {
+  id: string;
+  debtor_member_id: string;
+  creditor_member_id: string;
+  amount: string;
+  state: 'projected' | 'realized';
+  kind: 'responsibility_funding' | 'explicit_settlement' | 'adjustment' | 'correction';
+  financial_date: string;
+  notes: string | null;
+  source_transaction_id: string | null;
+  source_description: string | null;
+};
+
+export async function listMemberSettlementEvents(client: SupabaseClient, householdId: string) {
+  const events = await client
+    .from('member_settlement_events')
+    .select('id,debtor_member_id,creditor_member_id,amount,state,kind,financial_date,notes,source_transaction_id')
+    .eq('household_id', householdId)
+    .in('state', ['projected', 'realized'])
+    .order('financial_date', { ascending: false });
+  if (events.error) throw events.error;
+  const transactionIds = [...new Set((events.data ?? []).map((event) => event.source_transaction_id).filter((id): id is string => Boolean(id)))];
+  const descriptions = new Map<string, string>();
+  if (transactionIds.length > 0) {
+    const transactions = await client.from('transactions').select('id,description').in('id', transactionIds);
+    if (transactions.error) throw transactions.error;
+    for (const transaction of transactions.data ?? []) descriptions.set(transaction.id, transaction.description);
+  }
+  return (events.data ?? []).map((event) => ({
+    ...event,
+    source_description: event.source_transaction_id ? descriptions.get(event.source_transaction_id) ?? null : null,
+  })) as MemberSettlementEvent[];
+}
+
 export async function getScheduledMemberSettlementContext(client: SupabaseClient, householdId: string, scheduleId: string) {
   const schedule = await client
     .from('member_settlement_schedules')

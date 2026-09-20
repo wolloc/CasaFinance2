@@ -21,3 +21,11 @@ test('read failure remains explicit and retryable', () => {
   assert.match(source, /não vai presumir que uma dívida foi resolvida ou que não há nada em aberto/);
   assert.match(source, /Tentar novamente/);
 });
+
+
+test('settlement hub makes each member position traceable without creating a new financial action', () => {
+  assert.match(source, /Ver de onde vem esse valor/);
+  assert.match(source, /Ver compromissos que podem gerar este acerto/);
+  assert.match(source, /listMemberSettlementEvents/);
+  assert.doesNotMatch(source, /settleMemberPosition\(/);
+});
