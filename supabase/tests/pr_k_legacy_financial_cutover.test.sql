@@ -165,8 +165,10 @@ select is(
   'K17 retry não duplica posições iniciais'
 );
 
+select set_config('request.jwt.claim.sub','8b000000-0000-4000-8000-000000000003',true);
+
 select throws_ok(
-  $$select public.set_household_financial_tracking_start(
+  $select public.set_household_financial_tracking_start(
     '8b000000-0000-4000-8000-000000000011',
     ((current_timestamp at time zone 'America/Sao_Paulo')::date + 1)
   )$$,
