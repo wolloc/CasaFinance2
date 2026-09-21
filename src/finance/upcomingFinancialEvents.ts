@@ -37,7 +37,24 @@ const addDays=(date:string,days:number)=>{
 
 export async function listUpcomingFinancialEvents(client:SupabaseClient,householdId:string,fromDate:string,days=7,memberId?:string):Promise<UpcomingFinancialEvent[]>{
   const throughDate=addDays(fromDate,days);
-  const incomeSource=memberId?'financial_member_true_income_positions':'financial_true_income_positions';
+  const incomeRequest=memberId
+    ?client.from('financial_member_true_income_positions')
+      .select('money_movement_id,movement_date,reliable_remaining_amount,state,member_id')
+      .eq('household_id',householdId)
+      .eq('member_id',memberId)
+      .eq('state','projected')
+      .gte('movement_date',fromDate)
+      .lte('movement_date',throughDate)
+      .gt('reliable_remaining_amount',0)
+      .order('movement_date')
+    :client.from('financial_true_income_positions')
+      .select('money_movement_id,movement_date,reliable_remaining_amount,state')
+      .eq('household_id',householdId)
+      .eq('state','projected')
+      .gte('movement_date',fromDate)
+      .lte('movement_date',throughDate)
+      .gt('reliable_remaining_amount',0)
+      .order('movement_date');
 
   const [commitments,incomes,invoices,schedules,cards]=await Promise.all([
     client.from('financial_commitment_positions')
@@ -48,14 +65,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       .gt('remaining_amount',0)
       .in('commitment_state',['forecast','confirmed'])
       .order('financial_date'),
-    client.from(incomeSource)
-      .select('money_movement_id,movement_date,reliable_remaining_amount,state')
-      .eq('household_id',householdId)
-      .eq('state','projected')
-      .gte('movement_date',fromDate)
-      .lte('movement_date',throughDate)
-      .gt('reliable_remaining_amount',0)
-      .order('movement_date'),
+    incomeRequest,
     client.from('financial_card_invoice_positions')
       .select('invoice_id,card_id,due_date,remaining_amount,state')
       .eq('household_id',householdId)
@@ -82,13 +92,6 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
   const memberAmounts=new Map<string,number>();
 
   if(memberId){
-    const memberIncomeRows=(incomes.data??[]).filter(row=>(row as {member_id?:string}).member_id===undefined||(row as {member_id?:string}).member_id===memberId);
-    // The member read model is filtered explicitly below because PostgREST cannot
-    // share one query shape between the household and member views.
-    if(incomeSource==='financial_member_true_income_positions'&&memberIncomeRows.length!==(incomes.data??[]).length){
-      incomes.data=memberIncomeRows as typeof incomes.data;
-    }
-
     if(commitmentRows.length>0){
       const responsibility=await client.from('financial_member_commitment_responsibility_positions')
         .select('commitment_key,remaining_responsibility_amount')
@@ -103,7 +106,6 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
 
   const events:UpcomingFinancialEvent[]=[];
   for(const income of incomes.data??[]){
-    if(memberId&&(income as {member_id?:string}).member_id&&((income as {member_id:string}).member_id!==memberId))continue;
     events.push({
       key:`income:${income.money_movement_id}`,
       date:income.movement_date,
