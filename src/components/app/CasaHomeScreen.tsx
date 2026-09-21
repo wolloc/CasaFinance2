@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, CircleGauge, CreditCard, Landmark, Loader
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
+import { listEconomicMonthExpenses } from '../../finance/expenseMonthViews.js';
 import { ensureRecurringExpenseHorizon, recurringExpenseRollingHorizonDate } from '../../finance/recurringExpenses.js';
 import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
@@ -30,9 +31,13 @@ export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementA
  const[memberError,setMemberError]=useState(false);
  const[loading,setLoading]=useState(true);
  const[error,setError]=useState(false);
+ const[spendInsight,setSpendInsight]=useState<{total:number;categories:Array<{name:string;amount:number}>}|null>(null);
+ const[spendInsightLoading,setSpendInsightLoading]=useState(true);
+ const[spendInsightError,setSpendInsightError]=useState(false);
 
  useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);const load=async()=>{try{try{await ensureRecurringExpenseHorizon(supabase,household.id,recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone)));}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled)setDashboard(nextDashboard);}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'){setMemberProjection([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone).then(rows=>{if(!cancelled)setMemberProjection(rows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household){setSpendInsight(null);setSpendInsightLoading(false);return()=>{cancelled=true;};}setSpendInsightLoading(true);setSpendInsightError(false);const month=dateInTimeZone(household.timezone).slice(0,7);listEconomicMonthExpenses(supabase,household.id,month).then(rows=>{if(cancelled)return;const byCategory=new Map<string,number>();let total=0;for(const row of rows){const amount=Number(row.amount);total+=amount;const name=row.category?.name?.trim()||'Sem categoria';byCategory.set(name,(byCategory.get(name)??0)+amount);}const categories=[...byCategory.entries()].map(([name,amount])=>({name,amount})).sort((a,b)=>b.amount-a.amount).slice(0,3);setSpendInsight({total,categories});}).catch(()=>{if(cancelled)return;setSpendInsight(null);setSpendInsightError(true);}).finally(()=>{if(!cancelled)setSpendInsightLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone]);
 
  if(loading)return <LoaderCircle className="mx-auto mt-16 h-7 w-7 animate-spin text-blue-400"/>;
  if(error||!dashboard)return <p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">Não foi possível carregar nenhuma fonte da posição financeira. Nenhum valor foi substituído por zero.</p>;
@@ -89,6 +94,11 @@ export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementA
      {commitmentTotal>0&&<div className="mt-3"><div className="mb-1 flex justify-between text-[10px] text-slate-500"><span>Quanto dos compromissos considerados já aconteceu</span><span>{Math.round(ratio(paid,commitmentTotal))}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-rose-400" style={{width:`${ratio(paid,commitmentTotal)}%`}}/></div></div>}
     </article>
    </div>})()}
+  </section>
+
+  <section>
+   <div className="mb-3"><h2 className="font-bold">O que mais pesou</h2><p className="mt-1 text-xs text-slate-500">As maiores categorias dos gastos que realmente aconteceram neste mês.</p></div>
+   {spendInsightLoading?<div className="flex min-h-20 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/40"><LoaderCircle className="h-5 w-5 animate-spin text-rose-300"/></div>:spendInsightError?unavailable('Não foi possível confirmar a leitura por categoria agora.'):!spendInsight||spendInsight.total<=0?<p className="rounded-2xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">Ainda não há gastos realizados para resumir neste mês.</p>:<div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-4"><div className="flex items-end justify-between gap-3"><div><p className="text-[11px] uppercase tracking-wide text-slate-500">Gasto realizado</p><strong className="mt-1 block text-2xl text-rose-200">{money(spendInsight.total)}</strong></div><span className="text-[10px] text-slate-500">top 3 categorias</span></div><div className="mt-4 space-y-3">{spendInsight.categories.map(category=><div key={category.name}><div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="truncate text-slate-300">{category.name}</span><span className="shrink-0 font-semibold">{money(category.amount)} · {Math.round(ratio(category.amount,spendInsight.total))}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-rose-400" style={{width:`${ratio(category.amount,spendInsight.total)}%`}}/></div></div>)}</div><p className="mt-4 text-[10px] leading-4 text-slate-500">Mostra onde o gasto econômico aconteceu. Compra parcelada entra uma vez pelo valor da compra; pagamento de fatura não vira outro gasto. Isso não é uma meta de orçamento.</p></div>}
   </section>
 
   <section>
