@@ -20,8 +20,9 @@ import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 import { NewExpenseWizard } from './NewExpenseWizard.js';
 import { ScreenErrorBoundary } from './ScreenErrorBoundary.js';
+import type { FinancialPerspective } from './FinancialPerspectiveSelector.js';
 
-export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: TransactionKind; createRequestId?: number; onGrantLoan?:()=>void }) {
+export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0 }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number; onGrantLoan?:()=>void }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   const projectionExpenseIntent = useMemo(() => mode === 'expense' ? consumeProjectionExpenseReviewIntent() : null, [mode]);
   const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
@@ -30,7 +31,7 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
   const [expenseListVersion, setExpenseListVersion] = useState(0);
   const [expenseSaved, setExpenseSaved] = useState(false);
 
-  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} /></ScreenErrorBoundary>;
+  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} /></ScreenErrorBoundary>;
 
   return <div className="space-y-4">
     <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); }} />
@@ -40,7 +41,7 @@ export function TransactionsScreen({ mode, createRequestId = 0 }: { mode: Transa
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
-    <ExpenseMonthBrowser refreshKey={expenseListVersion} />
+    <ExpenseMonthBrowser perspective={perspective} onPerspectiveChange={onPerspectiveChange} refreshKey={expenseListVersion} />
     <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
       <summary className="cursor-pointer font-semibold text-slate-200">Histórico e correções</summary>
       <p className="mt-1 text-xs text-slate-500">Abra para editar ou corrigir lançamentos. A lista não compete com as duas lentes mensais acima.</p>
