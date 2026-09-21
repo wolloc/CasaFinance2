@@ -9,7 +9,7 @@ const income=await readFile(new URL('../../src/components/app/IncomeLedgerScreen
 
 test('Nova despesa gera nova intenção e abre diretamente a jornada guiada',()=>{
  assert.match(app,/setExpenseCreateRequestId\(value=>value\+1\);setScreen\('expenses'\)/);
- assert.match(app,/TransactionsScreen mode="expense" createRequestId=\{expenseCreateRequestId\}/);
+ assert.match(app,/TransactionsScreen mode="expense" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{expenseCreateRequestId\}/);
  assert.match(screen,/<NewExpenseWizard openRequestId=\{createRequestId\}/);
  assert.match(wizard,/openRequestId <= 0 \|\| openRequestId === handledRequestId/);
  assert.match(wizard,/setOpen\(true\)/);
