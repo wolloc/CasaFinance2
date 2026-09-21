@@ -39,14 +39,14 @@ O repositório já possui:
 - build, manifesto e artefato de staging vinculados ao mesmo commit;
 - roteiro preenchível em `docs/operations/staging-evidence.md`.
 
-**Isso é preparação, não evidência de staging concluída.** O bloqueador só fecha após uma execução verde contra um projeto Supabase de staging real.
+**IMPLEMENTADO / EVIDENCIADO:** o workflow `Staging smoke` executou com sucesso na `main` para o SHA `020b02bc5753f6de353a5c6b4661db0c368b5f41` em 2026-09-21, em conjunto com a CI verde do mesmo commit. Isso fecha o gate automatizado de smoke do candidato contra o ambiente configurado. A homologação funcional humana e a prova de backup/restore permanecem separadas e obrigatórias.
 
 ## Roteiro funcional obrigatório de staging
 
 - [ ] Criar projeto Supabase de staging separado de produção.
 - [ ] Configurar o GitHub Environment `staging` com URL e publishable key públicas do projeto.
 - [ ] Aplicar todas as migrations desde zero e comparar com a CI.
-- [ ] Executar `Staging smoke` informando o SHA completo do candidato.
+- [x] Executar `Staging smoke` no SHA completo do candidato `020b02bc5753f6de353a5c6b4661db0c368b5f41` — execução automática verde em 2026-09-21.
 - [ ] Registrar o artefato/manifesto associado ao mesmo SHA.
 - [ ] Criar Casa e convidar o segundo membro.
 - [ ] Sair e entrar novamente com os dois usuários.
@@ -81,11 +81,10 @@ Migrations financeiras devem continuar preferencialmente aditivas/forward-only. 
 
 **Decisão atual: NÃO PUBLICAR AINDA.**
 
-A razão não é mais falta de persistência real, autenticação/RLS dinâmica, runtime Supabase ou rastreabilidade do build. Esses pontos já têm cobertura no Marco 3. Os bloqueios restantes dependem de ambiente real e homologação humana.
+A razão não é mais falta de persistência real, autenticação/RLS dinâmica, runtime Supabase, rastreabilidade do build ou smoke automatizado do candidato. Esses pontos já têm cobertura automatizada e o `Staging smoke` do SHA `020b02bc5753f6de353a5c6b4661db0c368b5f41` está verde. Os bloqueios Altos restantes são a prova reproduzível de backup/restore e a homologação humana conjunta do ciclo financeiro em dispositivos reais.
 
 | Severidade | Pendência | Saída exigida |
 |---|---|---|
-| Alto | Ainda não há execução registrada do staging real. | Criar/configurar o projeto de staging e executar o `Staging smoke` no SHA candidato. |
 | Alto | Backup/restore ainda não foi comprovado em ambiente de staging. | Restaurar dump em projeto isolado e reconciliar posições financeiras. |
 | Alto | Wallace e Guilherme ainda não homologaram juntos o ciclo mensal em dispositivos reais. | Executar `docs/operations/staging-evidence.md` nos dois logins e registrar bloqueadores. |
 | Médio | Distribuição iOS/App Store ainda não foi preparada. | Definir wrapper/build/TestFlight somente após os itens Altos acima fecharem. |
