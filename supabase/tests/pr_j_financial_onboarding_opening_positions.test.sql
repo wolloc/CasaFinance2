@@ -102,7 +102,7 @@ select lives_ok($$
     'Compra histórica parcelada',(current_date-interval '4 months')::date,1000,null,
     '8a000000-0000-4000-8000-000000000021',
     '[{"member_id":"8a000000-0000-4000-8000-000000000021","amount":"1000.00","percentage":"100.0000"}]'::jsonb,
-    4,2,'Compra anterior ao uso do Casa','j-card-history'
+    12,2,'Compra anterior ao uso do Casa','j-card-history'
   )
 $$,'J26 repetição idempotente da abertura não cria outra compra');
 select is((select count(*) from public.transactions where household_id='8a000000-0000-4000-8000-000000000010' and description='Compra histórica parcelada' and type='expense'),1::bigint,'J27 abertura histórica não duplica despesa econômica');
