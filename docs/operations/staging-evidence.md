@@ -8,7 +8,7 @@ Preencher em cada homologação:
 
 - commit/release candidato: `020b02bc5753f6de353a5c6b4661db0c368b5f41`
 - data e hora: 2026-09-21 — smoke automatizado concluído com sucesso
-- projeto Supabase de staging (somente o identificador não secreto): não registrar automaticamente; validar na homologação humana
+- projeto Supabase de staging: `Casa Finance Staging` (projeto separado confirmado)
 - responsável pela execução: GitHub Actions / workflow `Staging smoke`
 - iPhone Wallace / versão iOS:
 - iPhone Guilherme / versão iOS:
@@ -17,16 +17,21 @@ Nunca registrar senhas, JWTs, service-role keys, publishable keys privadas de am
 
 ## Gate A — ambiente e migrations
 
-- [ ] staging é um projeto separado de produção — confirmar explicitamente na homologação humana;
-- [ ] migrations versionadas foram aplicadas sem edição manual no banco — confirmar evidência operacional;
+- [x] staging é um projeto separado do projeto principal — confirmado via Supabase em 2026-09-21;
+- [x] migrations versionadas do staging conferidas até `20260921020630_security_advisor_search_path_hardening`; a CI reaplica a cadeia desde zero;
 - [x] versão/commit testado é exatamente o candidato ao beta (`020b02bc5753f6de353a5c6b4661db0c368b5f41`);
 - [ ] nenhum dado real de produção foi necessário para a homologação — confirmar na rodada humana.
 
 Evidência/observação:
 
+- `Casa Finance Staging`: `ACTIVE_HEALTHY`, separado de `Casa Finance`.
 - `Staging smoke` da `main`: **SUCCESS** em 2026-09-21 para o SHA acima.
 - CI da `main`: **SUCCESS** para o mesmo SHA.
 - O smoke automatizado não substitui os itens explicitamente marcados para confirmação humana.
+
+## Preparação da rodada humana
+
+Executar a homologação sem Supabase, Codespaces ou GitHub abertos durante os fluxos funcionais. Wallace entra primeiro e confirma a Casa; Guilherme entra com credencial própria e aceita o vínculo; ambos fazem logout/login; Wallace executa o ciclo crítico e Guilherme confere; depois Guilherme registra pelo menos um gasto e Wallace confere; por fim, os dois validam o uso mobile. Se algo falhar, registrar o primeiro ponto de quebra sem corrigir manualmente o banco.
 
 ## Gate B — Casa compartilhada e autenticação
 
@@ -52,10 +57,12 @@ Evidência/observação:
 
 Evidência/observação:
 
-## Gate D — backup e restauração
+## Gate D — recuperação
 
-- [ ] gerar backup verificável do staging;
-- [ ] restaurar em ambiente isolado;
+- [x] reconstrução estrutural em Supabase local isolado — a CI inicia banco vazio e reaplica migrations;
+- [x] gates financeiros/RLS/Auth executados sobre o ambiente descartável reconstruído;
+- [ ] gerar backup verificável dos dados do staging;
+- [ ] restaurar os dados em ambiente isolado;
 - [ ] comparar contagens das tabelas financeiras relevantes;
 - [ ] reconciliar saldos, faturas, obrigações e posições de acerto antes/depois;
 - [ ] executar novamente os gates de RLS/Auth/financeiro contra a restauração;
