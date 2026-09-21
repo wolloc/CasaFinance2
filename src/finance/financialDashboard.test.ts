@@ -34,3 +34,20 @@ test('card utilization bar is visually capped while preserving the real percenta
  assert.match(screenSource,/Math\.min\(100,Math\.max\(0,usage\)\)/);
  assert.match(screenSource,/c\.card_health==='red'\?'bg-rose-400'/);
 });
+
+
+test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
+ for(const value of ['Agora','Já tem destino','Livre depois deles','Deve sobrar no fim do mês','Temos <strong>','o mês tende a terminar em'])assert.match(screenSource,new RegExp(value));
+ assert.match(screenSource,/Saúde: /);
+ assert.match(screenSource,/confidence\.confidence_label/);
+});
+
+test('fluxo mensal separa realizado de previsto também visualmente',()=>{
+ for(const value of ['já entrou','ainda esperado','já realizado\/pago','ainda pela frente','Quanto das entradas consideradas já chegou','Quanto dos compromissos considerados já aconteceu'])assert.match(screenSource,new RegExp(value));
+ assert.match(screenSource,/ratio\(entered,incomeTotal\)/);
+ assert.match(screenSource,/ratio\(paid,commitmentTotal\)/);
+});
+
+test('acerto realizado usa frase direcional de recebimento',()=>{
+ assert.match(settlementHubSource,/tem a receber de/);
+});
