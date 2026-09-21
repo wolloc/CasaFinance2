@@ -13,16 +13,13 @@ import { createFinancialParty, listFinancialParties, type FinancialParty } from 
 import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
+import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
 type RepaymentMode = 'one_time' | 'installments';
 type Props = { openRequestId: number; onSaved: () => void };
 
-const localDate = () => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-};
 const paidAtForDate = (value: string) => new Date(`${value}T12:00:00`).toISOString();
 const errorMessage = (cause: unknown, fallback: string) => {
   if (cause instanceof Error && cause.message) return cause.message;
@@ -49,7 +46,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [parties, setParties] = useState<FinancialParty[]>([]);
 
   const [buyerMemberId, setBuyerMemberId] = useState('');
-  const [date, setDate] = useState(localDate());
+  const [date, setDate] = useState(()=>dateInTimeZone(household?.timezone ?? DEFAULT_HOUSEHOLD_TIMEZONE));
   const [description, setDescription] = useState('');
   const [whereWithWhom, setWhereWithWhom] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -81,7 +78,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [recurrenceRecovery, setRecurrenceRecovery] = useState<PendingExpenseRecurrence | null>(null);
 
   const currentMemberId = householdMembers.find((member) => member.profile_id === user?.id)?.id ?? '';
-  const today = localDate();
+  const today = dateInTimeZone(household?.timezone ?? DEFAULT_HOUSEHOLD_TIMEZONE);
   const expenseCategories = useMemo(() => categories.filter((category) => category.type === 'expense'), [categories]);
   const spendableAccounts = useMemo(() => accounts.filter((account) => account.type !== 'investment'), [accounts]);
   const repaymentAccountChoices = useMemo(() => spendableAccounts.filter((account) => account.type !== 'meal_benefit'), [spendableAccounts]);
