@@ -187,5 +187,5 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
     });
   }
 
-  return events.sort((a,b)=>a.date.localeCompare(b.date)||({invoice:0,commitment:1,income:2,settlement:3}[a.kind]-{invoice:0,commitment:1,income:2,settlement:3}[b.kind])).slice(0,8);
+  return events.sort((a,b)=>a.date.localeCompare(b.date)||({invoice:0,commitment:1,income:2,settlement:3}[a.kind]-{invoice:0,commitment:1,income:2,settlement:3}[b.kind]));
 }
