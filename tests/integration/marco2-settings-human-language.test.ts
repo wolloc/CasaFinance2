@@ -20,11 +20,20 @@ test('recurring management is reachable from Ajustes using the existing canonica
   assert.match(source,/RecurringExpenseManagement/);
   assert.match(source,/RecurringIncomeManagement/);
   assert.match(source,/setArea\('recurring'\)/);
-  assert.doesNotMatch(source,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
+  const recurringSection=source.slice(source.indexOf("if(area==='recurring')"),source.indexOf('return <div className="space-y-5">'));
+  assert.doesNotMatch(recurringSection,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
 test('Minha conta exposes the authenticated identity and explicit sign out',()=>{
   assert.match(source,/user\?\.email/);
   assert.match(source,/onClick=\{signOut\}/);
   assert.match(source,/Sair da conta/);
+});
+
+
+test('Casa e membros permite editar o nome da Casa sem criar uma estrutura paralela',()=>{
+  assert.match(source,/Editar nome/);
+  assert.match(source,/\.from\('households'\)\.update\(\{name:nextName\}\)/);
+  assert.match(source,/refreshHousehold/);
+  assert.match(source,/Nome da Casa atualizado\./);
 });
