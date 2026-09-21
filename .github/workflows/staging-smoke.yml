@@ -1,11 +1,14 @@
 name: Staging smoke
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       release_sha:
-        description: Full 40-character commit SHA to homologate
-        required: true
+        description: Full 40-character commit SHA to homologate; empty uses the selected ref
+        required: false
         type: string
 
 permissions:
@@ -20,7 +23,7 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
-      RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
+      RELEASE_COMMIT_SHA: ${{ inputs.release_sha || github.sha }}
 
     steps:
       - name: Validate exact release SHA input
@@ -33,7 +36,7 @@ jobs:
       - name: Checkout exact release candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_sha }}
+          ref: ${{ env.RELEASE_COMMIT_SHA }}
 
       - name: Confirm checked out commit
         run: test "$(git rev-parse HEAD)" = "${RELEASE_COMMIT_SHA}"
@@ -85,7 +88,7 @@ jobs:
       - name: Retain exact staging candidate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: casa-finance-staging-${{ inputs.release_sha }}
+          name: casa-finance-staging-${{ env.RELEASE_COMMIT_SHA }}
           path: dist/
           if-no-files-found: error
           retention-days: 14
