@@ -1,3 +1,4 @@
+// Financial dates follow the Casa timezone, never the device or CI runner clock.
 export const DEFAULT_HOUSEHOLD_TIMEZONE = 'America/Sao_Paulo';
 
 export function dateInTimeZone(timeZone:string,date:Date=new Date()){
