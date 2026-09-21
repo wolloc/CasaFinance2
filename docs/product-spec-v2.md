@@ -47,6 +47,27 @@ Em conta conjunta, a visão Casa considera 100% do saldo e a perspectiva individ
 
 A Casa funciona como síntese financeira mensal e planejamento, não como duplicação da área Gastos.
 
+### Hierarquia visual da Casa
+
+**DEFINIDO:** a Casa deve priorizar compreensão rápida e reduzir texto contínuo. Ícones, números, barras, estados e frases curtas vêm antes de explicações longas; detalhes ficam em drill-down quando possível.
+
+A ordem conceitual é:
+
+1. **Resumo principal** — quanto temos agora, quanto já tem destino, quanto ainda entra, quanto ainda sai e quanto o mês pode terminar tendo;
+2. **Precisa de atenção** — somente exceções acionáveis; quando não houver urgência, o estado deve ser compacto;
+3. **Este mês** — fluxo visual de entradas e compromissos, separando realizado de previsto;
+4. **Contas e recursos** — contas/dinheiro, benefícios, reservas e investimentos, mantendo disponibilidade separada de patrimônio;
+5. **Cartões** — fotografia compacta por cartão, com fatura atual, vencimento, limite livre e compromissos futuros; detalhes e pagamento ficam em Faturas/Cartão;
+6. **Próximos acontecimentos** — eventos dos próximos dias, como entradas, compromissos, faturas, recorrências e acertos, sem duplicar o centro de atenção;
+7. **Principais categorias** — apenas um panorama das categorias que mais pesam; a exploração completa pertence a Gastos;
+8. **Acertos** — posição entre membros/terceiros, privilegiando linguagem humana;
+9. **Olhando pra frente** — trajetória mensal agregada, distinta de eventos dos próximos dias.
+
+**Patrimônio não é uma seção paralela obrigatória.** Ele é apresentado dentro de **Contas e recursos**, com separação explícita entre dinheiro de uso, reservas e investimentos.
+
+**Próximos acontecimentos** e **Olhando pra frente** não são redundantes: o primeiro responde “o que vai acontecer em breve?” com eventos discretos; o segundo responde “como a posição pode evoluir nos próximos meses?” de forma agregada.
+
+
 ### Navegação mensal
 
 Todo o Dashboard possui um período de referência navegável, por exemplo:
@@ -179,7 +200,7 @@ Cada cartão apresenta uma fotografia financeira, incluindo conceitualmente:
 
 **Fatura atual** e **limite comprometido** são conceitos diferentes. Uma compra parcelada pode colocar apenas uma parcela na fatura corrente e, ao mesmo tempo, comprometer no limite a exposição remanescente conforme a lógica do emissor.
 
-Ao tocar no cartão, o usuário acessa um detalhe contextual da fatura/cartão, preferencialmente leve (sheet/modal expansível), com lançamentos, parcelas, recorrências esperadas, situação da fatura e compromissos futuros. O mesmo dado pode ser alcançado por Gastos > Compromissos filtrando o cartão; são jornadas diferentes sobre a mesma fonte de verdade.
+Na Casa, o cartão deve permanecer **compacto**. Ao tocar em **Ver cartão e fatura** ou em **Ver faturas**, o usuário acessa a experiência contextual de Faturas/Cartão, com lançamentos, parcelas, recorrências esperadas, composição, situação da fatura, compromissos futuros e pagamento. O mesmo dado pode ser alcançado por Gastos > Compromissos filtrando o cartão; são jornadas diferentes sobre a mesma fonte de verdade.
 
 ### Acertos entre membros
 
