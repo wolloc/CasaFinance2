@@ -1,15 +1,16 @@
 name: Staging smoke
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       release_sha:
         description: Full 40-character commit SHA to homologate; empty uses the selected ref
         required: false
         type: string
+
+concurrency:
+  group: staging-smoke-${{ inputs.release_sha || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -45,6 +46,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Validate staging public configuration
         run: node scripts/validate-release-env.mjs
@@ -80,7 +82,7 @@ jobs:
           esac
 
       - name: Build exact release artifact for staging configuration
-        run: npm install --no-audit --no-fund && npm run build
+        run: npm ci --no-audit --no-fund && npm run build
 
       - name: Generate exact staging provenance manifest
         run: npm run release:manifest
