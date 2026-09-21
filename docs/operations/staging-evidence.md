@@ -6,10 +6,10 @@ Este arquivo é o contrato de evidência para liberar um beta. Ele não substitu
 
 Preencher em cada homologação:
 
-- commit/release candidato:
-- data e hora:
-- projeto Supabase de staging (somente o identificador não secreto):
-- responsável pela execução:
+- commit/release candidato: `020b02bc5753f6de353a5c6b4661db0c368b5f41`
+- data e hora: 2026-09-21 — smoke automatizado concluído com sucesso
+- projeto Supabase de staging (somente o identificador não secreto): não registrar automaticamente; validar na homologação humana
+- responsável pela execução: GitHub Actions / workflow `Staging smoke`
 - iPhone Wallace / versão iOS:
 - iPhone Guilherme / versão iOS:
 
@@ -17,12 +17,16 @@ Nunca registrar senhas, JWTs, service-role keys, publishable keys privadas de am
 
 ## Gate A — ambiente e migrations
 
-- [ ] staging é um projeto separado de produção;
-- [ ] migrations versionadas foram aplicadas sem edição manual no banco;
-- [ ] versão/commit testado é exatamente o candidato ao beta;
-- [ ] nenhum dado real de produção foi necessário para a homologação.
+- [ ] staging é um projeto separado de produção — confirmar explicitamente na homologação humana;
+- [ ] migrations versionadas foram aplicadas sem edição manual no banco — confirmar evidência operacional;
+- [x] versão/commit testado é exatamente o candidato ao beta (`020b02bc5753f6de353a5c6b4661db0c368b5f41`);
+- [ ] nenhum dado real de produção foi necessário para a homologação — confirmar na rodada humana.
 
 Evidência/observação:
+
+- `Staging smoke` da `main`: **SUCCESS** em 2026-09-21 para o SHA acima.
+- CI da `main`: **SUCCESS** para o mesmo SHA.
+- O smoke automatizado não substitui os itens explicitamente marcados para confirmação humana.
 
 ## Gate B — Casa compartilhada e autenticação
 
