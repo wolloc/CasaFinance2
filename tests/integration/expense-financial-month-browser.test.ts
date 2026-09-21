@@ -57,3 +57,15 @@ test('salvar uma nova despesa invalida a lente mensal sem remount destrutivo',()
  assert.match(screen,/<ExpenseMonthBrowser refreshKey=\{expenseListVersion\} \/>/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
+
+
+test('Gastos traz visão consolidada do mês sem transformar categorias em orçamento',()=>{
+ assert.match(browser,/Visão dos compromissos/);
+ assert.match(browser,/Já realizado\/pago/);
+ assert.match(browser,/Ainda comprometido/);
+ assert.match(browser,/Gasto realizado no mês/);
+ assert.match(browser,/Por categoria/);
+ assert.match(browser,/participação no gasto/);
+ assert.match(browser,/Não representa meta ou orçamento planejado/);
+ assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
+});
