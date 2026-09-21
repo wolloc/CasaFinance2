@@ -11,3 +11,14 @@ test('money classes remain separate',()=>{for(const value of['Disponível agora'
 test('dashboard stays read-only',()=>{assert.doesNotMatch(serviceSource,/\.insert\(|\.update\(|\.delete\(|\.upsert\(/);for(const rpc of['financial_household_health_position','financial_priority_attention_items','financial_monthly_projection','financial_member_monthly_projection','financial_liquidity_guidance'])assert.match(serviceSource,new RegExp(`rpc\\('${rpc}'`));assert.doesNotMatch(serviceSource,/create_financial_transaction|settle_|refund_|correct_|cancel_/);});
 
 test('individual perspective explains liquidity, projected change and household settlement visually',()=>{for(const value of['projected_net_change','Deve sobrar comigo no fim do mês','Acerto entre nós','A receber do outro membro','A pagar ao outro membro'])assert.match(screenSource,new RegExp(value));});
+
+
+test('household forward view explains opening cash, considered flows and projected ending cash',()=>{
+ assert.match(screenSource,/Como o caixa pode terminar em cada mês/);
+ assert.match(screenSource,/Começa com/);
+ assert.match(screenSource,/entradas consideradas/);
+ assert.match(screenSource,/compromissos considerados/);
+ assert.match(screenSource,/Pode terminar com/);
+ assert.match(screenSource,/opening_cash/);
+ assert.match(screenSource,/projected_ending_cash/);
+});
