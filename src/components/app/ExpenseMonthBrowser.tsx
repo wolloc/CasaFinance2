@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, LoaderCircle, ReceiptText, Search, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { supabase } from '../../lib/supabase.js';
 import { listEconomicMonthExpenses, listFinancialMonthExpenses, type EconomicMonthExpense, type FinancialMonthExpense } from '../../finance/expenseMonthViews.js';
 
@@ -15,8 +16,8 @@ const barWidth=(value:number,total:number)=>Math.min(100,percentage(value,total)
 type ViewMode='financial'|'economic';
 type CategorySummary={name:string;amount:number};
 
-export function ExpenseMonthBrowser({refreshKey=0}:{refreshKey?:number}){
-  const{household}=useSupabaseAuth();
+export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=0}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;refreshKey?:number}){
+  const{household,householdMembers}=useSupabaseAuth();
   const[month,setMonth]=useState(currentMonth());
   const[mode,setMode]=useState<ViewMode>('financial');
   const[financialRows,setFinancialRows]=useState<FinancialMonthExpense[]>([]);
@@ -26,7 +27,7 @@ export function ExpenseMonthBrowser({refreshKey=0}:{refreshKey?:number}){
   const[refreshVersion,setRefreshVersion]=useState(0);
   const[query,setQuery]=useState('');
 
-  useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}setLoading(true);setError(false);setFinancialRows([]);setEconomicRows([]);const request=mode==='financial'?listFinancialMonthExpenses(supabase,household.id,month):listEconomicMonthExpenses(supabase,household.id,month);request.then(rows=>{if(cancelled)return;if(mode==='financial')setFinancialRows(rows as FinancialMonthExpense[]);else setEconomicRows(rows as EconomicMonthExpense[]);}).catch(()=>{if(cancelled)return;setFinancialRows([]);setEconomicRows([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,month,mode,refreshKey,refreshVersion]);
+  useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}setLoading(true);setError(false);setFinancialRows([]);setEconomicRows([]);const memberId=perspective==='household'?undefined:perspective;const request=mode==='financial'?listFinancialMonthExpenses(supabase,household.id,month,memberId):listEconomicMonthExpenses(supabase,household.id,month,memberId);request.then(rows=>{if(cancelled)return;if(mode==='financial')setFinancialRows(rows as FinancialMonthExpense[]);else setEconomicRows(rows as EconomicMonthExpense[]);}).catch(()=>{if(cancelled)return;setFinancialRows([]);setEconomicRows([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,month,mode,perspective,refreshKey,refreshVersion]);
 
   const financialSummary=useMemo(()=>financialRows.reduce((summary,row)=>({total:summary.total+Number(row.effective_amount),realized:summary.realized+Number(row.realized_amount),remaining:summary.remaining+Number(row.remaining_amount)}),{total:0,realized:0,remaining:0}),[financialRows]);
   const economicSummary=useMemo(()=>{const byCategory=new Map<string,number>();let total=0;for(const row of economicRows){const amount=Number(row.amount);total+=amount;const name=row.category?.name?.trim()||'Sem categoria';byCategory.set(name,(byCategory.get(name)??0)+amount);}const categories=[...byCategory.entries()].map(([name,amount])=>({name,amount})).sort((a,b)=>b.amount-a.amount);return{total,count:economicRows.length,categories};},[economicRows]);
@@ -35,9 +36,11 @@ export function ExpenseMonthBrowser({refreshKey=0}:{refreshKey?:number}){
   const filteredEconomicRows=useMemo(()=>normalizedQuery?economicRows.filter(row=>[row.description,row.category?.name??'Sem categoria',row.transaction_date].some(value=>value.toLocaleLowerCase('pt-BR').includes(normalizedQuery))):economicRows,[economicRows,normalizedQuery]);
   const visibleCount=mode==='financial'?filteredFinancialRows.length:filteredEconomicRows.length;
   const totalCount=mode==='financial'?financialRows.length:economicRows.length;
+  const selectedMember=perspective==='household'?null:householdMembers.find(member=>member.id===perspective)??null;
 
   return <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-rose-300">Gastos</p><h2 className="mt-1 text-lg font-black capitalize">{monthName(month)}</h2><p className="mt-1 text-xs text-slate-500">Escolha entre o fato econômico e seus impactos financeiros, sem contar o mesmo gasto duas vezes.</p></div><label className="text-xs text-slate-400">Mês<input type="month" value={month} onChange={event=>{setMonth(event.target.value);setQuery('')}} className="mt-1 min-h-10 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"/></label></header>
+    <div className="mt-4"><FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>{selectedMember&&<p className="mt-2 text-[11px] text-blue-300">Mostrando a responsabilidade econômica de {selectedMember.display_name}. Comprador continua sendo um filtro diferente.</p>}</div>
     <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1"><button type="button" onClick={()=>{setMode('economic');setQuery('')}} aria-pressed={mode==='economic'} className={`min-h-12 rounded-lg px-2 text-xs font-semibold ${mode==='economic'?'bg-blue-700 text-white':'text-slate-400'}`}>Gastos realizados</button><button type="button" onClick={()=>{setMode('financial');setQuery('')}} aria-pressed={mode==='financial'} className={`min-h-12 rounded-lg px-2 text-xs font-semibold ${mode==='financial'?'bg-blue-700 text-white':'text-slate-400'}`}>Compromissos do mês</button></div>
     {mode==='financial'&&<p className="mt-2 text-[11px] text-slate-500">O que impactou ou ainda deve impactar financeiramente este mês. A borda coral indica impacto ainda esperado.</p>}
     {mode==='economic'&&<p className="mt-2 text-[11px] text-slate-500">Com o que gastamos neste mês? Compras parceladas aparecem uma vez, pelo valor econômico total na data da compra.</p>}
