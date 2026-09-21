@@ -16,5 +16,5 @@ test('home refreshes recurring projections before reading the financial dashboar
   const dashboardIndex = home.indexOf('await getFinancialDashboard');
   assert.ok(ensureIndex >= 0, 'CasaHomeScreen must extend the recurring horizon');
   assert.ok(dashboardIndex > ensureIndex, 'dashboard must be read only after recurrence projections are extended');
-  assert.match(home, /recurringExpenseRollingHorizonDate\(todayInFinanceTimeZone\(\)\)/);
+  assert.match(home, /recurringExpenseRollingHorizonDate\(dateInTimeZone\(household\.timezone\)\)/);
 });
