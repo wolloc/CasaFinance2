@@ -17,3 +17,10 @@ test('owner receives the first-household preparation instead of invited-member c
  assert.match(screen,/HouseholdFinancialSetup memberOnboarding=\{!isOwner\}/);
  assert.match(screen,/Revisar posição inicial/);
 });
+
+
+test('global household baseline gate also blocks members previously marked complete',()=>{
+ assert.match(app,/getHouseholdFinancialSetupReadiness/);
+ assert.match(app,/readiness !== 'ready'/);
+ assert.match(app,/if \(readiness !== 'ready'\) return <MemberFinancialPreparation/);
+});
