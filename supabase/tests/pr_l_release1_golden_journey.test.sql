@@ -35,8 +35,8 @@ insert into public.account_balance_events(household_id,account_id,created_by_mem
  ('9a000000-0000-4000-8000-000000000010','9a000000-0000-4000-8000-000000000031','9a000000-0000-4000-8000-000000000021','opening',2000,current_date,'Posição inicial'),
  ('9a000000-0000-4000-8000-000000000010','9a000000-0000-4000-8000-000000000032','9a000000-0000-4000-8000-000000000021','opening',1000,current_date,'Posição inicial');
 
-insert into public.cards(id,household_id,owner_member_id,name,credit_limit,closing_day,due_day)
-values ('9a000000-0000-4000-8000-000000000041','9a000000-0000-4000-8000-000000000010','9a000000-0000-4000-8000-000000000021','Cartão Wallace',5000,28,10);
+insert into public.cards(id,household_id,owner_member_id,name,credit_limit,closing_day,due_day,default_payment_account_id)
+values ('9a000000-0000-4000-8000-000000000041','9a000000-0000-4000-8000-000000000010','9a000000-0000-4000-8000-000000000021','Cartão Wallace',5000,28,10,'9a000000-0000-4000-8000-000000000031');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','9a000000-0000-4000-8000-000000000001',true);
