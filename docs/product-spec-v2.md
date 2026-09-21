@@ -25,7 +25,7 @@ As ações globais permanecem três fluxos independentes:
 - Nova entrada;
 - Novo acerto.
 
-A apresentação visual atual em barra fixa é **IMPLEMENTADA**, mas a simplificação para ações menores por ícones é **PROPOSTA** e ainda depende de validação de UX/UI.
+A apresentação visual das ações globais é **IMPLEMENTADA** como uma cápsula compacta e flutuante, centralizada acima da navegação inferior. Os rótulos visuais são **Despesa**, **Entrada** e **Acerto**, enquanto os nomes acessíveis completos permanecem **Nova despesa**, **Nova entrada** e **Novo acerto**. A compactação não reduz a área mínima de toque nem transforma as três ações em um único fluxo.
 
 ## Perspectiva
 
