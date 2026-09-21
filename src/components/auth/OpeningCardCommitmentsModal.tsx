@@ -17,7 +17,7 @@ export function OpeningCardCommitmentsModal({
   onSaved: (message: string) => Promise<void>;
 }) {
   const [mode, setMode] = useState<'detailed' | 'aggregate'>('detailed');
-  const latestHistoricalDate = useMemo(() => trackingStartedOn ? new Date(`${trackingStartedOn}T12:00:00`).toISOString().slice(0,10) : undefined, [trackingStartedOn]);
+  const latestHistoricalDate = useMemo(() => { if (!trackingStartedOn) return undefined; const date = new Date(`${trackingStartedOn}T00:00:00Z`); date.setUTCDate(date.getUTCDate()-1); return date.toISOString().slice(0,10); }, [trackingStartedOn]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requestKey] = useState(() => crypto.randomUUID());
