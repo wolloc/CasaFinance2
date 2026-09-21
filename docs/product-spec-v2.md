@@ -29,17 +29,23 @@ A apresentação visual das ações globais é **IMPLEMENTADA** como uma cápsul
 
 ## Perspectiva
 
-O seletor oferece **Nossa Casa**, **Wallace** e **Guilherme**.
+**DEFINIDO:** o seletor oferece **Nossa Casa**, **Wallace** e **Guilherme** e funciona como contexto financeiro global. A perspectiva escolhida permanece ao navegar entre Casa, Gastos, Entradas e Faturas.
 
 > Filtrar por membro muda a perspectiva financeira, não simplesmente os ativos exibidos.
 
-A perspectiva individual responde: “Considerando minha renda, compromissos e recursos que realmente posso usar, quanto consigo gastar ou movimentar sem retirar investimentos ou depender financeiramente do outro membro?”
+A perspectiva individual responde: “Considerando minha renda, compromissos e recursos que realmente posso usar, como está a minha situação dentro da Casa?”
 
 Ela distingue:
 
 - **Minha responsabilidade**;
 - **Pode sair dos meus recursos**;
-- **A receber do outro membro**.
+- **Tenho a receber / Preciso acertar**;
+- entradas cujo beneficiário é o membro;
+- responsabilidade do membro nos cartões;
+- contas e recursos atribuídos canonicamente ao membro;
+- principais categorias pela responsabilidade econômica do membro.
+
+**Comprador continua sendo um filtro independente.** Selecionar Wallace na perspectiva não significa filtrar compras feitas por Wallace; responsabilidade econômica, comprador e funding/pagador permanecem conceitos distintos.
 
 Em conta conjunta, a visão Casa considera 100% do saldo e a perspectiva individual de liquidez considera 50% para cada membro. Essa regra 50/50 vale somente para liquidez individual: a responsabilidade econômica continua independente.
 
