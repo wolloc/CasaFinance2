@@ -4,10 +4,11 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -17,55 +18,130 @@ jobs:
     name: TypeScript, tests and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      database: ${{ steps.changes.outputs.database }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify change risk
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          app=false
+          browser=false
+          database=false
+          dependencies=false
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            app=true
+            browser=true
+            database=true
+            dependencies=true
+            printf '%s\n' '[ci] manual run: full validation'
+          else
+            git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" > /tmp/changed-files.txt
+            printf '%s\n' '[ci] changed files:'
+            cat /tmp/changed-files.txt
+
+            while IFS= read -r file; do
+              case "${file}" in
+                package.json|package-lock.json)
+                  app=true
+                  dependencies=true
+                  ;;
+                src/*|server/*|tests/*|scripts/*|supabase/*|vite.config.*|tsconfig*.json|playwright.config.*)
+                  app=true
+                  ;;
+              esac
+
+              case "${file}" in
+                src/components/*|src/context/*|src/App*|src/main*|tests/e2e/*|playwright.config.*)
+                  browser=true
+                  ;;
+              esac
+
+              case "${file}" in
+                supabase/*|src/finance/*|src/domain/*|server/*)
+                  database=true
+                  ;;
+              esac
+            done < /tmp/changed-files.txt
+          fi
+
+          {
+            echo "app=${app}"
+            echo "browser=${browser}"
+            echo "database=${database}"
+            echo "dependencies=${dependencies}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "[ci] app=${app} browser=${browser} database=${database} dependencies=${dependencies}"
 
       - name: Use Node.js
+        if: steps.changes.outputs.app == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        if: steps.changes.outputs.app == 'true'
+        run: npm ci --no-audit --no-fund
 
       - name: TypeScript check
+        if: steps.changes.outputs.app == 'true'
         run: npm run lint
 
       - name: Unit and integration tests
+        if: steps.changes.outputs.app == 'true'
         run: npm test
 
       - name: Validate release public config contract
+        if: steps.changes.outputs.app == 'true'
         env:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
         run: npm run check:release-config
 
       - name: Install Playwright Chromium
+        if: steps.changes.outputs.browser == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Browser E2E smoke tests
+        if: steps.changes.outputs.browser == 'true'
         run: npm run test:e2e
 
       - name: Secret scan
         run: npm run check:secrets
 
       - name: Dependency audit
+        if: steps.changes.outputs.dependencies == 'true'
         run: npm audit --audit-level=high
 
       - name: Production build
+        if: steps.changes.outputs.app == 'true'
         env:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
         run: npm run build
 
       - name: Generate release provenance manifest
+        if: github.event_name == 'workflow_dispatch'
         env:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
         run: npm run release:manifest
 
       - name: Retain exact release candidate artifact
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: casa-finance-release-${{ github.sha }}
@@ -75,6 +151,8 @@ jobs:
 
   database-security:
     name: Supabase RLS and database contracts
+    needs: validate
+    if: needs.validate.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -93,218 +171,32 @@ jobs:
       - name: Start isolated Supabase and replay every migration from zero
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
 
-      - name: Run Marco 3 dynamic RLS security gate
-        run: supabase test db supabase/tests/marco3_rls_security.test.sql
-
-      - name: Run PR A mixed external responsibility behavior gate
+      - name: Run database behavior and security gates
         shell: bash
         run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_a_mixed_external_responsibility.test.sql 2>&1 | tee pr-a-db-test.log
+          set -euo pipefail
+          tests=(
+            supabase/tests/marco3_rls_security.test.sql
+            supabase/tests/pr_a_mixed_external_responsibility.test.sql
+            supabase/tests/pr_b_realized_expense_positions.test.sql
+            supabase/tests/pr_c_wizard_idempotency.test.sql
+            supabase/tests/pr_d_card_pix_integrity.test.sql
+            supabase/tests/pr_e_settlement_integrity.test.sql
+            supabase/tests/pr_f_recurring_expense_flow.test.sql
+            supabase/tests/pr_g_recurring_horizon_anchor.test.sql
+            supabase/tests/pr_h_card_direct_commitments.test.sql
+            supabase/tests/pr_i_recurring_card_single.test.sql
+            supabase/tests/pr_j_financial_onboarding_opening_positions.test.sql
+            supabase/tests/pr_k_legacy_financial_cutover.test.sql
+            supabase/tests/pr_l_release1_golden_journey.test.sql
+            supabase/tests/pr_m_release1_everyday_extended.test.sql
+            supabase/tests/pr_n_release1_reconciliation.test.sql
+          )
 
-      - name: Retain PR A database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-a-db-test-log-${{ github.sha }}
-          path: pr-a-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR B realized expense positions behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_b_realized_expense_positions.test.sql 2>&1 | tee pr-b-db-test.log
-
-      - name: Retain PR B database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-b-db-test-log-${{ github.sha }}
-          path: pr-b-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR C wizard idempotency behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_c_wizard_idempotency.test.sql 2>&1 | tee pr-c-db-test.log
-
-      - name: Retain PR C database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-c-db-test-log-${{ github.sha }}
-          path: pr-c-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR D card and card PIX behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_d_card_pix_integrity.test.sql 2>&1 | tee pr-d-db-test.log
-
-      - name: Retain PR D database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-d-db-test-log-${{ github.sha }}
-          path: pr-d-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR E settlement integrity behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_e_settlement_integrity.test.sql 2>&1 | tee pr-e-db-test.log
-
-      - name: Retain PR E database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-e-db-test-log-${{ github.sha }}
-          path: pr-e-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR F recurring expense behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_f_recurring_expense_flow.test.sql 2>&1 | tee pr-f-db-test.log
-
-      - name: Retain PR F database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-f-db-test-log-${{ github.sha }}
-          path: pr-f-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR G recurring horizon and month-anchor behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_g_recurring_horizon_anchor.test.sql 2>&1 | tee pr-g-db-test.log
-
-      - name: Retain PR G database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-g-db-test-log-${{ github.sha }}
-          path: pr-g-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR H card direct commitment behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_h_card_direct_commitments.test.sql 2>&1 | tee pr-h-db-test.log
-
-      - name: Retain PR H database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-h-db-test-log-${{ github.sha }}
-          path: pr-h-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR I recurring card single behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_i_recurring_card_single.test.sql 2>&1 | tee pr-i-db-test.log
-
-      - name: Retain PR I database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-i-db-test-log-${{ github.sha }}
-          path: pr-i-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR J financial onboarding opening position behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_j_financial_onboarding_opening_positions.test.sql 2>&1 | tee pr-j-db-test.log
-
-      - name: Retain PR J database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-j-db-test-log-${{ github.sha }}
-          path: pr-j-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR K legacy financial cutover behavior gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_k_legacy_financial_cutover.test.sql 2>&1 | tee pr-k-db-test.log
-
-      - name: Retain PR K database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-k-db-test-log-${{ github.sha }}
-          path: pr-k-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR L Release 1 golden journey gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_l_release1_golden_journey.test.sql 2>&1 | tee pr-l-db-test.log
-
-      - name: Retain PR L database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-l-db-test-log-${{ github.sha }}
-          path: pr-l-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR M Release 1 extended everyday gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_m_release1_everyday_extended.test.sql 2>&1 | tee pr-m-db-test.log
-
-      - name: Retain PR M database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-m-db-test-log-${{ github.sha }}
-          path: pr-m-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
-
-      - name: Run PR N Release 1 reconciliation gate
-        shell: bash
-        run: |
-          set -o pipefail
-          supabase test db supabase/tests/pr_n_release1_reconciliation.test.sql 2>&1 | tee pr-n-db-test.log
-
-      - name: Retain PR N database test log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-n-db-test-log-${{ github.sha }}
-          path: pr-n-db-test.log
-          if-no-files-found: warn
-          retention-days: 3
+          for test_file in "${tests[@]}"; do
+            echo "[db-gate] ${test_file}"
+            supabase test db "${test_file}"
+          done
 
       - name: Export local Supabase public connection settings
         run: |
@@ -319,15 +211,10 @@ jobs:
             esac
           done < /tmp/supabase.env
 
-      - name: Run Marco 3 Auth JWT and PostgREST gate
-        run: bash supabase/tests/marco3_auth_http.sh
-
-      - name: Run Marco 4 app-surface PostgREST gate
-        run: bash supabase/tests/marco4_app_surface_http.sh
-
-      - name: Run Marco 3 real financial HTTP gate
-        run: bash supabase/tests/marco3_financial_http.sh
-
-      - name: Run Marco 3 financial isolation HTTP gate
-        run: bash supabase/tests/marco3_financial_isolation_http.sh
-
+      - name: Run Auth, app-surface and financial HTTP gates
+        run: |
+          set -euo pipefail
+          bash supabase/tests/marco3_auth_http.sh
+          bash supabase/tests/marco4_app_surface_http.sh
+          bash supabase/tests/marco3_financial_http.sh
+          bash supabase/tests/marco3_financial_isolation_http.sh
