@@ -6,7 +6,7 @@ export type BootstrapHouseholdResult = {
   alreadyExisted: boolean;
 };
 
-type HouseholdRow = { id: string; name: string };
+export type HouseholdRow = { id: string; name: string; timezone: string };
 type MembershipRow = { household_id: string; profile_id: string };
 
 export async function findExistingHousehold(client: SupabaseClient, session: Session) {
@@ -18,7 +18,7 @@ export async function findExistingHousehold(client: SupabaseClient, session: Ses
   if ((membershipResponse.data as MembershipRow).profile_id !== userId) throw new Error('A associação retornada não pertence à sessão atual.');
 
   const householdResponse = await client.from('households')
-    .select('id, name').eq('id', membershipResponse.data.household_id).maybeSingle();
+    .select('id, name, timezone').eq('id', membershipResponse.data.household_id).maybeSingle();
   if (householdResponse.error) throw householdResponse.error;
   return householdResponse.data as HouseholdRow | null;
 }

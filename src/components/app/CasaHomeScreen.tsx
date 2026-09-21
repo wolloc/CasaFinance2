@@ -9,10 +9,10 @@ import type { SettlementActionIntent } from '../../finance/settlementActionInten
 import { CardFinancialJourney } from './CardFinancialJourney.js';
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
 import { SettlementHub } from './SettlementHub.js';
+import { dateInTimeZone } from '../../finance/householdClock.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value.slice(0,10)}T12:00:00Z`));
-const todayInFinanceTimeZone=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const year=parts.find(part=>part.type==='year')?.value??'';const month=parts.find(part=>part.type==='month')?.value??'';const day=parts.find(part=>part.type==='day')?.value??'';return `${year}-${month}-${day}`;};
 const healthText={green:'Saudável',yellow:'Atenção',red:'Crítico'}as const;
 const healthClass={green:'text-emerald-300',yellow:'text-amber-300',red:'text-rose-300'}as const;
 const unavailable=(message:string)=><p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">{message}</p>;
@@ -29,8 +29,8 @@ export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementA
  const[loading,setLoading]=useState(true);
  const[error,setError]=useState(false);
 
- useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);const load=async()=>{try{try{await ensureRecurringExpenseHorizon(supabase,household.id,recurringExpenseRollingHorizonDate(todayInFinanceTimeZone()));}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id);if(!cancelled)setDashboard(nextDashboard);}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id]);
- useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'){setMemberProjection([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);getMemberFinancialPerspective(supabase,household.id,perspective).then(rows=>{if(!cancelled)setMemberProjection(rows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,perspective]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);const load=async()=>{try{try{await ensureRecurringExpenseHorizon(supabase,household.id,recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone)));}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled)setDashboard(nextDashboard);}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'){setMemberProjection([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone).then(rows=>{if(!cancelled)setMemberProjection(rows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective]);
 
  if(loading)return <LoaderCircle className="mx-auto mt-16 h-7 w-7 animate-spin text-blue-400"/>;
  if(error||!dashboard)return <p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">Não foi possível carregar nenhuma fonte da posição financeira. Nenhum valor foi substituído por zero.</p>;
