@@ -276,6 +276,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Run PR M Release 1 extended everyday gate
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db supabase/tests/pr_m_release1_everyday_extended.test.sql 2>&1 | tee pr-m-db-test.log
+
+      - name: Retain PR M database test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-m-db-test-log-${{ github.sha }}
+          path: pr-m-db-test.log
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Export local Supabase public connection settings
         run: |
           supabase status -o env > /tmp/supabase.env
