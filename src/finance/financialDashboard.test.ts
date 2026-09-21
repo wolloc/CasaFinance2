@@ -24,10 +24,10 @@ test('household forward view explains opening cash, considered flows and project
 });
 
 
-test('Home resume exposição do cartão sem tratar limite como caixa',()=>{
- for(const value of ['Quanto do crédito já está comprometido','Fatura atual','Depois dela','Disponível','Limite comprometido','Limite é crédito; não aumenta o dinheiro disponível da Casa'])assert.match(screenSource,new RegExp(value));
+test('Home resume exposição do cartão e leva detalhe para Faturas',()=>{
+ for(const value of ['Fatura atual','Próximos meses','Limite livre','Crédito comprometido','Ver faturas','Ver cartão e fatura'])assert.match(screenSource,new RegExp(value));
  for(const field of ['credit_limit','future_known_commitments','available_limit','utilization_ratio','over_limit_amount','next_due_date'])assert.match(screenSource,new RegExp(field));
- assert.match(screenSource,/CardFinancialJourney/);
+ assert.doesNotMatch(screenSource,/CardFinancialJourney/);
 });
 test('card utilization bar is visually capped while preserving the real percentage label',()=>{
  assert.match(screenSource,/Math\.round\(usage\)/);
