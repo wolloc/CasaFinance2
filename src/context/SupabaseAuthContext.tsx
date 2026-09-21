@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session, User } from '@supabase/supabase-js';
 import { friendlyAuthError } from '../auth/authErrors.js';
 import { supabase, supabaseConfigurationError } from '../lib/supabase.js';
-import { bootstrapHousehold, findExistingHousehold, type BootstrapHouseholdResult } from '../auth/householdBootstrap.js';
+import { bootstrapHousehold, findExistingHousehold, type BootstrapHouseholdResult, type HouseholdRow } from '../auth/householdBootstrap.js';
 import { acceptHouseholdInvitation, createHouseholdInvitation, friendlyInvitationError, previewHouseholdInvitation, type AcceptInvitationResult, type HouseholdInvitation, type HouseholdInvitationPreview } from '../auth/householdInvitations.js';
 
 type Credentials = { email: string; password: string };
@@ -15,7 +15,7 @@ type SupabaseAuthValue = {
   isLoading: boolean;
   isSubmitting: boolean;
   error: string | null;
-  household: { id: string; name: string } | null;
+  household: HouseholdRow | null;
   householdMembers: HouseholdMember[];
   householdLoading: boolean;
   householdMembersLoading: boolean;
@@ -39,7 +39,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [household, setHousehold] = useState<{ id: string; name: string } | null>(null);
+  const [household, setHousehold] = useState<HouseholdRow | null>(null);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
   const [householdRefreshVersion, setHouseholdRefreshVersion] = useState(0);
   const [householdMembersRefreshVersion, setHouseholdMembersRefreshVersion] = useState(0);
