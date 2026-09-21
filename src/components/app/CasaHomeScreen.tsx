@@ -10,6 +10,7 @@ import type { SettlementActionIntent } from '../../finance/settlementActionInten
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
 import { SettlementHub } from './SettlementHub.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
+import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value.slice(0,10)}T12:00:00Z`));
@@ -19,12 +20,10 @@ const healthClass={green:'text-emerald-300',yellow:'text-amber-300',red:'text-ro
 const ratio=(value:number,total:number)=>total>0?Math.min(100,Math.max(0,(value/total)*100)):0;
 const unavailable=(message:string)=><p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">{message}</p>;
 type Dashboard=Awaited<ReturnType<typeof getFinancialDashboard>>;
-type Perspective='household'|string;
 
-export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementAction,onOpenInvoices,onOpenCard}:{onCoverageAction?:(kind:CoverageActionKind,suggestedAmount:number)=>void;onAttentionAction?:(action:AttentionNavigationAction)=>void;onSettlementAction?:(intent:SettlementActionIntent)=>void;onOpenInvoices?:()=>void;onOpenCard?:(cardId:string)=>void}){
+export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction,onAttentionAction,onSettlementAction,onOpenInvoices,onOpenCard}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;onCoverageAction?:(kind:CoverageActionKind,suggestedAmount:number)=>void;onAttentionAction?:(action:AttentionNavigationAction)=>void;onSettlementAction?:(intent:SettlementActionIntent)=>void;onOpenInvoices?:()=>void;onOpenCard?:(cardId:string)=>void}){
  const{household,householdMembers}=useSupabaseAuth();
  const[dashboard,setDashboard]=useState<Dashboard|null>(null);
- const[perspective,setPerspective]=useState<Perspective>('household');
  const[memberProjection,setMemberProjection]=useState<MemberMonthlyProjection[]>([]);
  const[memberLoading,setMemberLoading]=useState(false);
  const[memberError,setMemberError]=useState(false);
@@ -48,7 +47,7 @@ export function CasaHomeScreen({onCoverageAction,onAttentionAction,onSettlementA
  const projectedEndingCash=health?.projected_ending_cash!=null?Number(health.projected_ending_cash):position?Number(position.projected_balance):null;
  const gap=guidance?Number(guidance.coverage_gap):null;
  const hasPartialFailure=Object.values(availability).some(value=>!value);
- const selector=<div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-1"><button onClick={()=>setPerspective('household')} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective==='household'?'bg-blue-600':'text-slate-400'}`}>Nossa Casa</button>{householdMembers.slice(0,2).map(m=><button key={m.id} onClick={()=>setPerspective(m.id)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${perspective===m.id?'bg-blue-600':'text-slate-400'}`}>{m.display_name}</button>)}</div>;
+ const selector=<FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>;
 
  if(perspective!=='household'){
   const current=memberProjection[0];
