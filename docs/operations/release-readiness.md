@@ -43,9 +43,9 @@ O repositório já possui:
 
 ## Roteiro funcional obrigatório de staging
 
-- [ ] Criar projeto Supabase de staging separado de produção.
-- [ ] Configurar o GitHub Environment `staging` com URL e publishable key públicas do projeto.
-- [ ] Aplicar todas as migrations desde zero e comparar com a CI.
+- [x] Projeto Supabase de staging separado do projeto principal — confirmado em 2026-09-21 (`Casa Finance Staging` e `Casa Finance`, ambos `ACTIVE_HEALTHY`, região `sa-east-1`).
+- [x] GitHub Environment `staging` operacional — evidenciado pelo `Staging smoke` verde contra o endpoint configurado.
+- [x] Cadeia de migrations do staging conferida até `20260921020630_security_advisor_search_path_hardening`; a CI reconstrói banco isolado desde zero a cada gate.
 - [x] Executar `Staging smoke` no SHA completo do candidato `020b02bc5753f6de353a5c6b4661db0c368b5f41` — execução automática verde em 2026-09-21.
 - [ ] Registrar o artefato/manifesto associado ao mesmo SHA.
 - [ ] Criar Casa e convidar o segundo membro.
@@ -64,16 +64,16 @@ O repositório já possui:
 
 ## Backup e recuperação
 
-Antes de qualquer produção, staging deve provar o procedimento completo de backup e restore. Não basta ter o comando documentado.
+**DEFINIDO — estratégia de custo da Release 1:** não criar infraestrutura adicional paga sem aprovação explícita do PM. O projeto mantém os dois ambientes Supabase atuais e usa CI/ambiente local para ensaios descartáveis sempre que isso for tecnicamente equivalente.
 
-Fluxo mínimo:
+A CI já prova **reconstrução estrutural** em ambiente isolado e descartável: inicia Supabase local vazio, reaplica todas as migrations e executa os gates financeiros, RLS, Auth e PostgREST. Isso reduz o risco de perda da definição do banco, mas **não equivale a restaurar os dados reais do staging**.
 
-1. gerar dump verificável do banco de staging;
-2. restaurar em projeto isolado;
-3. aplicar migrations pendentes de forma controlada;
-4. comparar contagens e posições financeiras relevantes;
-5. executar os gates de RLS/Auth/financeiro contra a restauração;
-6. registrar duração, artefatos e responsável pela validação.
+Para a Release 1, o gate de recuperação fica dividido em:
+
+1. **reconstrução estrutural:** automatizada na CI, sem custo adicional;
+2. **restauração de dados:** permanece pendente até existir mecanismo gratuito que permita gerar/restaurar um dump verificável do staging ou até aprovação explícita de infraestrutura paga;
+3. nenhuma limitação do plano gratuito deve ser contornada com múltiplas contas como dependência arquitetural;
+4. nenhuma publicação em produção deve depender de uma afirmação de backup que não tenha sido realmente testada.
 
 Migrations financeiras devem continuar preferencialmente aditivas/forward-only. Evitar rollback destrutivo e `DROP CASCADE` em produção.
 
@@ -85,7 +85,7 @@ A razão não é mais falta de persistência real, autenticação/RLS dinâmica,
 
 | Severidade | Pendência | Saída exigida |
 |---|---|---|
-| Alto | Backup/restore ainda não foi comprovado em ambiente de staging. | Restaurar dump em projeto isolado e reconciliar posições financeiras. |
+| Alto | Restauração dos dados do staging ainda não foi comprovada; a reconstrução estrutural já é exercitada pela CI. | Antes da produção, provar restore de dados por mecanismo gratuito ou mediante aprovação explícita de custo. Isso não bloqueia preparar/executar a homologação funcional do beta. |
 | Alto | Wallace e Guilherme ainda não homologaram juntos o ciclo mensal em dispositivos reais. | Executar `docs/operations/staging-evidence.md` nos dois logins e registrar bloqueadores. |
 | Médio | Distribuição iOS/App Store ainda não foi preparada. | Definir wrapper/build/TestFlight somente após os itens Altos acima fecharem. |
 
