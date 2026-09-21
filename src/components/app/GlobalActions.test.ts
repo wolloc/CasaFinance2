@@ -24,7 +24,7 @@ test('all three Product Spec global actions are present independently', () => {
     assert.match(productSpec, new RegExp(label));
   }
   assert.match(appSource, /<GlobalActions/);
-  assert.match(appSource, /onExpense=\{\(\) => setScreen\('expenses'\)\}/);
+  assert.match(appSource, /onExpense=\{openExpenseCreation\}/);
   assert.match(appSource, /onIncome=\{\(\) => setScreen\('income'\)\}/);
   assert.match(appSource, /onAdjustment=\{openAdjustment\}/);
 });
@@ -109,4 +109,14 @@ test('loan principal creates obligation and cash without becoming income or expe
   assert.match(loanSource, /caixa aumentou e nasceu um valor a pagar/);
   assert.match(productSpec, /empréstimo tomado/i);
   assert.match(constitution, /empréstimo/i);
+});
+
+
+test('global actions float above navigation and stay compact without losing accessible names',()=>{
+  assert.match(actionsSource,/fixed bottom-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\] left-1\/2/);
+  assert.match(actionsSource,/w-max max-w-\[calc\(100vw-1\.5rem\)\]/);
+  assert.match(actionsSource,/inline-flex items-center gap-1 rounded-full/);
+  for(const label of ['Nova despesa','Nova entrada','Novo acerto']) assert.match(actionsSource,new RegExp(`aria-label="${label}"`));
+  for(const compactLabel of ['Despesa','Entrada','Acerto']) assert.match(actionsSource,new RegExp(`/>${compactLabel}<`));
+  assert.match(actionsSource,/min-h-11/);
 });
