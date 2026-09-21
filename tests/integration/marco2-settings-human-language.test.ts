@@ -28,3 +28,11 @@ test('Minha conta exposes the authenticated identity and explicit sign out',()=>
   assert.match(source,/onClick=\{signOut\}/);
   assert.match(source,/Sair da conta/);
 });
+
+
+test('Casa e membros permite editar o nome da Casa sem criar uma estrutura paralela',()=>{
+  assert.match(source,/Editar nome/);
+  assert.match(source,/\.from\('households'\)\.update\(\{name:nextName\}\)/);
+  assert.match(source,/refreshHousehold/);
+  assert.match(source,/Nome da Casa atualizado\./);
+});
