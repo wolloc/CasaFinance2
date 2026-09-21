@@ -12,15 +12,17 @@ const manifestScript = fs.readFileSync(
   'utf8',
 );
 
-test('staging smoke is manual, bound to staging and requires an exact release SHA', () => {
+test('staging smoke is automatic on main, keeps manual override and binds the exact release SHA', () => {
+  assert.match(workflow, /push:\n\s+branches:\n\s+- main/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /release_sha:/);
-  assert.match(workflow, /required:\s*true/);
+  assert.match(workflow, /required:\s*false/);
   assert.match(workflow, /\^\[0-9a-f\]\{40\}\$/);
   assert.match(workflow, /environment:\s*staging/);
   assert.match(workflow, /vars\.STAGING_SUPABASE_URL/);
   assert.match(workflow, /vars\.STAGING_SUPABASE_PUBLISHABLE_KEY/);
-  assert.match(workflow, /ref:\s*\$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /RELEASE_COMMIT_SHA:\s*\$\{\{ inputs\.release_sha \|\| github\.sha \}\}/);
+  assert.match(workflow, /ref:\s*\$\{\{ env\.RELEASE_COMMIT_SHA \}\}/);
   assert.match(workflow, /git rev-parse HEAD/);
 });
 
@@ -36,9 +38,9 @@ test('staging smoke uses only public browser credentials and accepts safe anonym
 });
 
 test('staging artifact records and retains the exact candidate SHA', () => {
-  assert.match(workflow, /RELEASE_COMMIT_SHA:\s*\$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /RELEASE_COMMIT_SHA:\s*\$\{\{ inputs\.release_sha \|\| github\.sha \}\}/);
   assert.match(workflow, /npm run release:manifest/);
-  assert.match(workflow, /casa-finance-staging-\$\{\{ inputs\.release_sha \}\}/);
+  assert.match(workflow, /casa-finance-staging-\$\{\{ env\.RELEASE_COMMIT_SHA \}\}/);
   assert.match(workflow, /retention-days:\s*14/);
   assert.match(manifestScript, /RELEASE_COMMIT_SHA \|\| process\.env\.GITHUB_SHA/);
 });
