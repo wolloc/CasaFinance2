@@ -69,3 +69,15 @@ test('Gastos traz visão consolidada do mês sem transformar categorias em orça
  assert.match(browser,/Não representa meta ou orçamento planejado/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
 });
+
+
+test('extrato mensal permite buscar sem alterar os totais consolidados do mês',()=>{
+ assert.match(browser,/Buscar gastos deste mês/);
+ assert.match(browser,/Buscar compromisso/);
+ assert.match(browser,/Buscar compra ou categoria/);
+ assert.match(browser,/filteredFinancialRows/);
+ assert.match(browser,/filteredEconomicRows/);
+ assert.match(browser,/O resumo acima continua mostrando o mês inteiro/);
+ assert.match(browser,/Limpar busca/);
+ assert.match(browser,/setQuery\(''\)/);
+});
