@@ -14,7 +14,7 @@ test('Home does not discard canonical dashboard reads when recurrence maintenanc
 test('Income ledger still reads canonical income facts when recurrence maintenance fails',()=>{
  assert.match(income,/try\{await ensureRecurringIncomeHorizon/);
  assert.match(income,/catch\(error\)\{console\.warn\('Casa Finance: não foi possível atualizar o horizonte de rendas recorrentes/);
- assert.match(income,/const \[transactions,movement\]=await Promise\.all/);
+ assert.match(income,/const \[transactions,movement,memberMovements\]=await Promise\.all/);
 });
 
 
@@ -36,8 +36,9 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 
 
 test('Home explains the financial equation and separates liquidity from patrimony',()=>{
- assert.match(home,/Quanto do disponível já tem destino/);
- assert.match(home,/disponíveis −/);
+ assert.match(home,/Quanto do dinheiro de agora já tem destino/);
+ assert.match(home,/Já tem destino/);
+ assert.match(home,/Livre depois deles/);
  assert.match(home,/Fluxo deste mês/);
  assert.match(home,/Onde está nosso dinheiro/);
  assert.match(home,/Disponibilidade e patrimônio continuam separados/);
