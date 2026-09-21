@@ -1,5 +1,33 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+
+export type HouseholdResourcePosition={
+  account_id:string;
+  name:string;
+  type:string;
+  resource_restriction:string|null;
+  current_balance:number;
+  is_restricted:boolean;
+  is_investment:boolean;
+};
+
+export async function listHouseholdResourcePositions(client:SupabaseClient,householdId:string):Promise<HouseholdResourcePosition[]>{
+  const response=await client.from('financial_account_balances')
+    .select('account_id,name,type,resource_restriction,current_balance,is_restricted,is_investment')
+    .eq('household_id',householdId)
+    .order('name');
+  if(response.error)throw response.error;
+  return (response.data??[]).map(row=>({
+    account_id:row.account_id,
+    name:row.name,
+    type:row.type,
+    resource_restriction:row.resource_restriction,
+    current_balance:Number(row.current_balance??0),
+    is_restricted:Boolean(row.is_restricted),
+    is_investment:Boolean(row.is_investment),
+  }));
+}
+
 export type MemberResourcePosition={
   account_id:string;
   name:string;
