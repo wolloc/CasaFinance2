@@ -67,13 +67,13 @@ select lives_ok($$
     'Compra histórica parcelada',(current_date-interval '4 months')::date,1000,null,
     '8a000000-0000-4000-8000-000000000021',
     '[{"member_id":"8a000000-0000-4000-8000-000000000021","amount":"1000.00","percentage":"100.0000"}]'::jsonb,
-    4,2,'Compra anterior ao uso do Casa','j-card-history'
+    12,2,'Compra anterior ao uso do Casa','j-card-history'
   )
 $$,'J14 compra parcelada histórica cria um único fato econômico');
 select is((select count(*) from public.transactions where household_id='8a000000-0000-4000-8000-000000000010' and description='Compra histórica parcelada' and type='expense'),1::bigint,'J15 compra histórica permanece um único evento econômico');
 select is((select transaction_date<financial_tracking_started_on from public.transactions t join public.households h on h.id=t.household_id where t.household_id='8a000000-0000-4000-8000-000000000010' and t.description='Compra histórica parcelada'),true,'J16 compra histórica não entra como gasto do mês de início');
-select is((select sum(opening_settled_amount) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='Compra histórica parcelada'),500::numeric,'J17 parcelas anteriores ficam baixadas como abertura, sem pagamento no período');
-select is((select total_exposure from public.financial_card_exposure_positions where card_id='8a000000-0000-4000-8000-000000000042'),500::numeric,'J18 somente parcelas ainda abertas comprometem o limite');
+select is((select sum(opening_settled_amount) from public.installments i join public.installment_plans p on p.id=i.installment_plan_id join public.transactions t on t.id=p.purchase_transaction_id where t.description='Compra histórica parcelada'),166.68::numeric,'J17 duas de doze parcelas anteriores ficam baixadas como abertura, sem pagamento no período');
+select is((select total_exposure from public.financial_card_exposure_positions where card_id='8a000000-0000-4000-8000-000000000042'),833.32::numeric,'J18 somente dez de doze parcelas ainda abertas comprometem o limite');
 
 select lives_ok($$
   select public.record_opening_card_balance_adjustment_idempotent(
