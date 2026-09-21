@@ -8,6 +8,9 @@ values ('8a000000-0000-4000-8000-000000000001','00000000-0000-0000-0000-00000000
 insert into public.households(id,name) values ('8a000000-0000-4000-8000-000000000010','Casa PR J');
 insert into public.household_members(id,household_id,profile_id,role) values ('8a000000-0000-4000-8000-000000000021','8a000000-0000-4000-8000-000000000010','8a000000-0000-4000-8000-000000000001','owner');
 
+-- Align current_date with the household clock so this test remains stable around UTC midnight.
+select set_config('TimeZone',(select timezone from public.households where id='8a000000-0000-4000-8000-000000000010'),true);
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','8a000000-0000-4000-8000-000000000001',true);
 
