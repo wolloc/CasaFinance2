@@ -7,7 +7,7 @@ const review = await readFile(new URL('../../src/components/app/ProjectionReview
 
 test('attention empty state explains that only actionable urgency is empty', () => {
   assert.match(priority, /Nada urgente agora/);
-  assert.match(priority, /Previsões que ainda pedem conferência aparecem abaixo/);
+  assert.match(priority, /O que pedir ação aparece aqui/);
   assert.match(priority, /CircleCheck/);
   assert.match(priority, /px-3 py-2/);
 });
