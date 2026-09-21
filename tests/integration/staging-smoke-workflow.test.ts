@@ -12,8 +12,8 @@ const manifestScript = fs.readFileSync(
   'utf8',
 );
 
-test('staging smoke is automatic on main, keeps manual override and binds the exact release SHA', () => {
-  assert.match(workflow, /push:\n\s+branches:\n\s+- main/);
+test('staging smoke is deliberate, keeps manual override and binds the exact release SHA', () => {
+  assert.doesNotMatch(workflow, /push:\n\s+branches:\n\s+- main/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /release_sha:/);
   assert.match(workflow, /required:\s*false/);

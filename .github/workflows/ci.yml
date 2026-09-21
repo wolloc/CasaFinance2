@@ -70,6 +70,8 @@ jobs:
               esac
 
               case "${file}" in
+                src/finance/*.test.ts|src/domain/*.test.ts)
+                  ;;
                 supabase/*|src/finance/*|src/domain/*|server/*)
                   database=true
                   ;;

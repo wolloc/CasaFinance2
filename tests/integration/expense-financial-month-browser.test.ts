@@ -43,30 +43,33 @@ test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
  assert.doesNotMatch(browser,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
-test('Gastos realizados mostra somente realized e usa a parcela atribuída aos membros, não o bruto',()=>{
+test('Gastos realizados mantém a Casa canônica e usa responsabilidade econômica na perspectiva individual',()=>{
  const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
  assert.match(economicQuery,/\.eq\('economic_state','realized'\)/);
  assert.doesNotMatch(economicQuery,/\['confirmed','realized'\]/);
+ assert.match(economicQuery,/from\('financial_transaction_positions'\)/);
  assert.match(economicQuery,/positions\.get\(row\.id\)\?\?row\.amount/);
- assert.doesNotMatch(economicQuery,/economic_allocations\(amount,responsible_member_id,responsible_party_id\)/);
+ assert.match(economicQuery,/from\('economic_allocations'\)/);
+ assert.match(economicQuery,/eq\('responsible_member_id',memberId\)/);
+ assert.match(economicQuery,/memberAmounts\.get\(row\.id\)/);
 });
 
-test('salvar uma nova despesa invalida a lente mensal sem remount destrutivo',()=>{
+test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
- assert.match(browser,/\[household\?\.id,month,mode,refreshKey,refreshVersion\]/);
- assert.match(screen,/<ExpenseMonthBrowser refreshKey=\{expenseListVersion\} \/>/);
+ assert.match(browser,/\[household\?\.id,month,mode,perspective,refreshKey,refreshVersion\]/);
+ assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} \/>/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
 
 
-test('Gastos traz visão consolidada do mês sem transformar categorias em orçamento',()=>{
- assert.match(browser,/Visão dos compromissos/);
- assert.match(browser,/Já realizado\/pago/);
- assert.match(browser,/Ainda comprometido/);
+test('Gastos fica compacto e deixa categorias completas sob demanda sem virar orçamento',()=>{
+ assert.match(browser,/Compromissos do mês/);
+ assert.match(browser,/já realizado/);
+ assert.match(browser,/ainda comprometido/);
  assert.match(browser,/Gasto realizado no mês/);
- assert.match(browser,/Por categoria/);
- assert.match(browser,/participação no gasto/);
- assert.match(browser,/Não representa meta ou orçamento planejado/);
+ assert.match(browser,/Ver todas as categorias/);
+ assert.match(browser,/<details/);
+ assert.match(browser,/não representa meta ou orçamento planejado/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
 });
 
@@ -80,4 +83,13 @@ test('extrato mensal permite buscar sem alterar os totais consolidados do mês',
  assert.match(browser,/O resumo acima continua mostrando o mês inteiro/);
  assert.match(browser,/Limpar busca/);
  assert.match(browser,/setQuery\(''\)/);
+});
+
+
+test('perspectiva de morador usa responsabilidade econômica e mantém comprador como conceito separado',()=>{
+ assert.match(browser,/FinancialPerspectiveSelector/);
+ assert.match(browser,/responsabilidade econômica de/);
+ assert.match(browser,/Comprador continua sendo um filtro diferente/);
+ assert.match(service,/financial_member_commitment_responsibility_positions/);
+ assert.match(service,/responsible_member_id/);
 });
