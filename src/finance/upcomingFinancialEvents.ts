@@ -104,6 +104,27 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
     }
   }
 
+  const incomeTitles=new Map<string,string>();
+  const incomeMovementIds=(incomes.data??[]).map(row=>row.money_movement_id as string).filter(Boolean);
+  if(incomeMovementIds.length>0){
+    const movements=await client.from('money_movements')
+      .select('id,related_transaction_id')
+      .eq('household_id',householdId)
+      .in('id',incomeMovementIds);
+    if(movements.error)throw movements.error;
+    const transactionIds=[...new Set((movements.data??[]).map(row=>row.related_transaction_id as string|null).filter((id):id is string=>Boolean(id)))];
+    const descriptions=new Map<string,string>();
+    if(transactionIds.length>0){
+      const transactions=await client.from('transactions').select('id,description').eq('household_id',householdId).in('id',transactionIds);
+      if(transactions.error)throw transactions.error;
+      for(const row of transactions.data??[])descriptions.set(row.id as string,row.description as string);
+    }
+    for(const row of movements.data??[]){
+      const description=row.related_transaction_id?descriptions.get(row.related_transaction_id as string):null;
+      if(description)incomeTitles.set(row.id as string,description);
+    }
+  }
+
   const events:UpcomingFinancialEvent[]=[];
   for(const income of incomes.data??[]){
     events.push({
@@ -111,7 +132,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       date:income.movement_date,
       kind:'income',
       direction:'in',
-      title:'Entrada confiável prevista',
+      title:incomeTitles.get(income.money_movement_id as string)??'Entrada confiável prevista',
       amount:Number(income.reliable_remaining_amount??0),
       card_id:null,payer_member_id:null,receiver_member_id:null,
     });
