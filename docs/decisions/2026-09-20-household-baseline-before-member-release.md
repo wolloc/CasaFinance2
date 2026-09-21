@@ -16,3 +16,7 @@ A preparação de um membro não pode liberar Dashboard, Gastos, Entradas ou Ace
 - falha ao ler o estado de preparação bloqueia a entrada no cotidiano financeiro em vez de presumir que está tudo pronto.
 
 Esta regra é um gate de segurança/UX. Não cria receita, despesa, saldo, funding, compromisso ou movimento de caixa.
+
+## Marcador individual x baseline global
+
+O marcador individual `profiles.financial_onboarding_completed_at` não substitui o readiness global da Casa. Mesmo um membro já marcado como preparado — inclusive proprietário grandfathered na introdução do gate — continua bloqueado do cotidiano financeiro se a posição inicial global estiver pendente ou inconsistente.
