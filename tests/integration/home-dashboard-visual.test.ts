@@ -28,3 +28,10 @@ test('Home resume top categorias pelo gasto econômico realizado sem chamar de o
 test('acerto realizado usa frase direcional de recebimento',()=>{
   assert.match(settlements,/tem a receber de/);
 });
+
+
+test('projeção futura mostra tendência entre meses comparáveis',()=>{
+  assert.match(home,/vs\. mês anterior/);
+  assert.match(home,/previousEnding/);
+  assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
+});
