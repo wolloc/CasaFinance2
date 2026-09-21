@@ -11,3 +11,10 @@ test('money classes remain separate',()=>{for(const value of['Disponível agora'
 test('dashboard stays read-only',()=>{assert.doesNotMatch(serviceSource,/\.insert\(|\.update\(|\.delete\(|\.upsert\(/);for(const rpc of['financial_household_health_position','financial_priority_attention_items','financial_monthly_projection','financial_member_monthly_projection','financial_liquidity_guidance'])assert.match(serviceSource,new RegExp(`rpc\\('${rpc}'`));assert.doesNotMatch(serviceSource,/create_financial_transaction|settle_|refund_|correct_|cancel_/);});
 
 test('individual perspective explains liquidity, projected change and household settlement visually',()=>{for(const value of['projected_net_change','Deve sobrar comigo no fim do mês','Acerto entre nós','A receber do outro membro','A pagar ao outro membro'])assert.match(screenSource,new RegExp(value));});
+
+
+test('Home resume exposição do cartão sem tratar limite como caixa',()=>{
+ for(const value of ['Quanto do crédito já está comprometido','Fatura atual','Depois dela','Disponível','Limite comprometido','Limite é crédito; não aumenta o dinheiro disponível da Casa'])assert.match(screenSource,new RegExp(value));
+ for(const field of ['credit_limit','future_known_commitments','available_limit','utilization_ratio','over_limit_amount','next_due_date'])assert.match(screenSource,new RegExp(field));
+ assert.match(screenSource,/CardFinancialJourney/);
+});
