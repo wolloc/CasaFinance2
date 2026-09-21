@@ -33,3 +33,13 @@ test('Home never turns an unavailable dashboard section into an apparent financi
  assert.match(home,/Não foi possível confirmar a projeção deste mês/);
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);
 });
+
+
+test('Home explains the financial equation and separates liquidity from patrimony',()=>{
+ assert.match(home,/Quanto do disponível já tem destino/);
+ assert.match(home,/disponíveis −/);
+ assert.match(home,/Fluxo deste mês/);
+ assert.match(home,/Onde está nosso dinheiro/);
+ assert.match(home,/Disponibilidade e patrimônio continuam separados/);
+ assert.match(home,/Recursos financeiros acompanhados/);
+});
