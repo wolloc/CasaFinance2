@@ -37,7 +37,8 @@ test('Gastos prioriza o navegador mensal e leva histórico/correções para o la
  assert.match(browser,/Mês seguinte/);
  assert.match(browser,/Escolher mês/);
  assert.match(screen,/Detalhe do gasto/);
- assert.doesNotMatch(screen,/Histórico e correções/);
+ assert.match(screen,/Histórico e correções ficam ligados a este lançamento/);
+ assert.doesNotMatch(screen,/Precisa fazer algo diferente\?/);
 });
 
 test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{

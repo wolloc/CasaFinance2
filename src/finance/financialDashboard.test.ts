@@ -7,26 +7,28 @@ test('individual perspective keeps liquidity responsibility and funding distinct
 test('failed individual read is not silently replaced',()=>{assert.match(serviceSource,/unattributed_funding_remaining/);assert.match(screenSource,/memberError/);assert.match(screenSource,/Nenhum valor foi substituído por zero/);});
 test('Casa separates current free and projected cash',()=>{assert.match(screenSource,/Saldo atual/);assert.match(screenSource,/Livre depois deles/);assert.match(screenSource,/Deve sobrar/);assert.match(screenSource,/health\?\.current_cash/);assert.match(screenSource,/health\?\.projected_ending_cash/);});
 test('monthly indicators use true income and commitments',()=>{for(const value of['realized_true_income_in_month','expected_reliable_income_remaining','realized_commitments_in_month','remaining_commitments_in_month','projected_recurring_commitments','prior_pending_outflow'])assert.match(screenSource,new RegExp(value));});
-test('money classes remain separate',()=>{for(const value of['Disponível agora','Benefícios','Reservas','Investimentos'])assert.match(screenSource,new RegExp(value));assert.match(screenSource,/Disponibilidade e patrimônio continuam separados/);});
+test('money classes remain separate',()=>{for(const value of['Contas e dinheiro','Benefícios','Reservas','Investimentos'])assert.match(screenSource,new RegExp(value));assert.match(screenSource,/Patrimônio financeiro acompanhado/);});
 test('dashboard stays read-only',()=>{assert.doesNotMatch(serviceSource,/\.insert\(|\.update\(|\.delete\(|\.upsert\(/);for(const rpc of['financial_household_health_position','financial_priority_attention_items','financial_monthly_projection','financial_member_monthly_projection','financial_liquidity_guidance'])assert.match(serviceSource,new RegExp(`rpc\\('${rpc}'`));assert.doesNotMatch(serviceSource,/create_financial_transaction|settle_|refund_|correct_|cancel_/);});
 
 test('individual perspective explains liquidity, projected change and household settlement visually',()=>{for(const value of['projected_net_change','Deve sobrar comigo no fim do mês','Acerto entre nós','Tenho a receber','Preciso acertar'])assert.match(screenSource,new RegExp(value));});
 
 
-test('household forward view explains opening cash, considered flows and projected ending cash',()=>{
- assert.match(screenSource,/Como o caixa pode terminar em cada mês/);
- assert.match(screenSource,/Começa com/);
- assert.match(screenSource,/entradas consideradas/);
- assert.match(screenSource,/compromissos considerados/);
+test('household forward view keeps considered flows and projected ending cash visible without turning into a report',()=>{
+ assert.match(screenSource,/Uma leitura rápida de como o caixa pode fechar nos próximos meses/);
  assert.match(screenSource,/Pode terminar com/);
- assert.match(screenSource,/opening_cash/);
+ assert.match(screenSource,/realized_true_income_in_month/);
+ assert.match(screenSource,/expected_reliable_income_remaining/);
+ assert.match(screenSource,/remaining_commitments_in_month/);
  assert.match(screenSource,/projected_ending_cash/);
+ assert.match(screenSource,/overflow-x-auto/);
 });
 
 
-test('Home resume exposição do cartão e leva detalhe para Faturas',()=>{
- for(const value of ['Fatura atual','Próximos meses','Limite livre','Crédito comprometido','Ver faturas','Ver cartão e fatura'])assert.match(screenSource,new RegExp(value));
+test('Home resume exposição do cartão e usa o próprio cartão como entrada para Faturas',()=>{
+ for(const value of ['Fatura','Futuro','Limite livre','Crédito comprometido','Todas as faturas'])assert.match(screenSource,new RegExp(value));
  for(const field of ['credit_limit','future_known_commitments','available_limit','utilization_ratio','over_limit_amount','next_due_date'])assert.match(screenSource,new RegExp(field));
+ assert.match(screenSource,/onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
+ assert.doesNotMatch(screenSource,/Ver cartão e fatura/);
  assert.doesNotMatch(screenSource,/CardFinancialJourney/);
 });
 test('card utilization bar is visually capped while preserving the real percentage label',()=>{

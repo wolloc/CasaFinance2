@@ -10,7 +10,8 @@ test('daily expense screen keeps creation and monthly list without a parallel to
  assert.match(source,/<NewExpenseWizard/);
  assert.match(source,/<ExpenseMonthBrowser/);
  assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
- assert.doesNotMatch(source,/Histórico e correções/);
+ assert.match(source,/Histórico e correções ficam ligados a este lançamento/);
+ assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
 });
 
 test('contextual intents remain reachable when the financial engine asks for action',()=>{
@@ -23,7 +24,7 @@ test('transaction detail owns correction history and valid per-item actions',()=
  assert.match(source,/Detalhe do gasto/);
  assert.match(source,/focusTransactionId=\{detailTransactionId\}/);
  assert.match(setup,/focusTransactionId/);
- for(const value of ['História','Editar','Estornar'])assert.match(setup,new RegExp(value));
+ for(const value of ['Histórico','Editar','Registrar estorno'])assert.match(setup,new RegExp(value));
  assert.doesNotMatch(source,/ExternalExpensePaymentAction|PartialDirectRefundAction|CardRefundAction|PostPaymentCardRefundAction|ExpenseRoleCorrectionAction/);
  assert.doesNotMatch(source,/CardPixExpenseAction/);
  assert.match(wizard,/paymentChoice === 'card_pix'/);
