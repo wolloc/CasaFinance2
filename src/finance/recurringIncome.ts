@@ -11,7 +11,7 @@ export type RecurringIncomeRule = {
   frequency: RecurringIncomeFrequency;
   start_date: string;
   end_date: string | null;
-  income_category_id: string;
+  income_category_id: string | null;
   income_beneficiary_member_id: string;
   income_destination_account_id: string;
   income_nature: IncomeNature;
@@ -26,7 +26,7 @@ export async function createRecurringIncomeRule(client: SupabaseClient, input: {
   startDate: string;
   endDate?: string;
   frequency: RecurringIncomeFrequency;
-  categoryId: string;
+  categoryId: string | null;
   beneficiaryMemberId: string;
   plannedDestinationAccountId: string;
   incomeNature: IncomeNature;
