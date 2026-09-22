@@ -62,11 +62,11 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
       const wantsObject = (request.headers()['accept'] ?? '').includes('application/vnd.pgrst.object');
       if (table === 'household_members') {
         if (select === 'household_id,profile_id') return fulfill({ household_id: householdId, profile_id: userId });
-        if (select.includes('id,household_id,profile_id,role,profiles(display_name,display_name_confirmed_at,financial_onboarding_completed_at)')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace', display_name_confirmed_at: now, financial_onboarding_completed_at: now } });
-        if (options.failMemberList && select.includes('profiles(display_name,display_name_confirmed_at,financial_onboarding_completed_at)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
+        if (select.includes('id,household_id,profile_id,role,display_name,profiles(display_name,display_name_confirmed_at,financial_onboarding_completed_at)')) return fulfill({ id: 'm1', household_id: householdId, profile_id: userId, role: 'owner', display_name: null, profiles: { display_name: 'Wallace', display_name_confirmed_at: now, financial_onboarding_completed_at: now } });
+        if (options.failMemberList && select.includes('display_name,profiles(display_name,display_name_confirmed_at,financial_onboarding_completed_at)')) return fulfill({ code: 'E2E001', message: 'forced member list failure', details: null, hint: null }, 500);
         return fulfill([
-          { id: 'm1', profile_id: userId, role: 'owner', profiles: { display_name: 'Wallace', display_name_confirmed_at: now, financial_onboarding_completed_at: now } },
-          { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', profiles: { display_name: 'Guilherme', display_name_confirmed_at: now, financial_onboarding_completed_at: now } },
+          { id: 'm1', profile_id: userId, role: 'owner', display_name: null, profiles: { display_name: 'Wallace', display_name_confirmed_at: now, financial_onboarding_completed_at: now } },
+          { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', display_name: null, profiles: { display_name: 'Guilherme', display_name_confirmed_at: now, financial_onboarding_completed_at: now } },
         ]);
       }
       if (table === 'households') return fulfill({ id: householdId, name: 'Casa Teste' });
@@ -102,11 +102,11 @@ test('login real do frontend entra na Casa e navega pelas áreas principais', as
   await login(page);
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
   await page.getByRole('button', { name: 'Gastos' }).click();
-  await expect(page.getByText('Precisa fazer algo diferente?')).toBeVisible();
-  await page.getByText('Precisa fazer algo diferente?').click();
-  for (const label of ['Formas especiais de pagar', 'Recebeu dinheiro de volta?', 'Corrigir quem participou do gasto', 'Gastos que se repetem']) await expect(page.getByText(label)).toBeVisible();
+  await expect(page.getByText('Compromissos do mês')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
+  await expect(page.getByText('Precisa fazer algo diferente?')).toHaveCount(0);
   await page.getByRole('button', { name: 'Ajustes' }).click();
-  for (const label of ['Casa e membros', 'Contas, cartões e posição inicial', 'Categorias', 'Recorrências', 'Minha conta']) await expect(page.getByText(label)).toBeVisible();
+  for (const label of ['Casa e membros', 'Contas e cartões', 'Categorias', 'Recorrências', 'Minha conta']) await expect(page.getByText(label)).toBeVisible();
 });
 
 test('falha ao reler membros bloqueia o produto financeiro e oferece retry', async ({ page }) => {

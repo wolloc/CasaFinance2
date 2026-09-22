@@ -25,15 +25,19 @@ test('Gastos realizados combina metadados do fato com o read model econômico ca
  assert.match(browser,/Compras parceladas aparecem uma vez/);
 });
 
-test('Gastos prioriza o navegador mensal e explica que parcela não é nova despesa',()=>{
+test('Gastos prioriza o navegador mensal e leva histórico/correções para o lançamento',()=>{
  const month=screen.indexOf('<ExpenseMonthBrowser');
- const operational=screen.indexOf('<HouseholdTransactionsSetup');
+ const contextualDetail=screen.indexOf('focusTransactionId={detailTransactionId}');
  assert.ok(month>=0,'financial month browser must be present');
- assert.ok(operational>month,'financial month must appear before operational history');
+ assert.ok(contextualDetail>month,'transaction detail must be contextual to the monthly list');
  assert.match(browser,/Compromissos do mês/);
  assert.match(browser,/Item da fatura; o pagamento não vira outro gasto/);
  assert.match(browser,/border-orange-500/);
- assert.match(screen,/Histórico e correções/);
+ assert.match(browser,/Mês anterior/);
+ assert.match(browser,/Mês seguinte/);
+ assert.match(browser,/Escolher mês/);
+ assert.match(screen,/Detalhe do gasto/);
+ assert.doesNotMatch(screen,/Histórico e correções/);
 });
 
 test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
@@ -57,7 +61,7 @@ test('Gastos realizados mantém a Casa canônica e usa responsabilidade econômi
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
  assert.match(browser,/\[household\?\.id,month,mode,perspective,refreshKey,refreshVersion\]/);
- assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} \/>/);
+ assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} onOpenTransaction=\{setDetailTransactionId\} \/>/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
 

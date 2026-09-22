@@ -31,8 +31,10 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
  assert.doesNotMatch(wizard,/datetime-local|Quando o dinheiro saiu\?/);
 });
 
-test('Nova entrada leva ao fluxo canônico de entradas',()=>{
- assert.match(app,/onIncome=\{\(\)=>setScreen\('income'\)\}/);
+test('Nova entrada abre captura contextual sem transformar a aba Entradas em formulário',()=>{
+ assert.match(app,/setIncomeCreateRequestId\(value=>value\+1\);setScreen\('income'\)/);
+ assert.match(app,/TransactionsScreen mode="income" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{incomeCreateRequestId\}/);
  assert.match(screen,/mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
- assert.match(income,/<IncomeCreationAction onCreated=\{refresh\}\/>/);
+ assert.match(screen,/createRequestId=\{createRequestId\}/);
+ assert.match(income,/<IncomeCreationAction onCreated=\{refresh\} openRequestId=\{createRequestId\}\/>/);
 });
