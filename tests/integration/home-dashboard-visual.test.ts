@@ -7,7 +7,8 @@ const settlements = await readFile(new URL('../../src/components/app/SettlementH
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
   for(const value of ['Agora','Já tem destino','Livre depois deles','Deve sobrar no fim do mês','Temos <strong>','o mês tende a terminar em']) assert.match(home,new RegExp(value));
-  assert.match(home,/Saúde: /);
+  assert.match(home,/healthText\[health\.health\]/);
+  assert.match(home,/confidence&&confidence\.confidence_state!=='well_updated'/);
   assert.match(home,/confidence\.confidence_label/);
 });
 
@@ -34,4 +35,11 @@ test('projeção futura mostra tendência entre meses comparáveis',()=>{
   assert.match(home,/vs\. mês anterior/);
   assert.match(home,/previousEnding/);
   assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
+});
+
+test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado dominante',()=>{
+  for(const value of ['Contas e dinheiro','Benefícios','Reservas','Investimentos','Patrimônio financeiro acompanhado']) assert.match(home,new RegExp(value));
+  assert.match(home,/role="button" tabIndex=\{0\} onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
+  assert.match(home,/Todas as faturas/);
+  assert.doesNotMatch(home,/Ver cartão e fatura/);
 });
