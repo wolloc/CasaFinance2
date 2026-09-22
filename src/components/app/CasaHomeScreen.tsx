@@ -97,7 +97,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   <section>
    <h2 className="mb-3 flex items-center gap-2 font-bold"><CircleGauge className="h-5 w-5 text-blue-400"/>Como estamos?</h2>
-   <div className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5">
+   <div className="rounded-[2rem] border border-blue-900/70 bg-gradient-to-br from-blue-950 via-indigo-950 to-slate-900 p-5 shadow-xl shadow-blue-950/20">
     <div className="flex items-start justify-between gap-3">
      <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">Agora</p>{currentCash===null?<strong className="mt-1 block text-xl">Não confirmado</strong>:<strong className="mt-1 block text-3xl">{money(currentCash)}</strong>}<p className="mt-1 text-xs text-white/70">Saldo atual em contas e dinheiro físico.</p></div>
      <div className="flex flex-col items-end gap-2">{health&&<span className={`rounded-full bg-white/8 px-2.5 py-1 text-xs font-bold ${healthClass[health.health]}`}>{healthText[health.health]}</span>}{confidence&&confidence.confidence_state!=='well_updated'&&<span className="max-w-44 rounded-full bg-amber-400/10 px-2.5 py-1 text-right text-[11px] font-semibold text-amber-200">{confidence.confidence_label}</span>}</div>
