@@ -26,7 +26,7 @@ test('household forward view keeps considered flows and projected ending cash vi
 
 test('Home resume exposição do cartão e usa o próprio cartão como entrada para Faturas',()=>{
  for(const value of ['Fatura','Futuro','Limite livre','Crédito comprometido','Todas as faturas'])assert.match(screenSource,new RegExp(value));
- for(const field of ['credit_limit','future_known_commitments','available_limit','utilization_ratio','over_limit_amount','next_due_date'])assert.match(screenSource,new RegExp(field));
+ for(const field of ['current_invoice_remaining','future_known_commitments','available_limit','utilization_ratio','over_limit_amount','next_due_date'])assert.match(screenSource,new RegExp(field));
  assert.match(screenSource,/onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
  assert.doesNotMatch(screenSource,/Ver cartão e fatura/);
  assert.doesNotMatch(screenSource,/CardFinancialJourney/);
