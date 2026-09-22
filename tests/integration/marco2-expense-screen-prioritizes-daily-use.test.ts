@@ -2,34 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const source = await readFile(new URL('../../src/components/app/TransactionsScreen.tsx', import.meta.url), 'utf8');
-const wizard = await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx', import.meta.url), 'utf8');
+const source=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const wizard=await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx',import.meta.url),'utf8');
+const setup=await readFile(new URL('../../src/components/auth/HouseholdTransactionsSetup.tsx',import.meta.url),'utf8');
 
-test('daily expense flow appears before secondary actions', () => {
-  const daily = source.indexOf('<NewExpenseWizard');
-  const advanced = source.indexOf('Precisa fazer algo diferente?');
-  assert.ok(daily >= 0, 'daily expense flow must be present');
-  assert.ok(advanced > daily, 'secondary tools must come after the daily flow');
-  assert.match(source, /Precisa fazer algo diferente\?/);
+test('daily expense screen keeps creation and monthly list without a parallel toolbox',()=>{
+ assert.match(source,/<NewExpenseWizard/);
+ assert.match(source,/<ExpenseMonthBrowser/);
+ assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
+ assert.match(source,/Histórico, correções e ações especiais ficam ligados a este lançamento/);
+ assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
 });
 
-test('contextual intents remain visible without opening secondary tools', () => {
-  assert.match(source, /projectionExpenseIntent && <ForecastExpenseReviewCard/);
-  assert.match(source, /recurringIntent && <RecurringExpenseCommitmentCenter/);
-  assert.match(source, /directExpenseIntent && <DirectExpensePaymentAction/);
+test('contextual intents remain reachable when the financial engine asks for action',()=>{
+ assert.match(source,/projectionExpenseIntent && <ForecastExpenseReviewCard/);
+ assert.match(source,/recurringIntent && <RecurringExpenseCommitmentCenter/);
+ assert.match(source,/directExpenseIntent && <DirectExpensePaymentAction/);
 });
 
-test('secondary actions are grouped by human intent without duplicating card PIX', () => {
-  const advanced = source.slice(source.indexOf('<details'));
-  for (const group of ['Formas especiais de pagar', 'Recebeu dinheiro de volta?', 'Corrigir quem participou do gasto', 'Gastos que se repetem']) assert.ok(advanced.includes(group), `${group} must be visible`);
-  for (const component of ['DirectExpensePaymentAction','ExternalExpensePaymentAction','PartialDirectRefundAction','CardRefundAction','PostPaymentCardRefundAction','ExpenseRoleCorrectionAction','RecurringExpenseCommitmentCenter','RecurringExpenseAction','RecurringExpenseManagement']) {
-    assert.ok(advanced.includes(`<${component}`), `${component} must remain reachable`);
-  }
-  assert.doesNotMatch(source, /CardPixExpenseAction/);
-  assert.match(wizard, /paymentChoice === 'card_pix'/);
-  assert.match(wizard, /createSimpleCardPixExpense/);
+test('transaction detail owns correction history and valid per-item actions',()=>{
+ assert.match(source,/Detalhe do gasto/);
+ assert.match(source,/focusTransactionId=\{detailTransactionId\}/);
+ assert.match(setup,/focusTransactionId/);
+ for(const value of ['Histórico','Editar','Registrar estorno'])assert.match(setup,new RegExp(value));
+ for(const action of ['ExternalExpensePaymentAction','PartialDirectRefundAction','CardRefundAction','PostPaymentCardRefundAction','ExpenseRoleCorrectionAction']) assert.match(source,new RegExp('<'+action+' initialTransactionId=\\{detailTransactionId\\}'));
+ assert.match(source,/Outras ações deste gasto/);
+ assert.match(source,/detailActionsOpen/);
+ assert.doesNotMatch(source,/CardPixExpenseAction/);
+ assert.match(wizard,/paymentChoice === 'card_pix'/);
 });
 
-test('grouping only changes navigation and does not add a financial write',()=>{
-  assert.doesNotMatch(source,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
-});
+test('navigation shell adds no direct financial write',()=>{assert.doesNotMatch(source,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);});

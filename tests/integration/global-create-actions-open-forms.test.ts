@@ -8,7 +8,7 @@ const wizard=await readFile(new URL('../../src/components/app/NewExpenseWizard.t
 const income=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
 
 test('Nova despesa gera nova intenção e abre diretamente a jornada guiada',()=>{
- assert.match(app,/setExpenseCreateRequestId\(value=>value\+1\);setScreen\('expenses'\)/);
+ assert.match(app,/expenseCreateSequence\.current\+=1;setExpenseCreateRequestId\(expenseCreateSequence\.current\);setScreen\('expenses'\)/);
  assert.match(app,/TransactionsScreen mode="expense" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{expenseCreateRequestId\}/);
  assert.match(screen,/<NewExpenseWizard openRequestId=\{createRequestId\}/);
  assert.match(wizard,/openRequestId <= 0 \|\| openRequestId === handledRequestId/);
@@ -31,8 +31,18 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
  assert.doesNotMatch(wizard,/datetime-local|Quando o dinheiro saiu\?/);
 });
 
-test('Nova entrada leva ao fluxo canônico de entradas',()=>{
- assert.match(app,/onIncome=\{\(\)=>setScreen\('income'\)\}/);
+test('Nova entrada abre captura contextual sem transformar a aba Entradas em formulário',()=>{
+ assert.match(app,/incomeCreateSequence\.current\+=1;setIncomeCreateRequestId\(incomeCreateSequence\.current\);setScreen\('income'\)/);
+ assert.match(app,/TransactionsScreen mode="income" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{incomeCreateRequestId\}/);
  assert.match(screen,/mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
- assert.match(income,/<IncomeCreationAction onCreated=\{refresh\}\/>/);
+ assert.match(screen,/createRequestId=\{createRequestId\}/);
+ assert.match(income,/<IncomeCreationAction onCreated=\{refresh\} openRequestId=\{createRequestId\}\/>/);
+});
+
+
+test('abrir abas normalmente limpa só a intenção ativa sem reutilizar o identificador seguinte',()=>{
+ assert.match(app,/const openExpenses=\(\)=>\{setExpenseCreateRequestId\(0\);setScreen\('expenses'\);\}/);
+ assert.match(app,/const openIncome=\(\)=>\{setIncomeCreateRequestId\(0\);setScreen\('income'\);\}/);
+ assert.match(app,/expenseCreateSequence=useRef\(0\)/);
+ assert.match(app,/incomeCreateSequence=useRef\(0\)/);
 });

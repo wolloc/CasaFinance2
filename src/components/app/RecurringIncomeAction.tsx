@@ -76,7 +76,7 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
     const normalized = normalizeAmount(amount);
     if (!description.trim()) { setError('Informe de onde vem esta renda recorrente.'); return; }
     if (!Number.isFinite(Number(normalized)) || Number(normalized) <= 0) { setError('Informe um valor maior que zero.'); return; }
-    if (!categoryId || !beneficiaryMemberId || !plannedDestinationAccountId) { setError('Categoria, beneficiário e destino previsto são obrigatórios.'); return; }
+    if (!beneficiaryMemberId || !plannedDestinationAccountId) { setError('Beneficiário e destino previsto são obrigatórios.'); return; }
     if (endDate && endDate < startDate) { setError('A data final não pode ser anterior ao início.'); return; }
 
     setSaving(true); setError(null); setSuccess(null);
@@ -88,7 +88,7 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
         startDate,
         endDate,
         frequency,
-        categoryId,
+        categoryId: categoryId || null,
         beneficiaryMemberId,
         plannedDestinationAccountId,
         incomeNature,
@@ -111,10 +111,10 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
       <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Primeiro recebimento<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label><label className="text-sm font-semibold">Termina em (opcional)<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label></div>
       <label className="text-sm font-semibold">De quem é esta renda?<select value={beneficiaryMemberId} onChange={(e) => setBeneficiaryMemberId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
       <label className="text-sm font-semibold">Onde espera receber?<select value={plannedDestinationAccountId} onChange={(e) => setPlannedDestinationAccountId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione</option>{resources.map((resource) => <option key={resource.account_id} value={resource.account_id}>{resource.name}</option>)}</select></label>
-      <label className="text-sm font-semibold">Categoria<select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Selecione</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+      <label className="text-sm font-semibold">Categoria <span className="font-normal text-slate-500">(opcional)</span><select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
       <label className="text-sm font-semibold">Observação (opcional)<textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"/></label>
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}{success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
-      <button disabled={saving || categories.length === 0 || resources.length === 0} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold disabled:opacity-50">{saving ? 'Criando série…' : 'Criar renda recorrente'}</button>
+      <button disabled={saving || resources.length === 0} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold disabled:opacity-50">{saving ? 'Criando série…' : 'Criar renda recorrente'}</button>
     </form>}
   </section>;
 }

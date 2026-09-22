@@ -193,6 +193,7 @@ jobs:
             supabase/tests/pr_l_release1_golden_journey.test.sql
             supabase/tests/pr_m_release1_everyday_extended.test.sql
             supabase/tests/pr_n_release1_reconciliation.test.sql
+            supabase/tests/pr_o_homologacao_ux_income_member_identity.test.sql
           )
 
           for test_file in "${tests[@]}"; do
