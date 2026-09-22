@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.js';
 import type { TransactionKind } from '../../finance/householdTransactions.js';
 import { consumeRecurringExpenseActionIntent } from '../../finance/recurringExpenseIntent.js';
@@ -8,15 +9,8 @@ import { consumeProjectionIncomeReviewIntent } from '../../finance/projectionInc
 import { consumeDirectExpensePaymentIntent } from '../../finance/directExpensePaymentIntent.js';
 import { IncomeLedgerScreen } from './IncomeLedgerScreen.js';
 import { ForecastExpenseReviewCard } from './ForecastExpenseReviewCard.js';
-import { RecurringExpenseAction } from './RecurringExpenseAction.js';
-import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
 import { RecurringExpenseCommitmentCenter } from './RecurringExpenseCommitmentCenter.js';
 import { DirectExpensePaymentAction } from './DirectExpensePaymentAction.js';
-import { ExternalExpensePaymentAction } from './ExternalExpensePaymentAction.js';
-import { PartialDirectRefundAction } from './PartialDirectRefundAction.js';
-import { CardRefundAction } from './CardRefundAction.js';
-import { PostPaymentCardRefundAction } from './PostPaymentCardRefundAction.js';
-import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 import { NewExpenseWizard } from './NewExpenseWizard.js';
 import { ScreenErrorBoundary } from './ScreenErrorBoundary.js';
@@ -30,6 +24,7 @@ export function TransactionsScreen({ mode, perspective, onPerspectiveChange, cre
   const projectionIncomeIntent = useMemo(() => mode === 'income' ? consumeProjectionIncomeReviewIntent() : null, [mode]);
   const [expenseListVersion, setExpenseListVersion] = useState(0);
   const [expenseSaved, setExpenseSaved] = useState(false);
+  const [detailTransactionId,setDetailTransactionId]=useState<string|null>(null);
 
   if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} /></ScreenErrorBoundary>;
 
@@ -41,54 +36,7 @@ export function TransactionsScreen({ mode, perspective, onPerspectiveChange, cre
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
-    <ExpenseMonthBrowser perspective={perspective} onPerspectiveChange={onPerspectiveChange} refreshKey={expenseListVersion} />
-    <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
-      <summary className="cursor-pointer font-semibold text-slate-200">Histórico e correções</summary>
-      <p className="mt-1 text-xs text-slate-500">Abra para editar ou corrigir lançamentos. A lista não compete com as duas lentes mensais acima.</p>
-      <div key={expenseListVersion} className="mt-4 border-t border-slate-800 pt-4 [&_header>button]:hidden"><HouseholdTransactionsSetup embedded mode={mode} /></div>
-    </details>
-
-    <details className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-slate-100">
-      <summary className="cursor-pointer list-none font-semibold text-slate-200">
-        Precisa fazer algo diferente?
-        <span className="mt-1 block text-xs font-normal text-slate-500">As situações menos comuns ficam organizadas por tipo para não atrapalhar o registro normal de gastos.</span>
-      </summary>
-      <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
-        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <summary className="cursor-pointer font-semibold text-slate-200">Formas especiais de pagar</summary>
-          <p className="mt-1 text-xs text-slate-500">Use para pagar um gasto já registrado ou quando outra pessoa pagou. PIX por cartão já faz parte de Nova despesa.</p>
-          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
-            {!directExpenseIntent && <DirectExpensePaymentAction />}
-            <ExternalExpensePaymentAction />
-          </div>
-        </details>
-
-        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <summary className="cursor-pointer font-semibold text-slate-200">Recebeu dinheiro de volta?</summary>
-          <p className="mt-1 text-xs text-slate-500">Use quando houve devolução ou estorno de uma compra já registrada.</p>
-          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
-            <PartialDirectRefundAction />
-            <CardRefundAction />
-            <PostPaymentCardRefundAction />
-          </div>
-        </details>
-
-        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <summary className="cursor-pointer font-semibold text-slate-200">Corrigir quem participou do gasto</summary>
-          <p className="mt-1 text-xs text-slate-500">Corrija papéis do lançamento sem apagar o histórico financeiro que já aconteceu.</p>
-          <div className="mt-3 border-t border-slate-800 pt-3"><ExpenseRoleCorrectionAction /></div>
-        </details>
-
-        <details className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <summary className="cursor-pointer font-semibold text-slate-200">Gastos que se repetem</summary>
-          <p className="mt-1 text-xs text-slate-500">Crie, acompanhe ou ajuste contas e gastos recorrentes.</p>
-          <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
-            {!recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={null} />}
-            <RecurringExpenseAction />
-            <RecurringExpenseManagement />
-          </div>
-        </details>
-      </div>
-    </details>
+    <ExpenseMonthBrowser perspective={perspective} onPerspectiveChange={onPerspectiveChange} refreshKey={expenseListVersion} onOpenTransaction={setDetailTransactionId} />
+    {detailTransactionId&&<div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:items-center"><section role="dialog" aria-modal="true" aria-label="Detalhe do gasto" className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 p-4 shadow-2xl"><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-rose-300">Detalhe do gasto</p><p className="text-sm text-slate-500">Histórico e correções ficam ligados a este lançamento.</p></div><button type="button" aria-label="Fechar detalhe do gasto" onClick={()=>setDetailTransactionId(null)} className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-slate-800 text-slate-300"><X className="h-5 w-5"/></button></div><HouseholdTransactionsSetup embedded mode="expense" focusTransactionId={detailTransactionId}/></section></div>}
   </div>;
 }
