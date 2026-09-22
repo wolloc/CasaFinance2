@@ -21,6 +21,7 @@ type SupabaseAuthValue = {
   householdMembersLoading: boolean;
   householdMembersError: string | null;
   retryHouseholdMembers: () => void;
+  refreshHousehold: () => Promise<void>;
   renameHouseholdMember: (memberId: string, displayName: string) => Promise<boolean>;
   confirmDisplayName: (displayName: string) => Promise<boolean>;
   completeFinancialOnboarding: () => Promise<boolean>;
@@ -173,6 +174,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     householdMembersLoading,
     householdMembersError,
     retryHouseholdMembers: () => setHouseholdMembersRefreshVersion((version) => version + 1),
+    refreshHousehold: async () => {
+      if (!supabase || !session) return;
+      setHousehold(await findExistingHousehold(supabase, session));
+      setHouseholdRefreshVersion((version)=>version+1);
+    },
     renameHouseholdMember: async (memberId, displayName) => {
       if (!supabase || !household) return false;
       const normalized=displayName.trim();
