@@ -125,7 +125,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           id: member.id,
           profile_id: member.profile_id,
           role: member.role as 'owner' | 'member' | 'viewer',
-          display_name: (member as { display_name?: string | null }).display_name?.trim() || ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name ?? 'Membro',
+          display_name: (member as { display_name?: string | null }).display_name?.trim() || ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name?: string } | null)?.display_name || 'Membro',
           display_name_confirmed_at: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { display_name_confirmed_at?: string | null } | null)?.display_name_confirmed_at ?? null,
           financial_onboarding_completed_at: ((Array.isArray(member.profiles) ? member.profiles[0] : member.profiles) as { financial_onboarding_completed_at?: string | null } | null)?.financial_onboarding_completed_at ?? null,
         })));
