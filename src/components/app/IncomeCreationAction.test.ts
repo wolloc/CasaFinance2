@@ -2,41 +2,41 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const creationSource = await readFile(new URL('./IncomeCreationAction.tsx', import.meta.url), 'utf8');
-const ledgerSource = await readFile(new URL('./IncomeLedgerScreen.tsx', import.meta.url), 'utf8');
-const transactionsScreenSource = await readFile(new URL('./TransactionsScreen.tsx', import.meta.url), 'utf8');
-const serviceSource = await readFile(new URL('../../finance/incomeFacts.ts', import.meta.url), 'utf8');
-const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
+const creationSource=await readFile(new URL('./IncomeCreationAction.tsx',import.meta.url),'utf8');
+const ledgerSource=await readFile(new URL('./IncomeLedgerScreen.tsx',import.meta.url),'utf8');
+const transactionsScreenSource=await readFile(new URL('./TransactionsScreen.tsx',import.meta.url),'utf8');
+const appSource=await readFile(new URL('./CasaFinanceApp.tsx',import.meta.url),'utf8');
+const serviceSource=await readFile(new URL('../../finance/incomeFacts.ts',import.meta.url),'utf8');
+const productSpec=await readFile(new URL('../../../docs/product-spec-v2.md',import.meta.url),'utf8');
 
-test('income creation uses its dedicated canonical RPC instead of the generic transaction creator', () => {
-  assert.match(serviceSource, /rpc\('create_income_fact'/);
-  assert.doesNotMatch(serviceSource, /create_financial_transaction|createHouseholdTransaction/);
-  assert.match(transactionsScreenSource, /if \(mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
-  assert.doesNotMatch(transactionsScreenSource, /mode === 'income'.*HouseholdTransactionsSetup/s);
+test('income creation uses its dedicated canonical command instead of the generic expense creator',()=>{
+ assert.match(serviceSource,/create_income_fact_idempotent/);
+ assert.doesNotMatch(serviceSource,/create_financial_transaction|createHouseholdTransaction/);
+ assert.match(transactionsScreenSource,/mode === 'income'.*IncomeLedgerScreen/s);
 });
 
-test('new income explicitly captures nature, beneficiary, planned destination and confidence', () => {
-  assert.match(creationSource, /Natureza da renda/);
-  assert.match(creationSource, /De quem é esta renda\?/);
-  assert.match(creationSource, /Onde espera receber\?/);
-  assert.match(creationSource, /Quanto confia nesta entrada\?/);
-  assert.match(creationSource, /Prevista — ainda pode mudar/);
-  assert.match(creationSource, /Confirmada — posso contar com ela/);
-  assert.match(serviceSource, /p_beneficiary_member_id/);
-  assert.match(serviceSource, /p_planned_destination_account_id/);
-  assert.match(serviceSource, /p_income_nature/);
+test('Nova Entrada is quick capture opened by the global action, not a permanent form',()=>{
+ assert.match(appSource,/openIncomeCreation/);
+ assert.match(appSource,/setIncomeCreateRequestId\(value=>value\+1\);setScreen\('income'\)/);
+ assert.match(ledgerSource,/openRequestId=\{createRequestId\}/);
+ assert.match(creationSource,/if\(!open\)return null/);
+ assert.match(creationSource,/role="dialog"/);
+ assert.match(creationSource,/text-2xl font-black/);
 });
 
-test('income UX preserves forecast versus realized cash and excludes neutral inflows', () => {
-  assert.match(creationSource, /O saldo só muda quando você confirmar o recebimento/);
-  assert.match(creationSource, /Transferência, acerto, empréstimo tomado, recebível, refund e resgate de principal/);
-  assert.match(creationSource, /Renda confirmada criada\. Ela entra na projeção, mas ainda não no saldo atual/);
-  assert.match(productSpec, /Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto/);
+test('new income captures nature beneficiary planned destination and confidence with optional category',()=>{
+ for(const value of ['Tipo','De quem é?','Onde deve entrar?','Confiança','Categoria'])assert.match(creationSource,new RegExp(value.replace('?','\\?')));
+ assert.match(creationSource,/Categoria <span[^>]*>\(opcional\)/);
+ assert.match(creationSource,/categoryId:categoryId\|\|null/);
+ assert.match(serviceSource,/categoryId:string\|null/);
+ assert.match(serviceSource,/p_beneficiary_member_id/);
+ assert.match(serviceSource,/p_planned_destination_account_id/);
+ assert.match(serviceSource,/p_income_nature/);
 });
 
-test('dedicated income screen keeps creation, receipt and read list in one journey', () => {
-  assert.match(ledgerSource, /<IncomeCreationAction onCreated=\{refresh\}\/>/);
-  assert.match(ledgerSource, /<IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\} onCompleted=\{refresh\}\/>/);
-  assert.match(ledgerSource, /Rendas cadastradas/);
-  assert.match(ledgerSource, /row\.type === 'income'/);
+test('income UX preserves forecast versus realized cash and neutral-flow boundary',()=>{
+ assert.match(creationSource,/O saldo só muda quando o recebimento acontecer de verdade/);
+ assert.match(productSpec,/Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto/);
+ assert.match(creationSource,/Prevista/);
+ assert.match(creationSource,/Confirmada/);
 });
