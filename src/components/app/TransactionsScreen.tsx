@@ -26,7 +26,7 @@ export function TransactionsScreen({ mode, perspective, onPerspectiveChange, cre
   const [expenseSaved, setExpenseSaved] = useState(false);
   const [detailTransactionId,setDetailTransactionId]=useState<string|null>(null);
 
-  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} /></ScreenErrorBoundary>;
+  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} createRequestId={createRequestId} /></ScreenErrorBoundary>;
 
   return <div className="space-y-4">
     <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); }} />
