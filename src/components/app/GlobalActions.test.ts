@@ -25,7 +25,7 @@ test('all three Product Spec global actions are present independently', () => {
   }
   assert.match(appSource, /<GlobalActions/);
   assert.match(appSource, /onExpense=\{openExpenseCreation\}/);
-  assert.match(appSource, /onIncome=\{\(\) => setScreen\('income'\)\}/);
+  assert.match(appSource, /onIncome=\{openIncomeCreation\}/);
   assert.match(appSource, /onAdjustment=\{openAdjustment\}/);
 });
 
