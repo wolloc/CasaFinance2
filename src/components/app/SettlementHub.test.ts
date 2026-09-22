@@ -10,7 +10,8 @@ test('Home settlement hub separates realized from projected positions',()=>{
   assert.match(hub,/Entre nós · já realizado/);
   assert.match(hub,/Entre nós · previsto/);
   assert.match(hub,/Ainda não é dívida realizada/);
-  assert.match(hub,/Resolver agora/);
+  assert.doesNotMatch(hub,/Resolver agora/);
+  assert.match(hub,/O Casa acompanha esta diferença até que um acerto correspondente seja registrado/);
 });
 
 test('third-party obligations use human language and contextual actions',()=>{
