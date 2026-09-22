@@ -10,7 +10,7 @@ test('daily expense screen keeps creation and monthly list without a parallel to
  assert.match(source,/<NewExpenseWizard/);
  assert.match(source,/<ExpenseMonthBrowser/);
  assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
- assert.match(source,/Histórico e correções ficam ligados a este lançamento/);
+ assert.match(source,/Histórico, correções e ações especiais ficam ligados a este lançamento/);
  assert.doesNotMatch(source,/Precisa fazer algo diferente\?/);
 });
 
