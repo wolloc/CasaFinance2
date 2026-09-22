@@ -88,7 +88,7 @@ export function RecurringIncomeAction({ onCreated }: { onCreated?: () => void })
         startDate,
         endDate,
         frequency,
-        categoryId,
+        categoryId: categoryId || null,
         beneficiaryMemberId,
         plannedDestinationAccountId,
         incomeNature,
