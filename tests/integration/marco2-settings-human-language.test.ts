@@ -38,4 +38,6 @@ test('Casa e membros edits Casa and household-local member names',()=>{
  assert.match(source,/renameHouseholdMember/);
  assert.match(context,/set_household_member_display_name/);
  assert.match(context,/display_name, profiles\(display_name/);
+ assert.match(source,/memberNameMessage/);
+ assert.match(source,/Não foi possível atualizar o nome deste membro\. Tente novamente\./);
 });
