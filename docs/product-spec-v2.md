@@ -25,7 +25,7 @@ As ações globais permanecem três fluxos independentes:
 - Nova entrada;
 - Novo acerto.
 
-A apresentação visual das ações globais é **IMPLEMENTADA** como uma cápsula compacta e flutuante, centralizada acima da navegação inferior. Os rótulos visuais são **Despesa**, **Entrada** e **Acerto**, enquanto os nomes acessíveis completos permanecem **Nova despesa**, **Nova entrada** e **Novo acerto**. A compactação não reduz a área mínima de toque nem transforma as três ações em um único fluxo.
+A apresentação visual das ações globais é **IMPLEMENTADA** como três botões compactos e independentes, visualmente soltos/flutuantes acima da navegação inferior. Os rótulos visuais são **Despesa**, **Entrada** e **Acerto**, enquanto os nomes acessíveis completos permanecem **Nova despesa**, **Nova entrada** e **Novo acerto**. A compactação não reduz a área mínima de toque nem transforma as três ações em um único fluxo.
 
 ## Perspectiva
 
@@ -56,6 +56,8 @@ A Casa funciona como síntese financeira mensal e planejamento, não como duplic
 ### Hierarquia visual da Casa
 
 **DEFINIDO:** a Casa deve priorizar compreensão rápida e reduzir texto contínuo. Ícones, números, barras, estados e frases curtas vêm antes de explicações longas; detalhes ficam em drill-down quando possível.
+
+A linguagem visual deve evitar aparência de dashboard corporativo/BI: tipografia principal maior, menos bordas repetidas, cards com funções visuais distintas, contraste suficiente e progressive disclosure. Quando um estado saudável não exige ação — por exemplo, confiança da projeção bem atualizada — o sinal pode ser discreto em vez de ocupar espaço textual permanente.
 
 A ordem conceitual é:
 
@@ -249,6 +251,10 @@ Gastos possui duas lentes complementares sobre os mesmos fatos financeiros.
 
 ### Gastos realizados
 
+**DEFINIDO:** a navegação cotidiana entre meses prioriza setas anterior/próximo, com o mês atual no centro. O seletor de mês continua disponível para saltos maiores, mas não é a interação principal.
+
+**DEFINIDO:** a lista é a superfície principal. Tocar num lançamento abre seu detalhe contextual; histórico, correções, estornos e outras ações válidas pertencem ao lançamento selecionado e não a um bloco operacional global no fim da tela.
+
 Responde: **“Com o que gastamos neste mês?”**
 
 Usa a data econômica do fato. Uma compra de R$ 1.000 realizada em outubro e parcelada em 10 vezes aparece como R$ 1.000 em Gastos realizados de outubro, uma única vez.
@@ -414,6 +420,8 @@ A fonte e o escopo do calendário de feriados (nacional/estadual/municipal e loc
 
 ## Entradas
 
+**DEFINIDO:** a aba **Entradas** abre como leitura/lista das entradas da perspectiva atual. O formulário não fica permanentemente exposto. A ação global **Entrada** abre uma captura rápida contextual e, após salvar, a pessoa retorna para a leitura atualizada.
+
 Renda verdadeira inclui salário, aluguel, freelance, bônus, presente e juros/rendimento.
 
 Categorias de despesa têm prioridade analítica maior na experiência. Entradas podem se apoiar principalmente em natureza, sem remover a capacidade de categorização de receitas para usuários que precisem dela. A categoria não deve ser obrigatória no registro e pode ser atribuída posteriormente.
@@ -423,6 +431,8 @@ Nova entrada permite recorrência: **Não**, **Todo mês**, **Toda semana** ou *
 Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto.
 
 ## Novo acerto
+
+**DEFINIDO:** na Home, Acertos é principalmente uma leitura de posição e não deve usar “Resolver agora” como CTA dominante. A liquidação continua explícita por uma jornada de acerto. Uma transferência comum entre recursos não quita silenciosamente um acerto apenas por coincidência de valor/data.
 
 O fluxo oferece intenções explícitas:
 
@@ -460,6 +470,10 @@ Refund não é renda comum, mantém vínculo com a compra e pode ser integral ou
 Antes de produzir efeitos financeiros dependentes, um registro pode ser editado. Depois de produzir parcelas, faturas, funding, acertos ou obrigações, a correção preserva histórico e recalcula o futuro atomicamente. `DELETE` financeiro não é fluxo normal.
 
 ## Ajustes
+
+**DEFINIDO:** Ajustes usa navegação curta, com ícone, título e no máximo uma linha de apoio. Explicações longas aparecem somente dentro da jornada correspondente.
+
+**DEFINIDO:** o nome exibido de um membro pode ser personalizado no contexto da própria Casa, sem alterar silenciosamente sua identidade global de perfil. O membro pode editar seu próprio nome local; o responsável/owner da Casa pode editar o nome local dos membros ativos. Essa personalização deve refletir filtros, perspectivas e labels da Casa.
 
 - Nossa Casa
 - Membros
