@@ -112,10 +112,10 @@ test('loan principal creates obligation and cash without becoming income or expe
 });
 
 
-test('global actions float above navigation and stay compact without losing accessible names',()=>{
-  assert.match(actionsSource,/fixed bottom-\[calc\(5\.5rem\+env\(safe-area-inset-bottom\)\)\] left-1\/2/);
-  assert.match(actionsSource,/w-max max-w-\[calc\(100vw-1\.5rem\)\]/);
-  assert.match(actionsSource,/inline-flex items-center gap-1 rounded-full/);
+test('global actions float independently above navigation without losing accessible names',()=>{
+  assert.match(actionsSource,/fixed bottom-\[calc\(5\.25rem\+env\(safe-area-inset-bottom\)\)\] left-1\/2/);
+  assert.match(actionsSource,/flex w-max max-w-\[calc\(100vw-1rem\)\]/);
+  assert.match(actionsSource,/rounded-full border border-slate-700\/80 bg-slate-900\/94/);
   for(const label of ['Nova despesa','Nova entrada','Novo acerto']) assert.match(actionsSource,new RegExp(`aria-label="${label}"`));
   for(const compactLabel of ['Despesa','Entrada','Acerto']) assert.match(actionsSource,new RegExp(`/>${compactLabel}<`));
   assert.match(actionsSource,/min-h-11/);
