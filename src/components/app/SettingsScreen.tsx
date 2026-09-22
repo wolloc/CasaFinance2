@@ -23,7 +23,7 @@ export function SettingsScreen(){
  const[householdNameMessage,setHouseholdNameMessage]=useState<string|null>(null);
  const[editingMemberId,setEditingMemberId]=useState<string|null>(null);
  const[memberName,setMemberName]=useState('');
- const[savingMember,setSavingMember]=useState(false);
+ const[savingMember,setSavingMember]=useState(false);const[memberNameMessage,setMemberNameMessage]=useState<string|null>(null);
 
  useEffect(()=>{if(!editingHouseholdName)setHouseholdName(household?.name??'')},[household?.name,editingHouseholdName]);
 
@@ -39,12 +39,13 @@ export function SettingsScreen(){
   }catch{setHouseholdNameMessage('Não foi possível atualizar o nome da Casa.')}
   finally{setSavingHouseholdName(false)}
  };
- const openMemberEdit=(memberId:string,name:string)=>{setEditingMemberId(memberId);setMemberName(name);};
+ const openMemberEdit=(memberId:string,name:string)=>{setEditingMemberId(memberId);setMemberName(name);setMemberNameMessage(null);};
  const saveMember=async()=>{
   if(!editingMemberId||!memberName.trim())return;
-  setSavingMember(true);
+  setSavingMember(true);setMemberNameMessage(null);
   const ok=await renameHouseholdMember(editingMemberId,memberName);
-  if(ok)setEditingMemberId(null);
+  if(ok){setEditingMemberId(null);setMemberNameMessage('Nome do membro atualizado.');}
+  else setMemberNameMessage('Não foi possível atualizar o nome deste membro. Tente novamente.');
   setSavingMember(false);
  };
  const currentMember=householdMembers.find(member=>member.profile_id===user?.id);
@@ -65,6 +66,7 @@ export function SettingsScreen(){
    {householdNameMessage&&<p role="status" className={'mt-2 text-xs '+(householdNameMessage==='Nome da Casa atualizado.'?'text-emerald-400':'text-rose-300')}>{householdNameMessage}</p>}
 
    <div className="mt-3 space-y-2">{householdMembers.map(member=><article key={member.id} className="flex min-h-14 items-center gap-3 rounded-2xl bg-slate-950/45 px-3 py-2"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/10 font-bold text-blue-300">{member.display_name.trim().charAt(0).toUpperCase()||<UserRound className="h-4 w-4"/>}</span>{editingMemberId===member.id?<div className="flex min-w-0 flex-1 gap-2"><input autoFocus maxLength={80} value={memberName} onChange={event=>setMemberName(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 text-base"/><button type="button" aria-label="Cancelar edição do membro" onClick={()=>setEditingMemberId(null)} className="min-h-11 min-w-11 rounded-xl text-slate-400"><X className="mx-auto h-4 w-4"/></button><button type="button" aria-label="Salvar nome do membro" disabled={savingMember||!memberName.trim()} onClick={saveMember} className="min-h-11 min-w-11 rounded-xl bg-blue-600 disabled:opacity-50">{savingMember?<LoaderCircle className="mx-auto h-4 w-4 animate-spin"/>:<Check className="mx-auto h-4 w-4"/>}</button></div>:<><div className="min-w-0 flex-1"><strong className="block truncate">{member.display_name}</strong><span className="text-xs text-slate-500">{member.role==='owner'?'Responsável pela Casa':'Membro'}</span></div>{canRename(member.id)&&<button type="button" aria-label={'Editar nome de '+member.display_name} onClick={()=>openMemberEdit(member.id,member.display_name)} className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-800 hover:text-blue-300"><Pencil className="h-4 w-4"/></button>}</>}</article>)}</div>
+   {memberNameMessage&&<p role="status" className={'mt-2 text-xs '+(memberNameMessage==='Nome do membro atualizado.'?'text-emerald-400':'text-rose-300')}>{memberNameMessage}</p>}
    <div className="mt-3"><HouseholdInvitationSettings/></div>
   </section>
 

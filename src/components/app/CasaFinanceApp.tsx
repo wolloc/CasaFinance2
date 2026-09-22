@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowLeft, Home, LoaderCircle, Receipt, Settings, TrendingUp } from 'lucide-react';
 import { CasaHomeScreen } from './CasaHomeScreen.js';
 import { TransactionsScreen } from './TransactionsScreen.js';
@@ -33,14 +33,14 @@ type PrimaryTab = 'home' | 'expenses' | 'income' | 'settings';
 const tabs = [['home','Casa',Home],['expenses','Gastos',Receipt],['income','Entradas',TrendingUp],['settings','Ajustes',Settings]] as const;
 
 export function CasaFinanceApp(){
- const{household,householdMembersLoading,householdMembersError,retryHouseholdMembers}=useSupabaseAuth();const[screen,setScreen]=useState<Screen>('home');const[perspective,setPerspective]=useState<FinancialPerspective>('household');const[returnTab,setReturnTab]=useState<PrimaryTab>('home');const[coverageReviewAmount,setCoverageReviewAmount]=useState(0);const[attentionNotice,setAttentionNotice]=useState<string|null>(null);const[attentionBusy,setAttentionBusy]=useState(false);const[expenseCreateRequestId,setExpenseCreateRequestId]=useState(0);const[incomeCreateRequestId,setIncomeCreateRequestId]=useState(0);const activeTab:PrimaryTab=screen==='invoices'||screen==='coverage-review'?'home':screen==='new-adjustment'?returnTab:screen==='loan-granted'?'expenses':screen;
+ const{household,householdMembersLoading,householdMembersError,retryHouseholdMembers}=useSupabaseAuth();const[screen,setScreen]=useState<Screen>('home');const[perspective,setPerspective]=useState<FinancialPerspective>('household');const[returnTab,setReturnTab]=useState<PrimaryTab>('home');const[coverageReviewAmount,setCoverageReviewAmount]=useState(0);const[attentionNotice,setAttentionNotice]=useState<string|null>(null);const[attentionBusy,setAttentionBusy]=useState(false);const[expenseCreateRequestId,setExpenseCreateRequestId]=useState(0);const[incomeCreateRequestId,setIncomeCreateRequestId]=useState(0);const expenseCreateSequence=useRef(0);const incomeCreateSequence=useRef(0);const activeTab:PrimaryTab=screen==='invoices'||screen==='coverage-review'?'home':screen==='new-adjustment'?returnTab:screen==='loan-granted'?'expenses':screen;
  if(householdMembersLoading)return <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-6 text-slate-300"><div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm font-semibold"><LoaderCircle className="h-5 w-5 animate-spin text-blue-300"/>Conferindo quem faz parte da Casa…</div></main>;
  if(householdMembersError)return <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 px-6 text-slate-100"><div className="w-full max-w-md rounded-2xl border border-rose-900 bg-rose-950/20 p-5"><h1 className="font-bold">Não foi possível conferir as pessoas da Casa</h1><p role="alert" className="mt-2 text-sm text-rose-200">{householdMembersError}</p><p className="mt-2 text-xs text-slate-400">Para evitar usar comprador, responsável ou pagador desatualizado, o Casa não libera registros financeiros até essa leitura funcionar.</p><button type="button" onClick={retryHouseholdMembers} className="mt-4 min-h-11 w-full rounded-xl border border-rose-800 px-3 text-sm font-bold text-rose-200">Tentar novamente</button></div></main>;
  const openAdjustment=()=>{setReturnTab(activeTab);setScreen('new-adjustment');};
  const openExpenses=()=>{setExpenseCreateRequestId(0);setScreen('expenses');};
  const openIncome=()=>{setIncomeCreateRequestId(0);setScreen('income');};
- const openExpenseCreation=()=>{setExpenseCreateRequestId(value=>value+1);setScreen('expenses');};
- const openIncomeCreation=()=>{setIncomeCreateRequestId(value=>value+1);setScreen('income');};
+ const openExpenseCreation=()=>{expenseCreateSequence.current+=1;setExpenseCreateRequestId(expenseCreateSequence.current);setScreen('expenses');};
+ const openIncomeCreation=()=>{incomeCreateSequence.current+=1;setIncomeCreateRequestId(incomeCreateSequence.current);setScreen('income');};
  const openGrantedLoan=()=>{setReturnTab('expenses');setScreen('loan-granted');};
  const openCoverageAction=(kind:CoverageActionKind,suggestedAmount:number)=>{setCoverageActionIntent({kind,suggestedAmount});setReturnTab('home');setScreen('new-adjustment');};
  const openSettlementAction=(intent:SettlementActionIntent)=>{setSettlementActionIntent(intent);setReturnTab('home');setScreen('new-adjustment');};
