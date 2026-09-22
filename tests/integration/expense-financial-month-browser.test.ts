@@ -37,7 +37,7 @@ test('Gastos prioriza o navegador mensal e leva histórico/correções para o la
  assert.match(browser,/Mês seguinte/);
  assert.match(browser,/Escolher mês/);
  assert.match(screen,/Detalhe do gasto/);
- assert.match(screen,/Histórico e correções ficam ligados a este lançamento/);
+ assert.match(screen,/Histórico, correções e ações especiais ficam ligados a este lançamento/);
  assert.doesNotMatch(screen,/Precisa fazer algo diferente\?/);
 });
 
@@ -62,7 +62,7 @@ test('Gastos realizados mantém a Casa canônica e usa responsabilidade econômi
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
  assert.match(browser,/\[household\?\.id,month,mode,perspective,refreshKey,refreshVersion\]/);
- assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} onOpenTransaction=\{setDetailTransactionId\} \/>/);
+ assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} onOpenTransaction=\{\(transactionId\)=>\{setDetailTransactionId\(transactionId\);setDetailActionsOpen\(false\)\}\} \/>/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
 
