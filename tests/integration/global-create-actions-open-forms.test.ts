@@ -31,6 +31,18 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
  assert.doesNotMatch(wizard,/datetime-local|Quando o dinheiro saiu\?/);
 });
 
+test('recorrência é uma opção secundária e o registro continua sendo a ação principal',()=>{
+ assert.match(wizard,/Repetir este gasto/);
+ assert.match(wizard,/Opcional · próximas ocorrências entram como projeção/);
+ assert.match(wizard,/>Adicionar<\/button>/);
+ assert.match(wizard,/>Remover<\/button>/);
+ assert.match(wizard,/Este gasto será registrado uma única vez\. As próximas repetições ficam previstas/);
+ assert.match(wizard,/min=\{recurringStartMinimum\}/);
+ assert.match(wizard,/suggestRecurringStartDate/);
+ assert.match(wizard,/min-h-14 w-full[\s\S]*Registrar despesa/);
+ assert.doesNotMatch(wizard,/Esse gasto se repete\?/);
+});
+
 test('Nova entrada abre captura contextual sem transformar a aba Entradas em formulário',()=>{
  assert.match(app,/incomeCreateSequence\.current\+=1;setIncomeCreateRequestId\(incomeCreateSequence\.current\);setScreen\('income'\)/);
  assert.match(app,/TransactionsScreen mode="income" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{incomeCreateRequestId\}/);
