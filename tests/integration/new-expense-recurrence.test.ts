@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../src/finance/newExpenseRecurrence.ts';
+import { parsePendingExpenseRecurrence } from '../../src/finance/newExpenseRecurrenceRecovery.ts';
 
 const wizard = await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx', import.meta.url), 'utf8');
 const standaloneAction = await readFile(new URL('../../src/components/app/RecurringExpenseAction.tsx', import.meta.url), 'utf8');
@@ -58,4 +59,44 @@ test('initial projection horizon covers exactly twelve monthly occurrences inclu
   assert.equal(recurringExpenseHorizonDate('2028-02-29'), '2029-01-29');
   assert.equal(recurringExpenseHorizonDate('2026-03-31'), '2027-02-28');
   assert.throws(() => recurringExpenseHorizonDate(''), /Data inicial/);
+});
+
+
+test('legacy pending recurrence keeps the already-saved expense and marks monthly migration intent', () => {
+  const pending = parsePendingExpenseRecurrence(JSON.stringify({
+    householdId: 'house-1',
+    transactionId: 'tx-already-saved',
+    recurringRuleId: 'legacy-weekly-rule',
+    frequency: 'weekly',
+    intervalCount: 1,
+    startDate: '2026-10-02',
+    endDate: '',
+  }), 'house-1');
+
+  assert.ok(pending);
+  assert.equal(pending.transactionId, 'tx-already-saved');
+  assert.equal(pending.recurringRuleId, 'legacy-weekly-rule');
+  assert.equal(pending.legacyIntent, true);
+});
+
+test('current monthly pending recurrence stays on the standard recovery path', () => {
+  const pending = parsePendingExpenseRecurrence(JSON.stringify({
+    householdId: 'house-1',
+    transactionId: 'tx-monthly',
+    recurringRuleId: null,
+    startDate: '2026-10-25',
+    endDate: '2027-09-25',
+  }), 'house-1');
+
+  assert.ok(pending);
+  assert.equal(pending.transactionId, 'tx-monthly');
+  assert.equal(pending.legacyIntent, false);
+});
+
+test('wizard migrates legacy recurrence intent without recreating the economic expense', () => {
+  assert.match(wizard, /recovery\.legacyIntent && recovery\.recurringRuleId/);
+  assert.match(wizard, /closeRecurringExpenseRule/);
+  assert.match(wizard, /Migrada para recorrência mensal da Release 1/);
+  assert.match(wizard, /A despesa já está salva/);
+  assert.match(wizard, /sem cadastrar o gasto novamente/);
 });
