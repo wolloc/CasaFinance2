@@ -420,7 +420,11 @@ Para compromissos e recebimentos projetados:
 - receita/recebível previsto em dia não útil é antecipado para o **dia útil anterior**;
 - sábado, domingo e feriados são dias não úteis.
 
-A fonte e o escopo do calendário de feriados (nacional/estadual/municipal e localização aplicável) permanecem **PENDENTES de decisão técnica/produto**.
+**DEFINIDO e IMPLEMENTADO na Release 1:** o calendário usa exclusivamente os feriados **nacionais brasileiros**, mantidos como referência legal versionada no banco, de 2000 até **2030**. Entram Confraternização Universal, Tiradentes, Dia Mundial do Trabalho, Independência, Nossa Senhora Aparecida, Finados, Proclamação da República, Consciência Negra e Natal. Não entram feriados estaduais, municipais ou pontos facultativos.
+
+A cobertura termina em 2030: uma projeção que exija data fora desse intervalo falha explicitamente até que o calendário seja ampliado por migração futura; o Casa não aplica uma regra incompleta em silêncio.
+
+A data econômica/âncora da ocorrência é preservada. Para recorrência em conta, somente a data projetada de liquidação é movida para o próximo dia útil; para entrada recorrente, somente a data projetada de recebimento é antecipada ao dia útil anterior. Isso não cria despesa, renda, movimento de caixa, funding ou liquidação. O ciclo de fechamento e a data de compra no fechamento de cartão continuam **PENDENTES por emissor** na issue #272.
 
 ## Entradas
 
