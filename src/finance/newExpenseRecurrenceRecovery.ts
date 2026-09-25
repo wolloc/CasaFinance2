@@ -1,11 +1,7 @@
-import type { RecurringExpenseFrequency } from './recurringExpenses.js';
-
 export type PendingExpenseRecurrence = {
   householdId: string;
   transactionId: string;
   recurringRuleId: string | null;
-  frequency: RecurringExpenseFrequency;
-  intervalCount: number;
   startDate: string;
   endDate: string;
 };
@@ -17,10 +13,6 @@ function storage() {
   try { return window.localStorage; } catch { return null; }
 }
 
-function isFrequency(value: unknown): value is RecurringExpenseFrequency {
-  return value === 'weekly' || value === 'monthly' || value === 'yearly';
-}
-
 export function loadPendingExpenseRecurrence(householdId: string): PendingExpenseRecurrence | null {
   const target = storage();
   if (!target || !householdId) return null;
@@ -29,14 +21,13 @@ export function loadPendingExpenseRecurrence(householdId: string): PendingExpens
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PendingExpenseRecurrence>;
     if (parsed.householdId !== householdId || typeof parsed.transactionId !== 'string' || !parsed.transactionId) return null;
-    if (!isFrequency(parsed.frequency) || !Number.isInteger(parsed.intervalCount) || Number(parsed.intervalCount) < 1) return null;
+    if ('frequency' in parsed && parsed.frequency !== undefined && parsed.frequency !== 'monthly') return null;
+    if ('intervalCount' in parsed && parsed.intervalCount !== undefined && Number(parsed.intervalCount) !== 1) return null;
     if (typeof parsed.startDate !== 'string' || !parsed.startDate) return null;
     return {
       householdId,
       transactionId: parsed.transactionId,
       recurringRuleId: typeof parsed.recurringRuleId === 'string' && parsed.recurringRuleId ? parsed.recurringRuleId : null,
-      frequency: parsed.frequency,
-      intervalCount: Number(parsed.intervalCount),
       startDate: parsed.startDate,
       endDate: typeof parsed.endDate === 'string' ? parsed.endDate : '',
     };

@@ -35,7 +35,9 @@ test('recorrência é uma opção secundária e o registro continua sendo a aç�
  assert.match(wizard,/Repetir este gasto/);
  assert.match(wizard,/Opcional · próximas ocorrências entram como projeção/);
  assert.match(wizard,/recurring \? 'Remover' : 'Adicionar'/);
- assert.match(wizard,/Este gasto será registrado uma única vez\. As próximas repetições ficam previstas/);
+ assert.match(wizard,/O gasto atual é registrado uma vez/);
+ assert.match(wizard,/uma nova ocorrência por mês/);
+ assert.doesNotMatch(wizard,/<option value="weekly">|<option value="yearly">/);
  assert.match(wizard,/min=\{recurringStartMinimum\}/);
  assert.match(wizard,/suggestRecurringStartDate/);
  assert.match(wizard,/min-h-14 w-full[\s\S]*Registrar despesa/);

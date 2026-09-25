@@ -26,7 +26,11 @@ export function recurringExpenseBlockReason(context: NewExpenseRecurrenceContext
 export function recurringExpenseHorizonDate(startDate: string) {
   const [year, month, day] = startDate.split('-').map(Number);
   if (!year || !month || !day) throw new Error('Data inicial da recorrência inválida.');
-  const horizon = new Date(Date.UTC(year + 1, month - 1, day));
-  return horizon.toISOString().slice(0, 10);
+  const targetMonthIndex = month - 1 + 11;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const targetMonth = (targetMonthIndex % 12) + 1;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  const targetDay = Math.min(day, lastDay);
+  return `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 }
 
