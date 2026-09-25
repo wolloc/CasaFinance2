@@ -196,6 +196,7 @@ jobs:
             supabase/tests/pr_o_homologacao_ux_income_member_identity.test.sql
             supabase/tests/pr_p_home_reference_month_read_model.test.sql
             supabase/tests/pr_q_national_business_calendar.test.sql
+            supabase/tests/pr_r_member_settlement_performance.test.sql
           )
 
           for test_file in "${tests[@]}"; do
