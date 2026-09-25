@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { runRetryStableRpc } from './retryIdempotency.js';
 
 export type RecurringExpenseFrequency = 'weekly' | 'monthly' | 'yearly';
+export const RELEASE1_EXPENSE_RECURRENCE_FREQUENCY: RecurringExpenseFrequency = 'monthly';
+export const RELEASE1_EXPENSE_RECURRENCE_INTERVAL = 1;
 export type RecurringExpenseRule = {
   id: string;
   template_transaction_id: string;
@@ -17,8 +19,6 @@ export type RecurringExpenseRule = {
 type RecurringExpenseRuleIdentity = {
   householdId: string;
   transactionId: string;
-  frequency: RecurringExpenseFrequency;
-  intervalCount: number;
   startDate: string;
   endDate?: string;
 };
@@ -44,9 +44,14 @@ export function recurringExpenseRollingHorizonDate(referenceDate: string) {
 
 export async function createRecurringExpenseFromTransaction(client: SupabaseClient, input: RecurringExpenseRuleIdentity) {
   const endDate=input.endDate||null;
-  const identity=[input.householdId,input.transactionId,input.frequency,input.intervalCount,input.startDate,endDate] as const;
+  const identity=[input.householdId,input.transactionId,RELEASE1_EXPENSE_RECURRENCE_FREQUENCY,RELEASE1_EXPENSE_RECURRENCE_INTERVAL,input.startDate,endDate] as const;
   return runRetryStableRpc(client,'create-recurring-expense',identity,'create_recurring_expense_rule_from_transaction_idempotent',{
-    p_household_id:input.householdId,p_template_transaction_id:input.transactionId,p_frequency:input.frequency,p_interval_count:input.intervalCount,p_start_date:input.startDate,p_end_date:endDate,
+    p_household_id:input.householdId,
+    p_template_transaction_id:input.transactionId,
+    p_frequency:RELEASE1_EXPENSE_RECURRENCE_FREQUENCY,
+    p_interval_count:RELEASE1_EXPENSE_RECURRENCE_INTERVAL,
+    p_start_date:input.startDate,
+    p_end_date:endDate,
   });
 }
 
@@ -55,8 +60,8 @@ export async function findRecurringExpenseRuleForTransaction(client: SupabaseCli
     .select('id')
     .eq('household_id', input.householdId)
     .eq('template_transaction_id', input.transactionId)
-    .eq('frequency', input.frequency)
-    .eq('interval_count', input.intervalCount)
+    .eq('frequency', RELEASE1_EXPENSE_RECURRENCE_FREQUENCY)
+    .eq('interval_count', RELEASE1_EXPENSE_RECURRENCE_INTERVAL)
     .eq('start_date', input.startDate)
     .is('deactivated_at', null)
     .is('income_nature', null);
@@ -114,15 +119,20 @@ export async function reviseRecurringExpenseRule(client: SupabaseClient, input: 
   ruleId: string;
   effectiveFrom: string;
   amount: string;
-  frequency: RecurringExpenseFrequency;
-  intervalCount: number;
   endDate?: string;
   reason: string;
 }) {
   const endDate=input.endDate||null;const reason=input.reason.trim();
-  const identity=[input.householdId,input.ruleId,input.effectiveFrom,input.amount,input.frequency,input.intervalCount,endDate,reason] as const;
+  const identity=[input.householdId,input.ruleId,input.effectiveFrom,input.amount,RELEASE1_EXPENSE_RECURRENCE_FREQUENCY,RELEASE1_EXPENSE_RECURRENCE_INTERVAL,endDate,reason] as const;
   return runRetryStableRpc(client,'revise-recurring-expense',identity,'revise_recurring_expense_rule_idempotent',{
-    p_household_id:input.householdId,p_rule_id:input.ruleId,p_effective_from:input.effectiveFrom,p_amount:input.amount,p_frequency:input.frequency,p_interval_count:input.intervalCount,p_end_date:endDate,p_reason:reason,
+    p_household_id:input.householdId,
+    p_rule_id:input.ruleId,
+    p_effective_from:input.effectiveFrom,
+    p_amount:input.amount,
+    p_frequency:RELEASE1_EXPENSE_RECURRENCE_FREQUENCY,
+    p_interval_count:RELEASE1_EXPENSE_RECURRENCE_INTERVAL,
+    p_end_date:endDate,
+    p_reason:reason,
   });
 }
 
