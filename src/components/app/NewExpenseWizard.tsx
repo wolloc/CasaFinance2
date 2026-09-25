@@ -10,7 +10,7 @@ import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreat
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
-import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction, type RecurringExpenseFrequency } from '../../finance/recurringExpenses.js';
+import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction } from '../../finance/recurringExpenses.js';
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
@@ -70,8 +70,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [repaymentDueDate, setRepaymentDueDate] = useState('');
   const [repaymentSourceAccountId, setRepaymentSourceAccountId] = useState('');
   const [recurring, setRecurring] = useState(false);
-  const [recurringFrequency, setRecurringFrequency] = useState<RecurringExpenseFrequency>('monthly');
-  const [recurringIntervalCount, setRecurringIntervalCount] = useState(1);
   const [recurringStartDate, setRecurringStartDate] = useState('');
   const [recurringStartDateTouched, setRecurringStartDateTouched] = useState(false);
   const [recurringEndDate, setRecurringEndDate] = useState('');
@@ -118,7 +116,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0');
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
-    setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
     setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setRecurrenceRecovery(null); setError(null);
   };
 
@@ -143,7 +141,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     const pending = household ? loadPendingExpenseRecurrence(household.id) : null;
     setHandledRequestId(openRequestId); reset();
     if (pending) {
-      setStep(2); setRecurring(true); setRecurringFrequency(pending.frequency); setRecurringIntervalCount(pending.intervalCount);
+      setStep(2); setRecurring(true);
       setRecurringStartDate(pending.startDate); setRecurringStartDateTouched(true); setRecurringEndDate(pending.endDate);
       setCreatedTransactionId(pending.transactionId); setCreatedRecurringRuleId(pending.recurringRuleId); setRecurrenceRecovery(pending);
     }
@@ -155,11 +153,11 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   useEffect(() => {
     if (!recurring || recurringBlockedReason || recurringStartDateTouched) return;
     try {
-      setRecurringStartDate(suggestRecurringStartDate(date, today, recurringFrequency, recurringIntervalCount));
+      setRecurringStartDate(suggestRecurringStartDate(date, today));
     } catch {
       setRecurringStartDate('');
     }
-  }, [recurring, recurringBlockedReason, recurringStartDateTouched, date, today, recurringFrequency, recurringIntervalCount]);
+  }, [recurring, recurringBlockedReason, recurringStartDateTouched, date, today]);
 
   useEffect(() => {
     if (!recurring || !recurringBlockedReason) return;
@@ -169,7 +167,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const enableRecurrence = () => {
     if (recurringBlockedReason) return;
     setRecurring(true); setRecurringStartDateTouched(false); setRecurringEndDate('');
-    try { setRecurringStartDate(suggestRecurringStartDate(date, today, recurringFrequency, recurringIntervalCount)); }
+    try { setRecurringStartDate(suggestRecurringStartDate(date, today)); }
     catch { setRecurringStartDate(''); }
   };
 
@@ -228,8 +226,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         let ruleId = recovery.recurringRuleId ?? await findRecurringExpenseRuleForTransaction(supabase, {
           householdId: recovery.householdId,
           transactionId: recovery.transactionId,
-          frequency: recovery.frequency,
-          intervalCount: recovery.intervalCount,
           startDate: recovery.startDate,
           endDate: recovery.endDate,
         });
@@ -237,8 +233,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           ruleId = String(await createRecurringExpenseFromTransaction(supabase, {
             householdId: recovery.householdId,
             transactionId: recovery.transactionId,
-            frequency: recovery.frequency,
-            intervalCount: recovery.intervalCount,
             startDate: recovery.startDate,
             endDate: recovery.endDate,
           }));
@@ -268,7 +262,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     if (externalPayment && needsRepayment && !repaymentSourceAccountId) return setError('Informe de qual recurso pretende fazer a devolução.');
     if (recurring && recurringBlockedReason) return setError(recurringBlockedReason);
     if (recurring && (!recurringStartDate || recurringStartDate <= today || recurringStartDate <= date)) return setError('Informe a primeira repetição em uma data futura.');
-    if (recurring && (!Number.isInteger(recurringIntervalCount) || recurringIntervalCount < 1)) return setError('O intervalo da recorrência precisa ser de pelo menos 1 período.');
     if (recurring && recurringEndDate && recurringEndDate < recurringStartDate) return setError('A data final da recorrência não pode ser anterior à primeira repetição.');
 
     let splits: EconomicAllocation[];
@@ -334,8 +327,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           householdId: household.id,
           transactionId: savedTransactionId,
           recurringRuleId: savedRecurringRuleId,
-          frequency: recurringFrequency,
-          intervalCount: recurringIntervalCount,
           startDate: recurringStartDate,
           endDate: recurringEndDate,
         };
@@ -344,8 +335,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           savedRecurringRuleId = String(await createRecurringExpenseFromTransaction(supabase, {
             householdId: household.id,
             transactionId: savedTransactionId,
-            frequency: recurringFrequency,
-            intervalCount: recurringIntervalCount,
             startDate: recurringStartDate,
             endDate: recurringEndDate,
           }));
@@ -381,7 +370,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         <div className="rounded-2xl border border-amber-800/70 bg-amber-950/30 p-4">
           <h2 className="font-bold text-amber-100">Despesa já registrada</h2>
           <p className="mt-2 text-sm text-amber-200">Falta apenas concluir a recorrência. O Casa preservou a referência do gasto e não vai cadastrá-lo novamente.</p>
-          <p className="mt-2 text-xs text-slate-400">Primeira repetição: {recurrenceRecovery.startDate} · intervalo: {recurrenceRecovery.intervalCount} · frequência: {recurrenceRecovery.frequency}.</p>
+          <p className="mt-2 text-xs text-slate-400">Primeira repetição: {recurrenceRecovery.startDate} · depois, uma vez por mês.</p>
         </div>
         {error && <ErrorBox text={error} />}
         <button type="submit" disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 font-bold text-slate-950 disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Concluir recorrência</button>
@@ -434,9 +423,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           </div>
           {recurringBlockedReason && <p className="mt-3 rounded-xl bg-slate-900/70 p-3 text-xs leading-5 text-slate-400"><strong className="text-slate-300">Não disponível neste caso.</strong> {recurringBlockedReason}</p>}
           {recurring && !recurringBlockedReason && <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
-            <p className="text-xs leading-5 text-slate-400">Este gasto será registrado uma única vez. As próximas repetições ficam previstas até você confirmá-las quando acontecerem.</p>
-            <div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Frequência<select value={recurringFrequency} onChange={(event) => { setRecurringFrequency(event.target.value as RecurringExpenseFrequency); setRecurringStartDateTouched(false); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"><option value="weekly">Semanal</option><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm text-slate-300">A cada<input type="number" min="1" value={recurringIntervalCount} onChange={(event) => { setRecurringIntervalCount(Number(event.target.value)); setRecurringStartDateTouched(false); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={recurringStartMinimum} value={recurringStartDate} onChange={(event) => { setRecurringStartDate(event.target.value); setRecurringStartDateTouched(true); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Sugerida automaticamente; você pode ajustar.</span></label><label className="text-sm text-slate-300">Termina em <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || recurringStartMinimum} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div>
+            <p className="text-xs leading-5 text-slate-400">O gasto atual é registrado uma vez. Depois, o Casa prevê <strong className="text-slate-300">uma nova ocorrência por mês</strong>, no mesmo dia-base. Em conta, fim de semana ou feriado nacional ajusta somente a data financeira prevista.</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={recurringStartMinimum} value={recurringStartDate} onChange={(event) => { setRecurringStartDate(event.target.value); setRecurringStartDateTouched(true); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Depois disso, repete mensalmente no mesmo dia-base.</span></label><label className="text-sm text-slate-300">Até quando? <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || recurringStartMinimum} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Sem data final, a série continua até você encerrar.</span></label></div>
           </div>}
         </section>
 
