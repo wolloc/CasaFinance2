@@ -24,7 +24,7 @@ A referência usa:
 - Lei nº 6.802/1980;
 - Lei nº 14.759/2023.
 
-São carregados: Confraternização Universal, Tiradentes, Dia Mundial do Trabalho, Independência do Brasil, Nossa Senhora Aparecida, Finados, Proclamação da República, Dia Nacional de Zumbi e da Consciência Negra e Natal.
+São carregados: Confraternização Universal, Tiradentes, Dia Mundial do Trabalho, Independência do Brasil, Nossa Senhora Aparecida, Finados, Proclamação da República, Dia Nacional de Zumbi e da Consciência Negra e Natal. Os recortes históricos respeitam a vigência legal: Finados é carregado a partir de 2003 e Consciência Negra a partir de 2024.
 
 Feriados estaduais, municipais, religiosos municipais e pontos facultativos não são inferidos nesta versão. Isso evita apresentar como regra nacional algo que depende de localidade ou de ato anual.
 

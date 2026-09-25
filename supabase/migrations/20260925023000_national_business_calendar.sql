@@ -37,7 +37,6 @@ with years as (
     (5, 1, 'Dia Mundial do Trabalho', 'Lei nº 662/1949, com redação da Lei nº 10.607/2002'),
     (9, 7, 'Independência do Brasil', 'Lei nº 662/1949, com redação da Lei nº 10.607/2002'),
     (10, 12, 'Nossa Senhora Aparecida', 'Lei nº 6.802/1980'),
-    (11, 2, 'Finados', 'Lei nº 662/1949, com redação da Lei nº 10.607/2002'),
     (11, 15, 'Proclamação da República', 'Lei nº 662/1949, com redação da Lei nº 10.607/2002'),
     (12, 25, 'Natal', 'Lei nº 662/1949, com redação da Lei nº 10.607/2002')
 ), seeded_holidays as (
@@ -46,6 +45,14 @@ with years as (
          h.holiday_legal_basis as legal_basis
     from years y
     cross join fixed_holidays h
+
+  union all
+
+  select make_date(y.year, 11, 2),
+         'Finados',
+         'Lei nº 662/1949, com redação da Lei nº 10.607/2002'
+    from years y
+   where y.year >= 2003
 
   union all
 
@@ -381,8 +388,8 @@ begin
 end
 $$;
 
--- Existing future forecasts are re-dated in place. No new transaction,
--- movement, funding event, invoice or settlement is created by this migration.
+-- Existing open, unrealized recurring facts are re-dated in place. No new
+-- transaction, movement, funding event, invoice or settlement is created by this migration.
 with adjusted as (
   select o.id as occurrence_id,
          public.adjust_projected_business_date(o.competence_date,'next') as projected_due_date
@@ -394,11 +401,10 @@ with adjusted as (
       on pi.transaction_id=t.id
      and pi.household_id=t.household_id
    where pi.kind='account'
-     and o.status='planned'
+     and o.status in ('planned','pending')
      and t.type='expense'
-     and t.economic_state='forecast'
+     and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
-     and o.competence_date>=current_date
 )
 update public.recurring_occurrences o
    set due_date=a.projected_due_date
@@ -416,11 +422,10 @@ with adjusted as (
       on pi.transaction_id=t.id
      and pi.household_id=t.household_id
    where pi.kind='account'
-     and o.status='planned'
+     and o.status in ('planned','pending')
      and t.type='expense'
-     and t.economic_state='forecast'
+     and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
-     and o.competence_date>=current_date
 )
 update public.transactions t
    set due_date=a.projected_due_date,
@@ -439,7 +444,6 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
-     and o.competence_date>=current_date
 )
 update public.recurring_occurrences o
    set due_date=a.projected_receipt_date
@@ -457,7 +461,6 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
-     and o.competence_date>=current_date
 )
 update public.transactions t
    set due_date=a.projected_receipt_date,
@@ -481,7 +484,6 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
-     and o.competence_date>=current_date
 )
 update public.money_movements m
    set movement_date=a.projected_receipt_date

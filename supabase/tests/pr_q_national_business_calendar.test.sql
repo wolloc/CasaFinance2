@@ -3,7 +3,7 @@ begin;
 set local time zone 'America/Sao_Paulo';
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(20);
 
 insert into auth.users(
   id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -52,45 +52,53 @@ select is(
   'Q01 imports exactly the nine national holidays for each year from 2026 through 2030'
 );
 
+select ok(
+  not exists(
+    select 1 from public.brazil_national_holidays
+     where holiday_date=date '2002-11-02'
+  ),
+  'Q02 does not retroactively classify Finados as a national holiday before Law 10.607/2002 took effect'
+);
+
 select is(
   (select legal_basis
      from public.brazil_national_holidays
     where holiday_date=date '2026-11-20'),
   'Lei nº 14.759/2023',
-  'Q02 includes National Black Awareness Day with its federal legal basis'
+  'Q03 includes National Black Awareness Day with its federal legal basis'
 );
 
 select ok(
   not public.is_brazil_national_business_day(date '2026-09-07')
   and not public.is_brazil_national_business_day(date '2026-09-06')
   and public.is_brazil_national_business_day(date '2026-09-08'),
-  'Q03 national holidays and weekends are non-business days while the following weekday is business'
+  'Q04 national holidays and weekends are non-business days while the following weekday is business'
 );
 
 select is(
   public.adjust_projected_business_date(date '2026-09-07','next'),
   date '2026-09-08',
-  'Q04 projected expense on Independence Day moves to the next business day'
+  'Q05 projected expense on Independence Day moves to the next business day'
 );
 
 select is(
   public.adjust_projected_business_date(date '2026-09-07','previous'),
   date '2026-09-04',
-  'Q05 projected income on Independence Day moves to the prior business day'
+  'Q06 projected income on Independence Day moves to the prior business day'
 );
 
 select throws_ok(
   $$select public.is_brazil_national_business_day(date '2031-01-01')$$,
   '22023',
   'Brazilian national calendar is configured from 2000 through 2030',
-  'Q06 calendar refuses to silently project beyond its imported coverage'
+  'Q07 calendar refuses to silently project beyond its imported coverage'
 );
 
 select ok(
   not has_table_privilege('authenticated','public.brazil_national_holidays','INSERT')
   and not has_table_privilege('authenticated','public.brazil_national_holidays','UPDATE')
   and not has_table_privilege('authenticated','public.brazil_national_holidays','DELETE'),
-  'Q07 authenticated users can read but cannot mutate the legal holiday reference'
+  'Q08 authenticated users can read but cannot mutate the legal holiday reference'
 );
 
 select lives_ok($$
@@ -108,7 +116,7 @@ select lives_ok($$
     null,
     'pr-q-direct-template'
   )
-$$,'Q08 creates the direct-account template with the canonical command');
+$$,'Q09 creates the direct-account template with the canonical command');
 
 select lives_ok($$
   select public.create_recurring_expense_rule_from_transaction_idempotent(
@@ -122,7 +130,7 @@ select lives_ok($$
     date '2026-09-07',
     'pr-q-direct-rule'
   )
-$$,'Q09 creates the direct recurring rule with Independence Day as its anchor');
+$$,'Q10 creates the direct recurring rule with Independence Day as its anchor');
 
 select is(
   public.ensure_household_recurring_expense_horizon(
@@ -130,7 +138,7 @@ select is(
     date '2026-09-07'
   ),
   1,
-  'Q10 materializes exactly one direct recurring occurrence'
+  'Q11 materializes exactly one direct recurring occurrence'
 );
 
 select is(
@@ -140,7 +148,7 @@ select is(
     where o.household_id='b1000000-0000-4000-8000-000000000010'
       and t.description='PR-Q direct recurring template'),
   date '2026-09-07',
-  'Q11 direct recurrence preserves the economic anchor'
+  'Q12 direct recurrence preserves the economic anchor'
 );
 
 select is(
@@ -150,7 +158,7 @@ select is(
     where o.household_id='b1000000-0000-4000-8000-000000000010'
       and t.description='PR-Q direct recurring template'),
   date '2026-09-07',
-  'Q12 direct recurrence does not rewrite the economic date'
+  'Q13 direct recurrence does not rewrite the economic date'
 );
 
 select is(
@@ -160,7 +168,7 @@ select is(
     where o.household_id='b1000000-0000-4000-8000-000000000010'
       and t.description='PR-Q direct recurring template'),
   date '2026-09-08',
-  'Q13 direct recurring commitment moves its planned settlement to the next business day'
+  'Q14 direct recurring commitment moves its planned settlement to the next business day'
 );
 
 select is(
@@ -169,7 +177,7 @@ select is(
      join public.recurring_occurrences o on o.transaction_id=m.related_transaction_id
     where o.household_id='b1000000-0000-4000-8000-000000000010'),
   0::bigint,
-  'Q14 business-day adjustment creates no cash movement for the direct forecast'
+  'Q15 business-day adjustment creates no cash movement for the direct forecast'
 );
 
 select is(
@@ -178,7 +186,7 @@ select is(
      join public.recurring_occurrences o on o.transaction_id=f.financed_transaction_id
     where o.household_id='b1000000-0000-4000-8000-000000000010'),
   0::bigint,
-  'Q15 business-day adjustment creates no funding for the direct forecast'
+  'Q16 business-day adjustment creates no funding for the direct forecast'
 );
 
 select lives_ok($$
@@ -196,7 +204,7 @@ select lives_ok($$
     'confirmed',
     null
   )
-$$,'Q16 creates a recurring income rule through the canonical command');
+$$,'Q17 creates a recurring income rule through the canonical command');
 
 select is(
   (select t.transaction_date
@@ -205,7 +213,7 @@ select is(
     where o.household_id='b1000000-0000-4000-8000-000000000010'
       and t.description='PR-Q recurring income'),
   date '2026-09-07',
-  'Q17 recurring income preserves its economic anchor'
+  'Q18 recurring income preserves its economic anchor'
 );
 
 select is(
@@ -215,7 +223,7 @@ select is(
     where o.household_id='b1000000-0000-4000-8000-000000000010'
       and t.description='PR-Q recurring income'),
   date '2026-09-04',
-  'Q18 recurring income exposes its expected receipt on the previous business day'
+  'Q19 recurring income exposes its expected receipt on the previous business day'
 );
 
 select is(
@@ -227,7 +235,7 @@ select is(
       and m.kind='income'
       and m.state='projected'),
   date '2026-09-04',
-  'Q19 calendar adjustment changes only the projected receipt date, not a realized cash fact'
+  'Q20 calendar adjustment changes only the projected receipt date, not a realized cash fact'
 );
 
 reset role;
