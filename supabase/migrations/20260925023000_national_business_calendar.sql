@@ -388,8 +388,9 @@ begin
 end
 $$;
 
--- Existing open, unrealized recurring facts are re-dated in place. No new
--- transaction, movement, funding event, invoice or settlement is created by this migration.
+-- Existing open, unrealized recurring facts inside the imported calendar
+-- coverage are re-dated in place. No new transaction, movement, funding event,
+-- invoice or settlement is created by this migration.
 with adjusted as (
   select o.id as occurrence_id,
          public.adjust_projected_business_date(o.competence_date,'next') as projected_due_date
@@ -405,6 +406,7 @@ with adjusted as (
      and t.type='expense'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
+     and o.competence_date between date '2000-01-01' and date '2030-12-31'
 )
 update public.recurring_occurrences o
    set due_date=a.projected_due_date
@@ -426,6 +428,7 @@ with adjusted as (
      and t.type='expense'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
+     and o.competence_date between date '2000-01-01' and date '2030-12-31'
 )
 update public.transactions t
    set due_date=a.projected_due_date,
@@ -444,6 +447,7 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
+     and o.competence_date between date '2000-01-01' and date '2030-12-31'
 )
 update public.recurring_occurrences o
    set due_date=a.projected_receipt_date
@@ -461,6 +465,7 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
+     and o.competence_date between date '2000-01-01' and date '2030-12-31'
 )
 update public.transactions t
    set due_date=a.projected_receipt_date,
@@ -484,6 +489,7 @@ with adjusted as (
      and t.type='income'
      and t.economic_state in ('forecast','confirmed')
      and t.realized_amount=0
+     and o.competence_date between date '2000-01-01' and date '2030-12-31'
 )
 update public.money_movements m
    set movement_date=a.projected_receipt_date
