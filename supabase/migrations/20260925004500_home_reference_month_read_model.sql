@@ -174,10 +174,26 @@ begin
   if v_period_kind='past' and v_can_navigate then
     v_closing:=public.financial_available_cash_at_date(p_household_id,v_period_end);
 
-    -- A month has a canonical opening only when the previous calendar day is
-    -- already inside the tracked history. The first/partial tracking month
-    -- deliberately returns NULL instead of inventing a pre-cutover balance.
-    if v_reference_month>v_tracking_start then
+    -- A full first month that starts exactly on the cutover uses confirmed
+    -- opening-position events. A partial first month returns NULL because no
+    -- canonical pre-cutover opening exists; later months use prior-day close.
+    if v_reference_month=v_tracking_start then
+      -- When tracking starts on day one, onboarding opening events are the
+      -- confirmed beginning-of-month position. Movements on that date are not
+      -- part of the opening balance.
+      select coalesce(sum(e.amount),0)::numeric(19,2)
+        into v_opening
+        from public.account_balance_events e
+        join public.accounts a
+          on a.id=e.account_id
+         and a.household_id=e.household_id
+       where e.household_id=p_household_id
+         and e.kind='opening'
+         and e.reversed_at is null
+         and e.effective_date=v_tracking_start
+         and a.type in ('cash','checking','savings','digital_wallet')
+         and a.resource_restriction is null;
+    elsif v_reference_month>v_tracking_start then
       v_opening:=public.financial_available_cash_at_date(
         p_household_id,
         (v_reference_month-interval '1 day')::date
