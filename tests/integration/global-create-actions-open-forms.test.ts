@@ -34,8 +34,7 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
 test('recorrência é uma opção secundária e o registro continua sendo a ação principal',()=>{
  assert.match(wizard,/Repetir este gasto/);
  assert.match(wizard,/Opcional · próximas ocorrências entram como projeção/);
- assert.match(wizard,/>Adicionar<\/button>/);
- assert.match(wizard,/>Remover<\/button>/);
+ assert.match(wizard,/recurring \? 'Remover' : 'Adicionar'/);
  assert.match(wizard,/Este gasto será registrado uma única vez\. As próximas repetições ficam previstas/);
  assert.match(wizard,/min=\{recurringStartMinimum\}/);
  assert.match(wizard,/suggestRecurringStartDate/);
