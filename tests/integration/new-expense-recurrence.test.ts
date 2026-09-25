@@ -10,8 +10,9 @@ const recoveryService = await readFile(new URL('../../src/finance/newExpenseRecu
 const commitmentCenter = await readFile(new URL('../../src/components/app/RecurringExpenseCommitmentCenter.tsx', import.meta.url), 'utf8');
 
 test('Nova Despesa offers a recurrence only after the current economic fact', () => {
-  assert.match(wizard, /Esse gasto se repete\?/);
-  assert.match(wizard, /A despesa de hoje continua realizada uma única vez/);
+  assert.match(wizard, /Repetir este gasto/);
+  assert.match(wizard, /Opcional · próximas ocorrências entram como projeção/);
+  assert.match(wizard, /Este gasto será registrado uma única vez/);
   assert.match(wizard, /createRecurringExpenseFromTransaction/);
   assert.match(wizard, /transactionId: savedTransactionId/);
   assert.match(wizard, /ensureRecurringExpenseHorizon/);
