@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarRange, Check, ChevronRight, CreditCard, FolderTree, LoaderCircle, LogOut, Pencil, UserCircle, UserRound, Users, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, CreditCard, FolderTree, LoaderCircle, LogOut, Pencil, UserCircle, UserRound, Users, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { consumeAccountReviewIntent } from '../../finance/accountReviewIntent.js';
 import { supabase } from '../../lib/supabase.js';
@@ -7,16 +7,13 @@ import { HouseholdFinancialSetup } from '../auth/HouseholdFinancialSetup.js';
 import { HouseholdCategoriesSetup } from '../auth/HouseholdCategoriesSetup.js';
 import { FinancialPartiesSettings } from './FinancialPartiesSettings.js';
 import { HouseholdInvitationSettings } from './HouseholdInvitationSettings.js';
-import { RecurringExpenseManagement } from './RecurringExpenseManagement.js';
-import { RecurringIncomeManagement } from './RecurringIncomeManagement.js';
 
-type Area='menu'|'financial'|'categories'|'recurring';
+type Area='menu'|'financial'|'categories';
 
 export function SettingsScreen(){
  const{household,householdMembers,user,signOut,isSubmitting,refreshHousehold,renameHouseholdMember}=useSupabaseAuth();
  const accountReview=useMemo(()=>consumeAccountReviewIntent(),[]);
  const[area,setArea]=useState<Area>(accountReview?'financial':'menu');
- const[recurringRefresh,setRecurringRefresh]=useState(0);
  const[editingHouseholdName,setEditingHouseholdName]=useState(false);
  const[householdName,setHouseholdName]=useState(household?.name??'');
  const[savingHouseholdName,setSavingHouseholdName]=useState(false);
@@ -53,10 +50,9 @@ export function SettingsScreen(){
 
  if(area==='financial')return <div><Back onClick={()=>setArea('menu')}/><HouseholdFinancialSetup initialAccountId={accountReview?.accountId??null}/></div>;
  if(area==='categories')return <HouseholdCategoriesSetup onBack={()=>setArea('menu')}/>;
- if(area==='recurring')return <div className="space-y-4"><Back onClick={()=>setArea('menu')}/><header><h1 className="text-2xl font-black">Recorrências</h1><p className="mt-1 text-sm text-slate-400">O que se repete, sem mexer no que já aconteceu.</p></header><RecurringExpenseManagement onChanged={()=>setRecurringRefresh(value=>value+1)}/><RecurringIncomeManagement refreshKey={recurringRefresh} onChanged={()=>setRecurringRefresh(value=>value+1)}/></div>;
 
  return <div className="space-y-6">
-  <header><p className="text-xs font-bold uppercase tracking-widest text-purple-400">Configurações</p><h1 className="mt-1 text-3xl font-black">Ajustes</h1><p className="mt-1 text-sm text-slate-400">Sua Casa, pessoas e preferências.</p></header>
+  <header><h1 className="text-3xl font-black">Ajustes</h1></header>
 
   <section className="rounded-[1.6rem] bg-slate-900/60 p-4">
    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-300"><Users className="h-5 w-5"/></span><div><h2 className="font-bold">Casa e membros</h2><p className="text-xs text-slate-500">Como vocês aparecem no Casa.</p></div></div>{!editingHouseholdName&&<button type="button" aria-label="Editar nome da Casa" onClick={()=>{setHouseholdName(household?.name??'');setEditingHouseholdName(true);setHouseholdNameMessage(null)}} className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-blue-300"><Pencil className="h-4 w-4"/></button>}</div>
@@ -75,7 +71,6 @@ export function SettingsScreen(){
   <section className="space-y-2">
    <SettingsLink icon={CreditCard} title="Contas e cartões" subtitle="Saldos, limites e posição inicial" tone="text-blue-300" onClick={()=>setArea('financial')}/>
    <SettingsLink icon={FolderTree} title="Categorias" subtitle="Como gastos e entradas são organizados" tone="text-emerald-300" onClick={()=>setArea('categories')}/>
-   <SettingsLink icon={CalendarRange} title="Recorrências" subtitle="O que se repete ao longo do tempo" tone="text-amber-300" onClick={()=>setArea('recurring')}/>
   </section>
 
   <section className="rounded-[1.6rem] bg-slate-900/55 p-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-800 text-slate-300"><UserCircle className="h-5 w-5"/></span><div className="min-w-0"><h2 className="font-bold">Minha conta</h2><p className="truncate text-sm text-slate-500">{user?.email??'E-mail indisponível'}</p></div></div><button onClick={signOut} disabled={isSubmitting} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-rose-300 hover:bg-rose-950/20"><LogOut className="h-4 w-4"/>Sair da conta</button></section>

@@ -4,11 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const source=await readFile(new URL('../../src/components/app/SettingsScreen.tsx',import.meta.url),'utf8');
 const context=await readFile(new URL('../../src/context/SupabaseAuthContext.tsx',import.meta.url),'utf8');
+const expenseScreen=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const incomeScreen=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
 
 test('settings stays concise while preserving core destinations',()=>{
- assert.match(source,/Sua Casa, pessoas e preferências/);
- for(const destination of ['Casa e membros','Contas e cartões','Categorias','Recorrências','Minha conta']) assert.ok(source.includes(destination),`${destination} must remain reachable`);
- assert.doesNotMatch(source,/Organize a Casa, as pessoas e as regras de cadastro/);
+ assert.match(source,/>Ajustes<\/h1>/);
+ for(const destination of ['Casa e membros','Contas e cartões','Categorias','Minha conta']) assert.ok(source.includes(destination),`${destination} must remain reachable`);
+ assert.doesNotMatch(source,/Sua Casa, pessoas e preferências|Organize a Casa, as pessoas e as regras de cadastro/);
+ assert.doesNotMatch(source,/title="Recorrências"|setArea\('recurring'\)/);
 });
 
 test('settings preserves household invite and account contextual review',()=>{
@@ -17,12 +20,11 @@ test('settings preserves household invite and account contextual review',()=>{
  assert.match(source,/initialAccountId=\{accountReview\?\.accountId\?\?null\}/);
 });
 
-test('recurring management remains reachable using canonical components',()=>{
- assert.match(source,/RecurringExpenseManagement/);
- assert.match(source,/RecurringIncomeManagement/);
- assert.match(source,/setArea\('recurring'\)/);
- const recurringSection=source.slice(source.indexOf("if(area==='recurring')"),source.indexOf("return <div className=\"space-y-6\">"));
- assert.doesNotMatch(recurringSection,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
+test('recurring management remains contextual instead of a primary Settings destination',()=>{
+ assert.doesNotMatch(source,/RecurringExpenseManagement|RecurringIncomeManagement|setArea\('recurring'\)/);
+ assert.match(expenseScreen,/RecurringExpenseManagement/);
+ assert.match(incomeScreen,/RecurringIncomeAction/);
+ assert.match(incomeScreen,/RecurringIncomeManagement/);
 });
 
 test('Minha conta exposes authenticated identity and explicit sign out',()=>{

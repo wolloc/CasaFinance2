@@ -105,8 +105,10 @@ test('login real do frontend entra na Casa e navega pelas áreas principais', as
   await expect(page.getByText('Compromissos do mês')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
   await expect(page.getByText('Precisa fazer algo diferente?')).toHaveCount(0);
+  await expect(page.getByText('Recorrências')).toBeVisible();
   await page.getByRole('button', { name: 'Ajustes' }).click();
-  for (const label of ['Casa e membros', 'Contas e cartões', 'Categorias', 'Recorrências', 'Minha conta']) await expect(page.getByText(label)).toBeVisible();
+  for (const label of ['Casa e membros', 'Contas e cartões', 'Categorias', 'Minha conta']) await expect(page.getByText(label)).toBeVisible();
+  await expect(page.getByText('Recorrências')).toHaveCount(0);
 });
 
 test('falha ao reler membros bloqueia o produto financeiro e oferece retry', async ({ page }) => {
