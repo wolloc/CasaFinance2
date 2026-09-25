@@ -9,11 +9,23 @@
 - O campo **Quanto?** deve ter maior destaque visual e normalizar valores monetários para duas casas decimais.
 - Textos técnicos do motor financeiro e textos de roadmap não devem aparecer na experiência final da Nova Despesa.
 
-## PENDENTE / PRÓXIMAS ENTREGAS
+## ATUALIZAÇÃO — 2026-09-25
 
-- Terceiro como responsável econômico em **Quem assume esse gasto?**, reutilizando `financial_parties` e preservando a separação entre responsável econômico e pagador.
-- Divisão personalizada.
-- Recorrência ao final da Nova Despesa.
+### DEFINIDO
+
+- A recorrência permanece **opcional** e desligada por padrão na conclusão da Nova Despesa.
+- A ação principal da etapa final é **Registrar despesa**; recorrência aparece como ação secundária **Repetir este gasto → Adicionar**.
+- Ao ativar recorrência, o Casa sugere a primeira repetição a partir da data original e da frequência escolhida, sempre em data futura; o usuário pode ajustar a sugestão.
+- A despesa atual continua sendo um único fato realizado. As próximas repetições são projeções até serem confirmadas quando acontecerem.
+- Quando a natureza do pagamento/responsabilidade ainda não suporta série recorrente com segurança, a opção fica indisponível e explica o motivo, sem criar uma série parcial.
+- Se a despesa for registrada e a criação da série falhar, o fluxo de recuperação preserva o ID do gasto e conclui apenas a recorrência, sem duplicar a despesa.
+
+### IMPLEMENTADO
+
+- Terceiro como responsável econômico em **Quem assume esse gasto?**, reutilizando `financial_parties` e mantendo responsabilidade separada do pagador.
+- Divisão personalizada entre membros e terceiros.
+- Recorrência opcional ao final da Nova Despesa, com recuperação idempotente em falha parcial.
+
 
 ## BUGS OBSERVADOS NO PREVIEW
 

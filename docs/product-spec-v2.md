@@ -398,9 +398,13 @@ Uma obrigação projetada deve permitir posteriormente pagamento total, pagament
 
 ### Finalização e recorrência
 
-O caminho feliz termina com a possibilidade opcional de indicar que o gasto se repete e então registrar a despesa. A melhor composição visual e microcopy dessa finalização permanece **PENDENTE de UX/UI**.
+**DEFINIDO:** o caminho feliz termina com **Registrar despesa** como ação principal. A recorrência é opcional, fica desligada por padrão e aparece como ação secundária **Repetir este gasto → Adicionar**.
 
-Se houver recorrência, o produto coleta apenas os dados necessários da regra. Ocorrências futuras são projeções e não novas despesas realizadas antecipadamente.
+Ao ativar recorrência, o Casa sugere a primeira repetição futura conforme a data do fato, frequência e intervalo escolhidos. A sugestão pode ser ajustada pelo usuário, mas nunca pode transformar a despesa atual em fato futuro.
+
+Se houver recorrência, o produto coleta apenas os dados necessários da regra. A despesa atual é registrada uma única vez; ocorrências futuras são projeções e não novas despesas realizadas antecipadamente. Quando a combinação de pagamento ou responsabilidade ainda não possui suporte canônico seguro para uma série, a recorrência fica indisponível com explicação contextual.
+
+Se a despesa for salva e a criação da regra recorrente falhar depois, o produto preserva a referência do fato já criado e permite concluir somente a recorrência, sem cadastrar a despesa novamente.
 
 ### Fora de Nova Despesa
 
