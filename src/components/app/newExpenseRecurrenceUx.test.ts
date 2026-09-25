@@ -15,6 +15,7 @@ test('preserva o dia âncora e ajusta meses curtos',()=>{
 test('avança quantos ciclos forem necessários quando a despesa original é antiga',()=>{
   assert.equal(suggestRecurringStartDate('2026-07-01','2026-09-25','monthly',1),'2026-10-01');
   assert.equal(suggestRecurringStartDate('2026-09-01','2026-09-25','weekly',1),'2026-09-29');
+  assert.equal(suggestRecurringStartDate('2000-01-01','2026-09-25','weekly',1),'2026-09-26');
 });
 
 test('respeita intervalos maiores que um período',()=>{
