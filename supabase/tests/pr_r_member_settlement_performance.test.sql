@@ -3,7 +3,7 @@ begin;
 set local time zone 'America/Sao_Paulo';
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 insert into auth.users(
   id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -34,13 +34,13 @@ set local statement_timeout='8s';
 
 select lives_ok($$
   select public.create_and_settle_direct_expense_idempotent(
-    'b2000000-0000-4000-8000-000000000010','PR-R recurring source',100.00,current_date,
+    'b2000000-0000-4000-8000-000000000010','PR-R recurring source 1',100.00,current_date,
     'b2000000-0000-4000-8000-000000000026',
     'b2000000-0000-4000-8000-000000000021',
     'b2000000-0000-4000-8000-000000000031',
     'b2000000-0000-4000-8000-000000000021',
     '[{"member_id":"b2000000-0000-4000-8000-000000000021","amount":"50.00","percentage":"50.0000"},{"member_id":"b2000000-0000-4000-8000-000000000022","amount":"50.00","percentage":"50.0000"}]'::jsonb,
-    now(),null,'pr-r-source'
+    now(),null,'pr-r-source-1'
   )
 $$,'R01 shared direct expense completes within authenticated timeout');
 
@@ -53,27 +53,76 @@ select is(
   'R02 realized settlement remains 50 after Wallace funds a 50/50 expense'
 );
 
-select lives_ok($$
+select throws_ok($$
   select public.create_recurring_expense_rule_from_transaction_idempotent(
     'b2000000-0000-4000-8000-000000000010',
-    (select id from public.transactions where description='PR-R recurring source' and type='expense'),
-    'weekly',1,current_date+1,null,'pr-r-rule'
+    (select id from public.transactions where description='PR-R recurring source 1' and type='expense'),
+    'weekly',1,current_date+1,null,'pr-r-weekly-rejected'
   )
-$$,'R03 weekly recurrence rule is created');
+$$,'0A000','Release 1 expense recurrence must be monthly with interval 1','R03 weekly expense recurrence is outside Release 1');
+
+set local statement_timeout='0';
+
+do $fixture$
+declare
+  i integer;
+  tx uuid;
+begin
+  for i in 2..10 loop
+    tx:=public.create_and_settle_direct_expense_idempotent(
+      'b2000000-0000-4000-8000-000000000010',
+      'PR-R recurring source '||i,
+      100.00,current_date,
+      'b2000000-0000-4000-8000-000000000026',
+      'b2000000-0000-4000-8000-000000000021',
+      'b2000000-0000-4000-8000-000000000031',
+      'b2000000-0000-4000-8000-000000000021',
+      '[{"member_id":"b2000000-0000-4000-8000-000000000021","amount":"50.00","percentage":"50.0000"},{"member_id":"b2000000-0000-4000-8000-000000000022","amount":"50.00","percentage":"50.0000"}]'::jsonb,
+      now(),null,'pr-r-source-'||i
+    );
+  end loop;
+
+  for i in 1..10 loop
+    select id into tx
+    from public.transactions
+    where household_id='b2000000-0000-4000-8000-000000000010'
+      and description='PR-R recurring source '||i
+      and type='expense'
+      and economic_state='realized';
+
+    perform public.create_recurring_expense_rule_from_transaction_idempotent(
+      'b2000000-0000-4000-8000-000000000010',
+      tx,
+      'monthly',1,
+      current_date+1,
+      (current_date+1+interval '11 months')::date,
+      'pr-r-rule-'||i
+    );
+  end loop;
+end
+$fixture$;
+
+select is(
+  (select count(*) from public.recurring_rules where household_id='b2000000-0000-4000-8000-000000000010' and deactivated_at is null),
+  10::bigint,
+  'R04 ten monthly rules exist'
+);
+
+set local statement_timeout='8s';
 
 select is(
   public.ensure_household_recurring_expense_horizon(
     'b2000000-0000-4000-8000-000000000010',
-    (current_date+interval '1 year')::date
+    (current_date+1+interval '11 months')::date
   ),
-  (1 + (((current_date+interval '1 year')::date-(current_date+1))/7))::integer,
-  'R04 one-year weekly horizon completes within authenticated timeout'
+  120,
+  'R05 ten monthly series materialize twelve occurrences each within authenticated timeout'
 );
 
 select is(
   (select count(*)::integer from public.recurring_occurrences where household_id='b2000000-0000-4000-8000-000000000010'),
-  (1 + (((current_date+interval '1 year')::date-(current_date+1))/7))::integer,
-  'R05 horizon materializes each weekly occurrence exactly once'
+  120,
+  'R06 horizon materializes exactly 120 monthly occurrences'
 );
 
 select is(
@@ -81,8 +130,8 @@ select is(
    join public.recurring_occurrences o on o.transaction_id=t.id
    where o.household_id='b2000000-0000-4000-8000-000000000010'
      and t.economic_state='forecast' and t.realized_amount=0),
-  (select count(*) from public.recurring_occurrences where household_id='b2000000-0000-4000-8000-000000000010'),
-  'R06 future occurrences remain forecasts'
+  120::bigint,
+  'R07 all future occurrences remain forecasts'
 );
 
 select is(
@@ -90,7 +139,7 @@ select is(
    join public.recurring_occurrences o on o.transaction_id=m.related_transaction_id
    where o.household_id='b2000000-0000-4000-8000-000000000010'),
   0::bigint,
-  'R07 horizon creates no cash movement'
+  'R08 monthly horizon creates no cash movement'
 );
 
 select is(
@@ -98,7 +147,7 @@ select is(
    join public.recurring_occurrences o on o.transaction_id=f.financed_transaction_id
    where o.household_id='b2000000-0000-4000-8000-000000000010'),
   0::bigint,
-  'R08 horizon creates no realized funding'
+  'R09 monthly horizon creates no realized funding'
 );
 
 select is(
@@ -106,29 +155,47 @@ select is(
    from public.financial_member_settlement_positions
    where debtor_member_id='b2000000-0000-4000-8000-000000000022'
      and creditor_member_id='b2000000-0000-4000-8000-000000000021'),
-  (50 * (1 + (((current_date+interval '1 year')::date-(current_date+1))/7)))::numeric,
-  'R09 each future 50/50 occurrence preserves its projected settlement'
+  6000.00::numeric,
+  'R10 each future 50/50 occurrence preserves its projected settlement'
 );
 
 select is(
   public.ensure_household_recurring_expense_horizon(
     'b2000000-0000-4000-8000-000000000010',
-    (current_date+interval '1 year')::date
+    (current_date+1+interval '11 months')::date
   ),
   0,
-  'R10 replaying the same horizon is idempotent'
+  'R11 replaying the same horizon is idempotent'
 );
 
 select is(
-  (select count(*) from public.recurring_rules where household_id='b2000000-0000-4000-8000-000000000010'),
-  1::bigint,
-  'R11 exactly one recurring rule exists'
+  (select count(*) from public.transactions
+   where household_id='b2000000-0000-4000-8000-000000000010'
+     and description like 'PR-R recurring source %'
+     and type='expense'
+     and economic_state='realized'),
+  10::bigint,
+  'R12 source expenses remain ten realized economic facts'
 );
 
 select is(
-  (select count(*) from public.transactions where household_id='b2000000-0000-4000-8000-000000000010' and description='PR-R recurring source' and type='expense' and economic_state='realized'),
-  1::bigint,
-  'R12 source expense remains one realized economic fact'
+  (select count(*) from public.recurring_rules
+   where household_id='b2000000-0000-4000-8000-000000000010'
+     and frequency='monthly'
+     and interval_count=1),
+  10::bigint,
+  'R13 every Release 1 expense rule is monthly with interval one'
+);
+
+select is(
+  (select min(per_rule.cnt) from (
+    select recurring_rule_id,count(*)::integer cnt
+    from public.recurring_occurrences
+    where household_id='b2000000-0000-4000-8000-000000000010'
+    group by recurring_rule_id
+  ) per_rule),
+  12,
+  'R14 every monthly rule owns exactly twelve projected occurrences'
 );
 
 reset role;
