@@ -412,9 +412,9 @@ Uma obrigação projetada deve permitir posteriormente pagamento total, pagament
 
 **DEFINIDO:** o caminho feliz termina com **Registrar despesa** como ação principal. A recorrência é opcional, fica desligada por padrão e aparece como ação secundária **Repetir este gasto → Adicionar**.
 
-Ao ativar recorrência, o Casa sugere a primeira repetição futura conforme a data do fato, frequência e intervalo escolhidos. A sugestão pode ser ajustada pelo usuário, mas nunca pode transformar a despesa atual em fato futuro.
+Ao ativar recorrência de despesa na Release 1, o Casa trabalha somente com repetição **mensal**. A pessoa informa ou confirma a **primeira repetição** e, opcionalmente, **até quando** a série deve durar; frequência e intervalo não são escolhas da interface. O Casa sugere a próxima repetição preservando o dia-base econômico do gasto. Em meses sem esse dia, usa o último dia válido do mês e volta ao dia-base original nos meses seguintes. A sugestão pode ser ajustada pelo usuário, mas nunca transforma a despesa atual em fato futuro.
 
-Se houver recorrência, o produto coleta apenas os dados necessários da regra. A despesa atual é registrada uma única vez; ocorrências futuras são projeções e não novas despesas realizadas antecipadamente. Quando a combinação de pagamento ou responsabilidade ainda não possui suporte canônico seguro para uma série, a recorrência fica indisponível com explicação contextual.
+Se houver recorrência, o produto coleta apenas os dados necessários da regra. A despesa atual é registrada uma única vez; ocorrências futuras são projeções e não novas despesas realizadas antecipadamente. Um período de 12 meses corresponde a **12 ocorrências mensais**, contando a primeira repetição. Em conta, feriado nacional ou fim de semana mantém a data econômica da ocorrência e desloca somente a data financeira prevista para o próximo dia útil. Semanal, quinzenal, anual e intervalos customizados de **despesa** ficam fora da Release 1. Quando a combinação de pagamento ou responsabilidade ainda não possui suporte canônico seguro para uma série, a recorrência fica indisponível com explicação contextual.
 
 Se a despesa for salva e a criação da regra recorrente falhar depois, o produto preserva a referência do fato já criado e permite concluir somente a recorrência, sem cadastrar a despesa novamente.
 
@@ -501,7 +501,6 @@ Antes de produzir efeitos financeiros dependentes, um registro pode ser editado.
 - Cartões
 - Categorias;
 - Pessoas e terceiros;
-- Recorrências;
 - Preferências;
 - Minha conta.
 
