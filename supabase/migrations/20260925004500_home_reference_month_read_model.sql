@@ -148,7 +148,7 @@ begin
 
   v_household_today:=(current_timestamp at time zone v_timezone)::date;
   v_current_month:=date_trunc('month',v_household_today)::date;
-  v_period_end:=(v_reference_month+interval '1 month-1 day')::date;
+  v_period_end:=(v_reference_month+interval '1 month'-interval '1 day')::date;
 
   v_period_kind:=case
     when v_reference_month<v_current_month then 'past'
