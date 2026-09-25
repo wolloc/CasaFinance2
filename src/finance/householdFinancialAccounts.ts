@@ -152,6 +152,42 @@ export async function createHouseholdCard(client: SupabaseClient, householdId: s
   return response.data as HouseholdCard;
 }
 
+
+export async function updateHouseholdAccountIdentity(client: SupabaseClient, householdId: string, accountId: string, input: {
+  name: string;
+  institution?: string;
+}) {
+  const response = await client.from('accounts')
+    .update({ name: input.name.trim(), institution: input.institution?.trim() || null })
+    .eq('household_id', householdId)
+    .eq('id', accountId)
+    .is('deactivated_at', null)
+    .select(accountColumns)
+    .single();
+  if (response.error) throw response.error;
+  return response.data as HouseholdAccount;
+}
+
+export async function updateHouseholdCardIdentity(client: SupabaseClient, householdId: string, cardId: string, input: {
+  name: string;
+  institution?: string;
+  lastFour?: string;
+}) {
+  const response = await client.from('cards')
+    .update({
+      name: input.name.trim(),
+      institution: input.institution?.trim() || null,
+      last_four: input.lastFour?.trim() || null,
+    })
+    .eq('household_id', householdId)
+    .eq('id', cardId)
+    .is('deactivated_at', null)
+    .select(cardColumns)
+    .single();
+  if (response.error) throw response.error;
+  return response.data as HouseholdCard;
+}
+
 export async function recordOpeningCardPurchase(client: SupabaseClient, householdId: string, input: {
   cardId: string; description: string; originalPurchaseDate: string; amount: string;
   buyerMemberId: string; responsibleMemberId: string; installmentCount: number; paidInstallmentCount: number; requestKey?: string;
