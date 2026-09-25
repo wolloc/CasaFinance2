@@ -126,9 +126,9 @@ select is(
 );
 
 select is(
-  (select count(*) from public.transactions where household_id='b2000000-0000-4000-8000-000000000010' and description='PR-R recurring source' and type='expense'),
+  (select count(*) from public.transactions where household_id='b2000000-0000-4000-8000-000000000010' and description='PR-R recurring source' and type='expense' and economic_state='realized'),
   1::bigint,
-  'R12 source expense remains one economic fact'
+  'R12 source expense remains one realized economic fact'
 );
 
 reset role;
