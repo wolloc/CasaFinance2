@@ -3,7 +3,7 @@ begin;
 set local time zone 'America/Sao_Paulo';
 
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(17);
 
 insert into auth.users(
   id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -200,6 +200,39 @@ select throws_ok(
   'P14 reference month must be canonical month start'
 );
 
+reset role;
+
+update public.households
+   set financial_tracking_started_on=(date_trunc('month',current_date)-interval '2 months')::date
+ where id='9f000000-0000-4000-8000-000000000010';
+
+update public.account_balance_events
+   set effective_date=(date_trunc('month',current_date)-interval '2 months')::date
+ where household_id='9f000000-0000-4000-8000-000000000010'
+   and account_id='9f000000-0000-4000-8000-000000000031'
+   and kind='opening';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','9f000000-0000-4000-8000-000000000001',true);
+
+select is(
+  (select coverage_state from public.financial_reference_month_context(
+    '9f000000-0000-4000-8000-000000000010',
+    (date_trunc('month',current_date)-interval '2 months')::date
+  )),
+  'full',
+  'P15 first-day cutover is a full historical month'
+);
+
+select is(
+  (select historical_opening_cash from public.financial_reference_month_context(
+    '9f000000-0000-4000-8000-000000000010',
+    (date_trunc('month',current_date)-interval '2 months')::date
+  )),
+  1000::numeric,
+  'P16 first-day cutover uses opening positions as beginning-of-month cash'
+);
+
 select set_config('request.jwt.claim.sub','9f000000-0000-4000-8000-000000000002',true);
 
 select throws_ok(
@@ -209,7 +242,7 @@ select throws_ok(
   )$$,
   '42501',
   'active household membership required',
-  'P15 another authenticated user cannot read household history'
+  'P17 another authenticated user cannot read household history'
 );
 
 select * from finish();
