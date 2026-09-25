@@ -47,6 +47,7 @@ describe('Home reference month canonical read model', () => {
   it('never fabricates a pre-cutover opening balance', async () => {
     const sql = await migration();
     assert.match(sql, /p_as_of_date<v_tracking_start[\s\S]*return null/);
-    assert.match(sql, /if v_reference_month>v_tracking_start then[\s\S]*financial_available_cash_at_date/);
+    assert.match(sql, /if v_reference_month=v_tracking_start then[\s\S]*e\.kind='opening'[\s\S]*e\.effective_date=v_tracking_start/);
+    assert.match(sql, /elsif v_reference_month>v_tracking_start then[\s\S]*financial_available_cash_at_date/);
   });
 });
