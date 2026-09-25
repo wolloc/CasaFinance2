@@ -109,7 +109,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
   );
   const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
-  const recurringStartMinimum = minimumRecurringStartDate(date, today);
+  const recurringStartMinimum = minimumRecurringStartDate(date || today, today);
 
   const reset = () => {
     const memberId = currentMemberId;
