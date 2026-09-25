@@ -10,7 +10,7 @@ import { createAndSettleDirectExpense } from '../../finance/explicitExpenseCreat
 import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.js';
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
-import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction } from '../../finance/recurringExpenses.js';
+import { closeRecurringExpenseRule, createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction } from '../../finance/recurringExpenses.js';
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
@@ -223,7 +223,21 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       setSaving(true);
       let recovery = recurrenceRecovery;
       try {
-        let ruleId = recovery.recurringRuleId ?? await findRecurringExpenseRuleForTransaction(supabase, {
+        if (recovery.legacyIntent && recovery.recurringRuleId) {
+          await closeRecurringExpenseRule(supabase, {
+            householdId: recovery.householdId,
+            ruleId: recovery.recurringRuleId,
+            effectiveFrom: recovery.startDate,
+            reason: 'Migrada para recorrência mensal da Release 1',
+          });
+          recovery = { ...recovery, recurringRuleId: null };
+          savePendingExpenseRecurrence(recovery);
+          setCreatedRecurringRuleId(null);
+          setRecurrenceRecovery(recovery);
+        }
+
+        let ruleId = recovery.legacyIntent ? null : recovery.recurringRuleId;
+        ruleId ??= await findRecurringExpenseRuleForTransaction(supabase, {
           householdId: recovery.householdId,
           transactionId: recovery.transactionId,
           startDate: recovery.startDate,
@@ -369,7 +383,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       {!loading && recurrenceRecovery && <div className="mt-5 space-y-4">
         <div className="rounded-2xl border border-amber-800/70 bg-amber-950/30 p-4">
           <h2 className="font-bold text-amber-100">Despesa já registrada</h2>
-          <p className="mt-2 text-sm text-amber-200">Falta apenas concluir a recorrência. O Casa preservou a referência do gasto e não vai cadastrá-lo novamente.</p>
+          <p className="mt-2 text-sm text-amber-200">{recurrenceRecovery.legacyIntent ? 'A despesa já está salva. A intenção de recorrência antiga será convertida para o padrão mensal atual sem cadastrar o gasto novamente.' : 'Falta apenas concluir a recorrência. O Casa preservou a referência do gasto e não vai cadastrá-lo novamente.'}</p>
           <p className="mt-2 text-xs text-slate-400">Primeira repetição: {recurrenceRecovery.startDate} · depois, uma vez por mês.</p>
         </div>
         {error && <ErrorBox text={error} />}
