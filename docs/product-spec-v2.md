@@ -6,7 +6,9 @@ Casa Finance é um sistema financeiro doméstico para uma Casa composta por **um
 
 > **Princípio de UX:** “O usuário conta o que aconteceu; o Casa interpreta financeiramente o acontecimento.”
 
-A interface usa linguagem amigável e evita expor nomes técnicos de banco.
+**DEFINIDO — Roteador Financeiro do Casa:** a experiência parte de pessoas, recursos, origem/destino e do acontecimento real. O aplicativo deriva por trás o comando canônico adequado — caixa, funding, transferência, acerto, fatura, obrigação ou movimento patrimonial — sem pedir que o usuário escolha conceitos técnicos do motor.
+
+A interface usa linguagem amigável e evita expor nomes técnicos de banco. Funding, settlement, obligation, allocation e comandos equivalentes pertencem ao motor; a UX prioriza ações como **Paguei**, **Recebi**, **Transferi**, **Aportei**, **Resgatei**, **Comprei** e **Devolvi**.
 
 ## Navegação e ações globais
 
@@ -47,7 +49,7 @@ Ela distingue:
 
 **Comprador continua sendo um filtro independente.** Selecionar Wallace na perspectiva não significa filtrar compras feitas por Wallace; responsabilidade econômica, comprador e funding/pagador permanecem conceitos distintos.
 
-Em conta conjunta, a visão Casa considera 100% do saldo e a perspectiva individual de liquidez considera 50% para cada membro. Essa regra 50/50 vale somente para liquidez individual: a responsabilidade econômica continua independente.
+Em conta conjunta, a visão Casa considera 100% do saldo e a perspectiva individual de liquidez considera 50% para cada membro. A responsabilidade econômica continua independente. **DEFINIDO:** quando uma saída realizada usa uma conta conjunta dos dois membros, o funding realizado é atribuído 50/50 entre eles.
 
 ## Casa / Dashboard
 
@@ -191,6 +193,16 @@ Exibir separadamente:
 
 Essas classes nunca são apresentadas juntas como se todo o patrimônio fosse saldo disponível.
 
+**DEFINIDO — comportamento financeiro por recurso:**
+
+- conta corrente, carteira digital, dinheiro físico e poupança são recursos transacionais; pagamentos e transferências movimentam caixa sem criar renda/despesa por si só;
+- poupança continua transacional e também pode participar de movimentos de guardar/retirar recursos com linguagem de aporte/resgate na UX, sem mudar a neutralidade financeira da transferência;
+- investimento e reserva recebem aporte e resgate de principal como movimentos patrimoniais neutros; rendimento/perda permanecem fatos econômicos separados;
+- benefício é recurso restrito: carga não é renda e seu uso financia a despesa compatível;
+- cartão representa crédito: compra vai para fatura/compromissos e pagamento da fatura sai de uma conta escolhida sem criar nova despesa.
+
+**PROPOSTO — navegação contextual por recurso:** tornar cada item de conta, carteira, benefício, reserva ou investimento clicável na Casa. O detalhe do recurso apresentaria somente ações compatíveis com sua natureza e usaria o saldo daquele recurso como contexto. Exemplos: transferir, pagar, depositar, aportar ou resgatar. A implementação deve reutilizar os comandos canônicos já existentes, sem criar um segundo motor financeiro.
+
 #### LIS
 
 Exemplo: saldo `-R$ 350`, LIS total `R$ 2.000`, LIS utilizado `R$ 350` e LIS disponível `R$ 1.650`. O saldo atual continua **-R$ 350**. LIS disponível nunca é somado ao dinheiro.
@@ -208,7 +220,7 @@ Cada cartão apresenta uma fotografia financeira, incluindo conceitualmente:
 
 **Fatura atual** e **limite comprometido** são conceitos diferentes. Uma compra parcelada pode colocar apenas uma parcela na fatura corrente e, ao mesmo tempo, comprometer no limite a exposição remanescente conforme a lógica do emissor.
 
-Na Casa, o cartão deve permanecer **compacto**. Ao tocar em **Ver cartão e fatura** ou em **Ver faturas**, o usuário acessa a experiência contextual de Faturas/Cartão, com lançamentos, parcelas, recorrências esperadas, composição, situação da fatura, compromissos futuros e pagamento. O mesmo dado pode ser alcançado por Gastos > Compromissos filtrando o cartão; são jornadas diferentes sobre a mesma fonte de verdade.
+Na Casa, o cartão deve permanecer **compacto**. **PROPOSTO:** o próprio card do cartão deve ser a entrada principal e única para o detalhe contextual de Faturas/Cartão, evitando um segundo CTA redundante como “Todas as faturas”. Dentro do cartão/fatura, **Pagar fatura** usa uma conta escolhida como origem do caixa e reaproveita o comando canônico de pagamento, sem criar nova despesa. O mesmo dado pode continuar acessível por Gastos > Compromissos filtrando o cartão; são jornadas diferentes sobre a mesma fonte de verdade.
 
 ### Acertos entre membros
 
@@ -509,3 +521,22 @@ O Casa deve sempre conseguir responder:
 - Quem deve quem?
 - O que temos a receber? O que temos a pagar?
 - Estamos saudáveis? A projeção está confiável?
+
+
+## Decisões de roteamento financeiro — 2026-09-25
+
+**DEFINIDO:**
+
+- em Nova Entrada, a pessoa beneficiária é escolhida antes do destino; contas individuais exibidas como destino pertencem à pessoa escolhida;
+- conta conjunta aparece como destino para qualquer um dos dois titulares, mas não muda quem é beneficiário econômico da renda;
+- transferência realizada entre recursos exclusivos de membros diferentes reduz primeiro o acerto realizado existente no mesmo sentido;
+- se houver excedente, o Casa pergunta de forma discreta se ele deve permanecer a favor do remetente ou se não precisa ser devolvido; nenhuma opção transforma automaticamente o excedente em renda;
+- conta conjunta é 50/50 para liquidez e para funding realizado de saídas feitas por ela;
+- investimento/reserva usam aporte/resgate de principal; poupança permanece também apta a pagamentos e transferências;
+- complexidade do motor deve permanecer oculta quando o contexto permitir derivação segura.
+
+**PROPOSTO:**
+
+- transformar os recursos exibidos em “Onde está nosso dinheiro” em pontos de entrada para ações contextuais;
+- reduzir a importância visual da ação global “Acerto”, deslocando sua liquidação para transferências e contextos onde a posição entre pessoas realmente existe;
+- consolidar a jornada de cartão em clique no card → fatura/detalhe → pagar fatura.
