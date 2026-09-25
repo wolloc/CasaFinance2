@@ -82,7 +82,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const isPast=referenceContext?.period_kind==='past';
   const futureRows=perspective==='household'?referenceProjection:referenceMemberProjection;
   const futureCurrent=futureRows[0];
-  const futureIncome=futureCurrent?Number(futureCurrent.realized_true_income_in_month)+Number(futureCurrent.expected_reliable_income_remaining):0;
+  const futureIncome=futureCurrent?Number(futureCurrent.realized_true_income_in_month)+Number(futureCurrent.expected_reliable_income_remaining)+(perspective==='household'?0:Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_inflow)):0;
   const futureOutflow=futureCurrent?(perspective==='household'
     ?Number((futureCurrent as Dashboard['projection'][number]).realized_commitments_in_month)+Number((futureCurrent as Dashboard['projection'][number]).remaining_commitments_in_month)+Number((futureCurrent as Dashboard['projection'][number]).projected_recurring_commitments)+Number((futureCurrent as Dashboard['projection'][number]).prior_pending_outflow)
     :Number((futureCurrent as MemberMonthlyProjection).realized_funding_in_month)+Number((futureCurrent as MemberMonthlyProjection).projected_funding_remaining)+Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_outflow)):0;
