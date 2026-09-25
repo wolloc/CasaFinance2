@@ -50,13 +50,16 @@ Este documento registra as **invariantes permanentes do domínio financeiro do C
 16. **Recebível é conservador.** Recebível de terceiro não aumenta a projeção principal antes do recebimento. Sua liquidação aumenta caixa e reduz o direito, com renda zero.
 17. **Pagável é conservador.** Todo pagável aberto compromete a projeção. Uma posição líquida pode ser exibida, mas nunca quita ou compensa automaticamente obrigações brutas.
 18. **Liquidação parcial reduz somente o aberto.** Pagamento parcial de fatura, pagável ou outra obrigação reduz caixa e obrigação somente pelo montante efetivamente liquidado; o saldo restante permanece aberto e não se reconhece novamente o fato econômico de origem.
-19. **Conta conjunta não altera responsabilidade.** A Casa considera 100% do saldo; perspectivas individuais de liquidez atribuem 50/50. Essa divisão não define responsabilidade econômica nem funding.
+19. **Conta conjunta mantém responsabilidade econômica independente, mas funding realizado é 50/50.** A Casa considera 100% do saldo e as perspectivas individuais de liquidez atribuem 50% para cada titular. Quando uma saída efetivamente ocorre por uma conta conjunta de dois membros, o funding realizado é atribuído 50/50 entre os titulares. Isso não altera a responsabilidade econômica do gasto, que continua definida pelas allocations do fato.
 20. **Saldo real é realizado.** Deriva de `account_balance_events` canônicos e `money_movements` realizados. Forecast, benefícios, reservas, investimentos, recebíveis, limite de cartão e LIS disponível não aumentam o saldo atual.
 21. **Vínculo com origem.** Refunds, pagamentos, liquidações, encargos, financiamentos e correções preservam relação auditável com o fato original. Refund não é renda comum.
 22. **Recorrência projeta, não antecipa resultado.** Uma regra recorrente pode gerar compromissos/ocorrências futuras, mas esses forecasts não são despesas econômicas realizadas antes da ocorrência efetiva. Confirmação/realização deve reutilizar ou vincular a ocorrência, nunca duplicá-la. Em cartão, a projeção entra na fatura/compromisso esperado sem consumir limite real; só a cobrança confirmada consome limite e a liquidação posterior continua sendo pagamento de fatura.
 23. **Passado é corrigido, não apagado.** Depois de efeitos dependentes, correções preservam histórico e recalculam o futuro. Exclusão financeira não é fluxo normal.
 24. **Atomicidade.** Operações compostas — transferências, pagamentos, correções, refunds e liquidações — gravam todas as pernas ou nenhuma. O frontend não coordena updates financeiros independentes.
 25. **Auditabilidade e idempotência.** Autor, Casa, origem, estado, valores e vínculos são rastreáveis. Ocorrências, parcelas e comandos repetidos não podem duplicar efeitos.
+26. **Entrada preserva beneficiário e destino.** A pessoa beneficiária da renda é definida independentemente da conta de destino. Em conta individual, a UX pode restringir os destinos às contas daquela pessoa e derivar essa associação automaticamente; conta conjunta pode ser destino de qualquer titular sem transformar a renda em renda conjunta.
+27. **Transferência entre membros pode liquidar acerto existente.** Quando dinheiro realizado sai de recurso exclusivo de um membro e entra em recurso exclusivo do outro, o Casa primeiro aplica o valor à posição realizada de acerto existente no mesmo sentido. O excedente nunca cria renda/despesa e exige intenção explícita: pode permanecer como valor a favor do remetente ou ser uma transferência definitiva sem devolução. Nenhuma dívida inversa nasce silenciosamente.
+28. **Roteamento financeiro preserva os comandos canônicos.** A interface descreve o acontecimento em linguagem cotidiana; o Casa escolhe por trás o comando financeiro compatível com recurso, origem, destino, titularidade e contexto. Essa camada não funde conceitos contábeis distintos nem autoriza o frontend a coordenar escritas financeiras independentes.
 
 ## Matriz resumida
 
@@ -96,7 +99,7 @@ Pagamento
 → não cria novo acerto
 ```
 
-Transferir mais do que a dívida não cria dívida inversa silenciosamente. O excedente requer intenção explícita e classificação própria.
+Transferir mais do que a posição de acerto não cria dívida inversa silenciosamente. O valor correspondente à posição existente pode liquidá-la automaticamente; o excedente exige intenção explícita e classificação própria. Se o remetente abrir mão do excedente, ele permanece uma transferência patrimonial entre membros e não é classificado como renda da Casa.
 
 ## Contratos puros existentes
 
