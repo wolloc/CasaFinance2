@@ -175,6 +175,10 @@ Reutilize `financial_parties`, `economic_allocations`, obrigações e eventos ca
 ## 10. Recorrência e projeções
 
 - Regra recorrente gera expectativas/projeções futuras, não despesas realizadas antecipadamente.
+- **Release 1 — despesas:** novas séries e revisões de séries de despesa são exclusivamente mensais (`frequency='monthly'`, `interval_count=1`). Não reintroduza semanal, quinzenal, anual ou intervalo customizado para despesa sem nova decisão explícita de produto.
+- A data econômica mensal preserva o dia-base; mês curto usa seu último dia válido sem deslocar a âncora futura. Para recorrência em conta, calendário de dia útil altera apenas a data financeira projetada, nunca a data econômica.
+- Séries históricas não mensais, caso existam, devem permanecer auditáveis e encerráveis; não reescreva fatos passados para adequá-los ao escopo novo.
+- Recorrência de entrada tem contrato separado e não deve ser restringida automaticamente pela simplificação das despesas.
 - Ocorrência confirmada deve ser ligada ao fato realizado sem duplicidade.
 - Edição de uma ocorrência e edição da série são operações distintas.
 - Encerrar recorrência não deve apagar fatos históricos já realizados.
