@@ -14,6 +14,7 @@ import { createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, f
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
+import { minimumRecurringStartDate, suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
@@ -72,6 +73,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringExpenseFrequency>('monthly');
   const [recurringIntervalCount, setRecurringIntervalCount] = useState(1);
   const [recurringStartDate, setRecurringStartDate] = useState('');
+  const [recurringStartDateTouched, setRecurringStartDateTouched] = useState(false);
   const [recurringEndDate, setRecurringEndDate] = useState('');
   const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
   const [createdRecurringRuleId, setCreatedRecurringRuleId] = useState<string | null>(null);
@@ -107,6 +109,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
   );
   const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
+  const recurringStartMinimum = minimumRecurringStartDate(date, today);
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -115,7 +118,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0');
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
-    setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringEndDate('');
+    setRecurring(false); setRecurringFrequency('monthly'); setRecurringIntervalCount(1); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
     setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setRecurrenceRecovery(null); setError(null);
   };
 
@@ -141,13 +144,38 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setHandledRequestId(openRequestId); reset();
     if (pending) {
       setStep(2); setRecurring(true); setRecurringFrequency(pending.frequency); setRecurringIntervalCount(pending.intervalCount);
-      setRecurringStartDate(pending.startDate); setRecurringEndDate(pending.endDate);
+      setRecurringStartDate(pending.startDate); setRecurringStartDateTouched(true); setRecurringEndDate(pending.endDate);
       setCreatedTransactionId(pending.transactionId); setCreatedRecurringRuleId(pending.recurringRuleId); setRecurrenceRecovery(pending);
     }
     setOpen(true); void loadContext();
   }, [openRequestId, handledRequestId, household?.id, currentMemberId]);
 
   useEffect(() => { setAccountId(''); }, [paymentChoice]);
+
+  useEffect(() => {
+    if (!recurring || recurringBlockedReason || recurringStartDateTouched) return;
+    try {
+      setRecurringStartDate(suggestRecurringStartDate(date, today, recurringFrequency, recurringIntervalCount));
+    } catch {
+      setRecurringStartDate('');
+    }
+  }, [recurring, recurringBlockedReason, recurringStartDateTouched, date, today, recurringFrequency, recurringIntervalCount]);
+
+  useEffect(() => {
+    if (!recurring || !recurringBlockedReason) return;
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+  }, [recurring, recurringBlockedReason]);
+
+  const enableRecurrence = () => {
+    if (recurringBlockedReason) return;
+    setRecurring(true); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    try { setRecurringStartDate(suggestRecurringStartDate(date, today, recurringFrequency, recurringIntervalCount)); }
+    catch { setRecurringStartDate(''); }
+  };
+
+  const disableRecurrence = () => {
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+  };
 
   const goToStep2 = () => {
     setError(null);
@@ -398,10 +426,22 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           </div>}
         </div>}
 
-        <fieldset className="rounded-2xl border border-amber-900/60 bg-amber-950/20 p-4"><legend className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-200"><CalendarClock className="h-4 w-4 text-amber-300" />Esse gasto se repete?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={!recurring} onClick={() => setRecurring(false)} label="Não" /><ChoiceButton active={recurring} onClick={() => { if (!recurringBlockedReason) setRecurring(true); }} label="Sim" /></div>{recurringBlockedReason && <p className="mt-3 text-xs text-amber-200">{recurringBlockedReason}</p>}{recurring && !recurringBlockedReason && <div className="mt-4 space-y-3 border-t border-amber-900/50 pt-4"><p className="text-xs text-slate-400">A despesa de hoje continua realizada uma única vez. As próximas ocorrências serão apenas projeções até você confirmá-las.</p><div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Frequência<select value={recurringFrequency} onChange={(event) => setRecurringFrequency(event.target.value as RecurringExpenseFrequency)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"><option value="weekly">Semanal</option><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm text-slate-300">A cada<input type="number" min="1" value={recurringIntervalCount} onChange={(event) => setRecurringIntervalCount(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div><div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={today} value={recurringStartDate} onChange={(event) => setRecurringStartDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label><label className="text-sm text-slate-300">Termina em <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || today} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div></div>}</fieldset>
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4" aria-label="Recorrência opcional">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300"><CalendarClock className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1"><p className="font-semibold text-slate-200">Repetir este gasto</p><p className="mt-0.5 text-xs text-slate-500">Opcional · próximas ocorrências entram como projeção.</p></div>
+            {!recurringBlockedReason && <button type="button" aria-pressed={recurring} onClick={recurring ? disableRecurrence : enableRecurrence} className={`min-h-10 shrink-0 rounded-xl px-3 text-sm font-bold ${recurring ? 'bg-slate-800 text-slate-200' : 'bg-blue-500/10 text-blue-300'}`}>{recurring ? 'Remover' : 'Adicionar'}</button>}
+          </div>
+          {recurringBlockedReason && <p className="mt-3 rounded-xl bg-slate-900/70 p-3 text-xs leading-5 text-slate-400"><strong className="text-slate-300">Não disponível neste caso.</strong> {recurringBlockedReason}</p>}
+          {recurring && !recurringBlockedReason && <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
+            <p className="text-xs leading-5 text-slate-400">Este gasto será registrado uma única vez. As próximas repetições ficam previstas até você confirmá-las quando acontecerem.</p>
+            <div className="grid grid-cols-2 gap-3"><label className="text-sm text-slate-300">Frequência<select value={recurringFrequency} onChange={(event) => { setRecurringFrequency(event.target.value as RecurringExpenseFrequency); setRecurringStartDateTouched(false); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"><option value="weekly">Semanal</option><option value="monthly">Mensal</option><option value="yearly">Anual</option></select></label><label className="text-sm text-slate-300">A cada<input type="number" min="1" value={recurringIntervalCount} onChange={(event) => { setRecurringIntervalCount(Number(event.target.value)); setRecurringStartDateTouched(false); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={recurringStartMinimum} value={recurringStartDate} onChange={(event) => { setRecurringStartDate(event.target.value); setRecurringStartDateTouched(true); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Sugerida automaticamente; você pode ajustar.</span></label><label className="text-sm text-slate-300">Termina em <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || recurringStartMinimum} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /></label></div>
+          </div>}
+        </section>
 
         {error && <ErrorBox text={error} />}
-        <div className="flex gap-3"><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 font-semibold"><ArrowLeft className="h-4 w-4" />Voltar</button><button type="submit" disabled={saving} className="flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button></div>
+        <div className="space-y-2"><button type="submit" disabled={saving} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-base font-black disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800"><ArrowLeft className="h-4 w-4" />Voltar</button></div>
       </div>}
     </form>
   </div>;
