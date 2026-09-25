@@ -29,6 +29,7 @@ test('past current and future cannot reuse the same visual semantics',()=>{
   assert.match(homeSource,/Fotografia histórica/);
   assert.match(homeSource,/Planejamento/);
   assert.match(homeSource,/Não é saldo realizado nem fato futuro garantido/);
+  assert.match(homeSource,/scheduled_settlement_inflow/);
   assert.match(homeSource,/não reutilizou dados do mês atual/i);
   assert.match(homeSource,/referenceMonth===currentReferenceMonth\?'mês atual'/);
 });
