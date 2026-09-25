@@ -12,7 +12,10 @@ const commitmentCenter = await readFile(new URL('../../src/components/app/Recurr
 test('Nova Despesa offers a recurrence only after the current economic fact', () => {
   assert.match(wizard, /Repetir este gasto/);
   assert.match(wizard, /Opcional · próximas ocorrências entram como projeção/);
-  assert.match(wizard, /Este gasto será registrado uma única vez/);
+  assert.match(wizard, /O gasto atual é registrado uma vez/);
+  assert.match(wizard, /uma nova ocorrência por mês/);
+  assert.doesNotMatch(wizard, /<option value="weekly">/);
+  assert.doesNotMatch(wizard, /<option value="yearly">/);
   assert.match(wizard, /createRecurringExpenseFromTransaction/);
   assert.match(wizard, /transactionId: savedTransactionId/);
   assert.match(wizard, /ensureRecurringExpenseHorizon/);
@@ -50,8 +53,9 @@ test('only simple card recurrence is enabled; unsupported financing remains bloc
   assert.match(commitmentCenter, /confirmRecurringCardExpenseOccurrence/);
 });
 
-test('projection horizon is one calendar year after the first occurrence', () => {
-  assert.equal(recurringExpenseHorizonDate('2026-09-14'), '2027-09-14');
-  assert.equal(recurringExpenseHorizonDate('2028-02-29'), '2029-03-01');
+test('initial projection horizon covers exactly twelve monthly occurrences including the first', () => {
+  assert.equal(recurringExpenseHorizonDate('2026-09-14'), '2027-08-14');
+  assert.equal(recurringExpenseHorizonDate('2028-02-29'), '2029-01-29');
+  assert.equal(recurringExpenseHorizonDate('2026-03-31'), '2027-02-28');
   assert.throws(() => recurringExpenseHorizonDate(''), /Data inicial/);
 });
