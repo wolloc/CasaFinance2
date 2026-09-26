@@ -41,7 +41,20 @@ test('Entradas exposes monthly navigation custom range and listed total',()=>{
 
 test('Entradas turns category beneficiary date and state into scannable visual tags',()=>{
   assert.match(source,/getCategoryVisual/);
-  assert.match(source,/beneficiaryByTransaction/);
+  assert.match(source,/beneficiariesByTransaction/);
   assert.match(source,/formatDate\(row\.transaction_date\)/);
   assert.match(source,/Detalhes e ações/);
+});
+
+
+test('Entradas derives its initial month from the household financial clock',()=>{
+  assert.match(source,/monthInTimeZone=\(timeZone:string\)=>dateInTimeZone\(timeZone\)\.slice\(0,7\)/);
+  assert.match(source,/monthInTimeZone\(household\?\.timezone\?\?'America\/Sao_Paulo'\)/);
+  assert.match(source,/monthInTimeZone\(household\.timezone\)/);
+});
+
+test('income visual tag remains deterministic when canonical movements involve more than one beneficiary',()=>{
+  assert.match(source,/new Map<string,string\[\]>\(\)/);
+  assert.match(source,/current\.includes\(item\.beneficiary_member_id\)/);
+  assert.match(source,/names\.join\(' \+ '\)/);
 });
