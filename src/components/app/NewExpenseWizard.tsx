@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, Banknote, CalendarClock, CreditCard, Landmark, LoaderCircle, PiggyBank, UserRound, Utensils, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarClock, CreditCard, Landmark, LoaderCircle, PiggyBank, Receipt, UserRound, Utensils, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
@@ -12,6 +12,7 @@ import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPl
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
 import { closeRecurringExpenseRule, createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction } from '../../finance/recurringExpenses.js';
 import { recurringExpenseBlockReason, recurringExpenseEndDate, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
+import { FinancialActionDialogHeader } from './FinancialActionDialogHeader.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
 import { consumeResourceExpenseIntent } from '../../finance/resourceExpenseIntent.js';
@@ -410,12 +411,9 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   if (!open) return null;
 
   return <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-    <form onSubmit={save} className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-700 bg-slate-900 p-5 text-slate-100">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-blue-300">Nova despesa</p>
-        <button type="button" aria-label="Fechar" onClick={() => setOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-800"><X className="h-5 w-5" /></button>
-      </div>
-
+    <form onSubmit={save} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+      <FinancialActionDialogHeader tone="expense" eyebrow="Gasto" title="Nova despesa" icon={<Receipt className="h-5 w-5"/>} onClose={()=>setOpen(false)} closeLabel="Fechar nova despesa"/>
+      <div className="p-4">
       {loading && <div className="flex min-h-40 items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin text-blue-300" /></div>}
 
       {!loading && recurrenceRecovery && <div className="mt-5 space-y-4">
@@ -435,7 +433,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         <label className="block text-sm text-slate-300">Onde/com quem? <span className="text-slate-500">(opcional)</span><input value={whereWithWhom} onChange={(event) => setWhereWithWhom(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>
         <label className="block text-sm text-slate-300">Categoria <span className="text-slate-500">(opcional)</span><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Sem categoria por enquanto</option>{expenseCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
         {error && <ErrorBox text={error} />}
-        <button type="button" onClick={goToStep2} className="min-h-12 w-full rounded-xl bg-blue-600 font-bold">Continuar</button>
+        <button type="button" onClick={goToStep2} className="min-h-12 w-full rounded-2xl bg-rose-600 font-bold">Continuar</button>
       </div>}
 
       {!loading && !recurrenceRecovery && step === 2 && <div className="mt-5 space-y-5">
@@ -479,8 +477,9 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
         </section>
 
         {error && <ErrorBox text={error} />}
-        <div className="space-y-2"><button type="submit" disabled={saving} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-base font-black disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800"><ArrowLeft className="h-4 w-4" />Voltar</button></div>
+        <div className="space-y-2"><button type="submit" disabled={saving} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 text-base font-black disabled:opacity-50">{saving && <LoaderCircle className="h-4 w-4 animate-spin" />}Registrar despesa</button><button type="button" onClick={() => { setError(null); setStep(1); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800"><ArrowLeft className="h-4 w-4" />Voltar</button></div>
       </div>}
+      </div>
     </form>
   </div>;
 }
