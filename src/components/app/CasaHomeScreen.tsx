@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, CalendarRange, ChevronLeft, ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, PiggyBank, TrendingUp, WalletCards, X } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, PiggyBank, TrendingUp, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
@@ -178,18 +178,15 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction}/>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}
 
-  <section>
-   <div className="mb-3 flex items-end justify-between gap-3"><div><h2 className="flex items-center gap-2 font-bold"><TrendingUp className="h-5 w-5 text-emerald-400"/>Fluxo deste mês</h2><p className="mt-1 text-xs text-slate-500">Recebido, esperado, realizado e ainda pela frente — sem misturar previsão com dinheiro que já entrou ou saiu.</p></div>{currentMonth&&<span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-bold text-slate-300">{monthLabel(currentMonth.financial_month)}</span>}</div>
-   {!availability.projection?unavailable('Não foi possível confirmar a projeção deste mês.'):!currentMonth?<p className="text-sm text-slate-400">Ainda não há projeção financeira para este mês.</p>:(()=>{const entered=Number(currentMonth.realized_true_income_in_month);const expected=Number(currentMonth.expected_reliable_income_remaining);const paid=Number(currentMonth.realized_commitments_in_month);const pending=Number(currentMonth.remaining_commitments_in_month)+Number(currentMonth.projected_recurring_commitments)+Number(currentMonth.prior_pending_outflow);const incomeTotal=entered+expected;const commitmentTotal=paid+pending;return <div className="space-y-3">
-    <article className="rounded-3xl border border-emerald-900/40 bg-emerald-950/15 p-4">
-     <div className="flex items-start justify-between gap-3"><div><p className="flex items-center gap-1 text-xs font-bold text-emerald-300"><ArrowUpRight className="h-4 w-4"/>Entradas</p><strong className="mt-1 block text-xl">{money(incomeTotal)}</strong></div><p className="text-right text-[11px] text-slate-400"><strong className="text-slate-200">{money(entered)}</strong> já entrou<br/>{money(expected)} ainda esperado</p></div>
-     {incomeTotal>0&&<div className="mt-3"><div className="mb-1 flex justify-between text-[10px] text-slate-500"><span>Quanto das entradas consideradas já chegou</span><span>{Math.round(ratio(entered,incomeTotal))}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-emerald-400" style={{width:`${ratio(entered,incomeTotal)}%`}}/></div></div>}
-    </article>
-    <article className="rounded-3xl border border-rose-900/40 bg-rose-950/10 p-4">
-     <div className="flex items-start justify-between gap-3"><div><p className="flex items-center gap-1 text-xs font-bold text-rose-300"><ArrowDownRight className="h-4 w-4"/>Compromissos</p><strong className="mt-1 block text-xl">{money(commitmentTotal)}</strong></div><p className="text-right text-[11px] text-slate-400"><strong className="text-slate-200">{money(paid)}</strong> já realizado/pago<br/>{money(pending)} ainda pela frente</p></div>
-     {commitmentTotal>0&&<div className="mt-3"><div className="mb-1 flex justify-between text-[10px] text-slate-500"><span>Quanto dos compromissos considerados já aconteceu</span><span>{Math.round(ratio(paid,commitmentTotal))}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-rose-400" style={{width:`${ratio(paid,commitmentTotal)}%`}}/></div></div>}
-    </article>
+  <section aria-labelledby="mes-em-resumo">
+   <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Mês em resumo</p><h2 id="mes-em-resumo" className="mt-1 font-bold">O que já aconteceu e o que ainda vem</h2></div>{currentMonth&&<span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-bold text-slate-300">{monthLabel(currentMonth.financial_month)}</span>}</div>
+   {!availability.projection?unavailable('Não foi possível confirmar a projeção deste mês.'):!currentMonth?<p className="text-sm text-slate-400">Ainda não há projeção financeira para este mês.</p>:(()=>{const entered=Number(currentMonth.realized_true_income_in_month);const expected=Number(currentMonth.expected_reliable_income_remaining);const realized=Number(currentMonth.realized_commitments_in_month);const pending=Number(currentMonth.remaining_commitments_in_month)+Number(currentMonth.projected_recurring_commitments)+Number(currentMonth.prior_pending_outflow);return <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-800 bg-slate-900/45 p-3 sm:grid-cols-4">
+    <article className="rounded-xl bg-emerald-950/15 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-300/80">Entrou</p><strong className="mt-1 block text-lg text-emerald-200">{money(entered)}</strong></article>
+    <article className="rounded-xl bg-slate-950/55 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ainda entra</p><strong className="mt-1 block text-lg">{money(expected)}</strong></article>
+    <article className="rounded-xl bg-rose-950/10 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-rose-300/80">Já comprometido</p><strong className="mt-1 block text-lg text-rose-200">{money(realized)}</strong></article>
+    <article className="rounded-xl bg-slate-950/55 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Ainda compromete</p><strong className="mt-1 block text-lg">{money(pending)}</strong></article>
    </div>})()}
+   <p className="mt-2 text-[11px] leading-4 text-slate-500">Aqui entra só o resumo do mês. Detalhes de entradas e gastos ficam nas áreas próprias; próximos eventos aparecem abaixo.</p>
   </section>
 
   <section className="rounded-[2rem] border border-blue-950/70 bg-gradient-to-br from-slate-900/90 via-slate-950 to-blue-950/35 p-4 sm:p-5">
