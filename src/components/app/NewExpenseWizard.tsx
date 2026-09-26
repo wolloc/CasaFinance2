@@ -14,6 +14,7 @@ import { closeRecurringExpenseRule, createRecurringExpenseFromTransaction, ensur
 import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
+import { consumeResourceExpenseIntent } from '../../finance/resourceExpenseIntent.js';
 import { minimumRecurringStartDate, suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
@@ -34,6 +35,7 @@ const casaResponsibilityAmount = (allocations: EconomicAllocation[]) => allocati
 
 export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const { user, household, householdMembers } = useSupabaseAuth();
+  const [resourceIntent,setResourceIntent]=useState(()=>consumeResourceExpenseIntent());
   const [open, setOpen] = useState(false);
   const [handledRequestId, setHandledRequestId] = useState(0);
   const [step, setStep] = useState<1 | 2>(1);
@@ -149,6 +151,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   }, [openRequestId, handledRequestId, household?.id, currentMemberId]);
 
   useEffect(() => { setAccountId(''); }, [paymentChoice]);
+
+  useEffect(() => {
+    if (!open || !resourceIntent || accounts.length === 0) return;
+    const account = accounts.find((item) => item.id === resourceIntent.accountId);
+    if (!account) { setResourceIntent(null); return; }
+    const intendedChoice: PaymentChoice = account.type === 'cash' ? 'cash' : account.type === 'meal_benefit' ? 'benefit' : 'account';
+    if (paymentChoice !== intendedChoice) { setPaymentChoice(intendedChoice); return; }
+    setAccountId(account.id);
+    setResourceIntent(null);
+  }, [open, resourceIntent, accounts, paymentChoice]);
 
   useEffect(() => {
     if (!recurring || recurringBlockedReason || recurringStartDateTouched) return;

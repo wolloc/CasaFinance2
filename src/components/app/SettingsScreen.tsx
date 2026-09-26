@@ -48,7 +48,7 @@ export function SettingsScreen(){
  const currentMember=householdMembers.find(member=>member.profile_id===user?.id);
  const canRename=(memberId:string)=>currentMember?.role==='owner'||currentMember?.id===memberId;
 
- if(area==='financial')return <div><Back onClick={()=>setArea('menu')}/><HouseholdFinancialSetup initialAccountId={accountReview?.accountId??null}/></div>;
+ if(area==='financial')return <div><Back onClick={()=>setArea('menu')}/><HouseholdFinancialSetup initialAccountId={accountReview?.accountId??null} initialAccountContext={accountReview?.source??null}/></div>;
  if(area==='categories')return <HouseholdCategoriesSetup onBack={()=>setArea('menu')}/>;
 
  return <div className="space-y-6">

@@ -201,7 +201,7 @@ Essas classes nunca são apresentadas juntas como se todo o patrimônio fosse sa
 - benefício é recurso restrito: carga não é renda e seu uso financia a despesa compatível;
 - cartão representa crédito: compra vai para fatura/compromissos e pagamento da fatura sai de uma conta escolhida sem criar nova despesa.
 
-**PROPOSTO — navegação contextual por recurso:** tornar cada item de conta, carteira, benefício, reserva ou investimento clicável na Casa. O detalhe do recurso apresentaria somente ações compatíveis com sua natureza e usaria o saldo daquele recurso como contexto. Exemplos: transferir, pagar, depositar, aportar ou resgatar. A implementação deve reutilizar os comandos canônicos já existentes, sem criar um segundo motor financeiro.
+**DEFINIDO e IMPLEMENTADO — navegação contextual por recurso:** tornar cada item de conta, carteira, benefício, reserva ou investimento clicável na Casa. O detalhe do recurso apresentaria somente ações compatíveis com sua natureza e usaria o saldo daquele recurso como contexto. Exemplos: transferir, pagar, depositar, aportar ou resgatar. A implementação deve reutilizar os comandos canônicos já existentes, sem criar um segundo motor financeiro.
 
 #### LIS
 
@@ -542,9 +542,9 @@ O Casa deve sempre conseguir responder:
 
 **IMPLEMENTADO:**
 
-- cartão na Casa abre diretamente seu contexto de fatura, com navegação temporal, itens da fatura e pagamento canônico.
+- cartão na Casa abre diretamente seu contexto de fatura, com navegação temporal, itens da fatura e pagamento canônico;
+- recursos exibidos em “Onde está nosso dinheiro” e “Meus recursos” abrem somente ações compatíveis com sua natureza e reutilizam os fluxos canônicos de despesa, transferência, investimento/reserva e edição.
 
 **PROPOSTO:**
 
-- transformar os recursos exibidos em “Onde está nosso dinheiro” em pontos de entrada para ações contextuais;
 - reduzir a importância visual da ação global “Acerto”, deslocando sua liquidação para transferências e contextos onde a posição entre pessoas realmente existe;
