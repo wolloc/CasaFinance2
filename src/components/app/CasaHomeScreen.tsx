@@ -16,6 +16,7 @@ import { listHouseholdResourcePositions, listMemberResourcePositions, type House
 import { UpcomingFinancialEvents } from './UpcomingFinancialEvents.js';
 import { ResourceActionRow, type ResourceNavigationAction } from './ResourceActionRow.js';
 import { getHouseholdReferenceProjection, getMemberReferenceProjection, getReferenceMonthContext, normalizeReferenceMonth, shiftReferenceMonth, type ReferenceMonthContext } from '../../finance/referenceMonthDashboard.js';
+import { FinancialPageHeader } from './FinancialPageHeader.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value.slice(0,10)}T12:00:00Z`));
@@ -95,7 +96,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const openingCash=referenceContext?.historical_opening_cash==null?null:Number(referenceContext.historical_opening_cash);
   const closingCash=referenceContext?.historical_closing_cash==null?null:Number(referenceContext.historical_closing_cash);
   return <div className="space-y-7">
-   <header><h1 className="text-2xl font-black">Casa</h1></header>
+   <FinancialPageHeader title="Casa"/>
    {monthNavigator}
    {selector}
    {referenceLoading?<LoaderCircle className="mx-auto mt-12 h-7 w-7 animate-spin text-blue-400"/>:referenceError||!referenceContext?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível confirmar este período. O Casa não reutilizou dados do mês atual.</p>:!referenceContext.can_navigate?<p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">Este mês é anterior ao início do acompanhamento financeiro da Casa.</p>:isPast?<>
@@ -123,7 +124,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const attributedResourceTotal=memberResources.reduce((sum,item)=>sum+Number(item.attributed_amount),0);
   const incomeTotal=current?Number(current.realized_true_income_in_month)+Number(current.expected_reliable_income_remaining):0;
   const fundingTotal=current?Number(current.realized_funding_in_month)+Number(current.projected_funding_remaining):0;
-  return <div className="space-y-7"><header><h1 className="text-2xl font-black">Casa</h1></header>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
+  return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section className="rounded-[2rem] border border-blue-900/70 bg-gradient-to-br from-blue-950 via-indigo-950 to-slate-900 p-5 shadow-xl shadow-blue-950/20">
     <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">Posso movimentar hoje</p><strong className="mt-1 block text-3xl">{money(current.opening_liquidity)}</strong><p className="mt-1 text-[11px] text-white/70">Liquidez atribuída a você agora.</p>
     <div className="mt-5 grid grid-cols-2 gap-2"><article className="rounded-2xl bg-white/10 p-3"><p className="text-[11px] text-white/70">Ainda entra</p><strong className="mt-1 block">{money(current.expected_reliable_income_remaining)}</strong></article><article className="rounded-2xl bg-white/10 p-3"><p className="text-[11px] text-white/70">Ainda pode sair</p><strong className="mt-1 block">{money(current.projected_funding_remaining)}</strong></article></div>
@@ -152,7 +153,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  }
 
  return <div className="space-y-7">
-  <header><h1 className="text-2xl font-black">Casa</h1></header>
+  <FinancialPageHeader title="Casa"/>
   {monthNavigator}
   {selector}
   {hasPartialFailure&&<p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">Algumas análises não puderam ser confirmadas agora. O Casa mantém visíveis apenas os dados que conseguiu ler e não substitui informações ausentes por R$ 0,00.</p>}
