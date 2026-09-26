@@ -102,13 +102,21 @@ test('login real do frontend entra na Casa e navega pelas áreas principais', as
   await login(page);
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
   await page.getByRole('button', { name: 'Gastos' }).click();
-  await expect(page.getByText('Compromissos do mês')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gastos realizados' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Compromissos do mês' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês seguinte' })).toBeVisible();
   await expect(page.getByText('Precisa fazer algo diferente?')).toHaveCount(0);
-  await expect(page.getByText('Recorrências')).toBeVisible();
+  await expect(page.getByText('Recorrências', { exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Entradas' }).click();
+  await expect(page.getByRole('heading', { name: 'Entradas' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês seguinte' })).toBeVisible();
+
   await page.getByRole('button', { name: 'Ajustes' }).click();
   for (const label of ['Casa e membros', 'Contas e cartões', 'Categorias', 'Minha conta']) await expect(page.getByText(label)).toBeVisible();
-  await expect(page.getByText('Recorrências')).toHaveCount(0);
+  await expect(page.getByText('Recorrências', { exact: true })).toHaveCount(0);
 });
 
 test('falha ao reler membros bloqueia o produto financeiro e oferece retry', async ({ page }) => {
