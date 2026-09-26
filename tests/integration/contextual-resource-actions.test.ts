@@ -31,11 +31,11 @@ test('resource actions route to existing canonical journeys',()=>{
  assert.match(app,/setResourceExpenseIntent/);
  assert.match(app,/openExpenseCreation\(\)/);
  assert.match(app,/setResourceAdjustmentIntent/);
- assert.match(app,/setAccountReviewIntent/);
+ assert.match(app,/setAccountReviewIntent\(\{accountId:action\.accountId,source:'resource-edit'\}\)/);
  assert.match(adjustment,/consumeResourceAdjustmentIntent/);
  assert.match(adjustment,/resourceIntent\?\.kind==='transfer'\?resourceIntent\.accountId/);
  assert.match(adjustment,/initialResourceId=\{resourceIntent\?\.kind==='reserve'/);
- assert.match(investment,/initialResourceId/);
+ assert.match(investment,/initialResourceId/);\n assert.match(investment,/setInvestmentAccountId\(''\)/);\n assert.match(investment,/resourceRows\.some\(item=>item\.account_id===initialResourceId\)/);
  assert.match(expense,/consumeResourceExpenseIntent/);
  assert.match(expense,/account\.type === 'cash' \? 'cash' : account\.type === 'meal_benefit' \? 'benefit' : 'account'/);
 });
