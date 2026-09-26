@@ -236,6 +236,8 @@ Exemplo: jantar de R$ 300 pago por Wallace com responsabilidade de R$ 150 para c
 
 Em compras financiadas por cartão, o acerto projetado nasce na origem econômica e é distribuído pelos mesmos compromissos financeiros da compra. O pagamento posterior da fatura realiza funding. **Não cria nova despesa e não cria novo acerto.** A liquidação do acerto deve ser explícita.
 
+**DEFINIDO e IMPLEMENTADO — histórico neutro:** acertos efetivamente realizados podem aparecer em uma timeline própria dentro do contexto de Acertos, com linguagem neutra e sem cores de renda/despesa. O item informa quem pagou, quem recebeu, data e valor. Ele reduz a posição entre membros, mas não altera resultado econômico.
+
 ### Terceiros
 
 Responsabilidade econômica, funding e obrigação são conceitos independentes:
