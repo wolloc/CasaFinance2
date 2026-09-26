@@ -358,27 +358,30 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
   const memberAmounts=new Map<string,number>();
 
   for(const ids of chunkValues(transactions.map(row=>row.id))){
-    const[positionsResponse,allocationsResponse,recurringResponse]=await Promise.all([
+    const[positionsResponse,allocationRowsPage,recurringResponse]=await Promise.all([
       client.from('financial_transaction_positions')
         .select('transaction_id,household_economic_amount,economic_state')
         .eq('household_id',householdId)
         .eq('economic_state','realized')
         .in('transaction_id',ids),
-      client.from('economic_allocations')
-        .select('transaction_id,responsible_member_id,responsible_party_id,amount')
-        .eq('household_id',householdId)
-        .in('transaction_id',ids),
+      collectPages<AllocationRow&{amount:string|number}>((from,to)=>
+        client.from('economic_allocations')
+          .select('transaction_id,responsible_member_id,responsible_party_id,amount')
+          .eq('household_id',householdId)
+          .in('transaction_id',ids)
+          .order('transaction_id',{ascending:true})
+          .range(from,to)
+      ),
       client.from('recurring_occurrences')
         .select('transaction_id,recurring_rule_id')
         .eq('household_id',householdId)
         .in('transaction_id',ids),
     ]);
     if(positionsResponse.error)throw positionsResponse.error;
-    if(allocationsResponse.error)throw allocationsResponse.error;
     if(recurringResponse.error)throw recurringResponse.error;
 
     for(const row of (positionsResponse.data??[]) as EconomicPositionRow[])positions.set(row.transaction_id,Number(row.household_economic_amount));
-    for(const row of (allocationsResponse.data??[]) as (AllocationRow&{amount:string|number})[]){
+    for(const row of allocationRowsPage){
       allocationRows.push(row);
       if(memberId&&row.responsible_member_id===memberId)memberAmounts.set(row.transaction_id,(memberAmounts.get(row.transaction_id)??0)+Number(row.amount??0));
     }
