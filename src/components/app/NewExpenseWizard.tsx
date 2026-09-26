@@ -11,11 +11,11 @@ import { createSimpleCardPixExpense } from '../../finance/simpleCardPixExpense.j
 import { createExternallyPaidExpense, createExternallyPaidExpenseWithRepaymentPlan } from '../../finance/externallyPaidExpense.js';
 import { createFinancialParty, listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
 import { closeRecurringExpenseRule, createRecurringExpenseFromTransaction, ensureRecurringExpenseHorizon, findRecurringExpenseRuleForTransaction } from '../../finance/recurringExpenses.js';
-import { recurringExpenseBlockReason, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
+import { recurringExpenseBlockReason, recurringExpenseEndDate, recurringExpenseHorizonDate } from '../../finance/newExpenseRecurrence.js';
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
 import { consumeResourceExpenseIntent } from '../../finance/resourceExpenseIntent.js';
-import { minimumRecurringStartDate, suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
+import { suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
@@ -75,6 +75,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const [recurringStartDate, setRecurringStartDate] = useState('');
   const [recurringStartDateTouched, setRecurringStartDateTouched] = useState(false);
   const [recurringEndDate, setRecurringEndDate] = useState('');
+  const [recurringDuration, setRecurringDuration] = useState<'3'|'6'|'12'|'ongoing'|'custom'>('12');
+  const [customRecurringMonths, setCustomRecurringMonths] = useState(5);
   const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
   const [createdRecurringRuleId, setCreatedRecurringRuleId] = useState<string | null>(null);
   const [recurrenceRecovery, setRecurrenceRecovery] = useState<PendingExpenseRecurrence | null>(null);
@@ -109,7 +111,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
   );
   const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
-  const recurringStartMinimum = minimumRecurringStartDate(date || today, today);
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -118,7 +119,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setPurchaseMode('single'); setInstallmentCount(2); setFinancialCharges('0');
     setPartySearch(''); setPayerPartyId(''); setNeedsRepayment(false); setRepaymentMode('one_time');
     setRepaymentInstallmentCount(2); setRepaymentDueDate(''); setRepaymentSourceAccountId('');
-    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate(''); setRecurringDuration('12'); setCustomRecurringMonths(5);
     setCreatedTransactionId(null); setCreatedRecurringRuleId(null); setRecurrenceRecovery(null); setError(null);
   };
 
@@ -173,18 +174,27 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
 
   useEffect(() => {
     if (!recurring || !recurringBlockedReason) return;
-    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate(''); setRecurringDuration('12'); setCustomRecurringMonths(5);
   }, [recurring, recurringBlockedReason]);
+
+  useEffect(() => {
+    if (!recurring || !recurringStartDate) return;
+    if (recurringDuration === 'ongoing') { setRecurringEndDate(''); return; }
+    const count = recurringDuration === 'custom' ? customRecurringMonths : Number(recurringDuration);
+    if (!Number.isInteger(count) || count < 1) { setRecurringEndDate(''); return; }
+    try { setRecurringEndDate(recurringExpenseEndDate(recurringStartDate, count)); }
+    catch { setRecurringEndDate(''); }
+  }, [recurring, recurringStartDate, recurringDuration, customRecurringMonths]);
 
   const enableRecurrence = () => {
     if (recurringBlockedReason) return;
-    setRecurring(true); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    setRecurring(true); setRecurringStartDateTouched(false); setRecurringEndDate(''); setRecurringDuration('12'); setCustomRecurringMonths(5);
     try { setRecurringStartDate(suggestRecurringStartDate(date, today)); }
     catch { setRecurringStartDate(''); }
   };
 
   const disableRecurrence = () => {
-    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate('');
+    setRecurring(false); setRecurringStartDate(''); setRecurringStartDateTouched(false); setRecurringEndDate(''); setRecurringDuration('12'); setCustomRecurringMonths(5);
   };
 
   const goToStep2 = () => {
@@ -450,7 +460,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           {recurringBlockedReason && <p className="mt-3 rounded-xl bg-slate-900/70 p-3 text-xs leading-5 text-slate-400"><strong className="text-slate-300">Não disponível neste caso.</strong> {recurringBlockedReason}</p>}
           {recurring && !recurringBlockedReason && <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
             <p className="text-xs leading-5 text-slate-400">O gasto atual é registrado uma vez. Depois, o Casa prevê <strong className="text-slate-300">uma nova ocorrência por mês</strong>, no mesmo dia-base. Em conta, fim de semana ou feriado nacional ajusta somente a data financeira prevista.</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300">Primeira repetição<input required type="date" min={recurringStartMinimum} value={recurringStartDate} onChange={(event) => { setRecurringStartDate(event.target.value); setRecurringStartDateTouched(true); }} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Depois disso, repete mensalmente no mesmo dia-base.</span></label><label className="text-sm text-slate-300">Até quando? <span className="text-slate-500">(opcional)</span><input type="date" min={recurringStartDate || recurringStartMinimum} value={recurringEndDate} onChange={(event) => setRecurringEndDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3" /><span className="mt-1 block text-[11px] text-slate-500">Sem data final, a série continua até você encerrar.</span></label></div>
+            <div className="space-y-3"><div className="rounded-xl bg-slate-900/70 p-3 text-xs text-slate-400"><span className="block font-semibold text-slate-300">Primeira repetição</span><span>{recurringStartDate ? new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${recurringStartDate}T12:00:00Z`)).replace('.','') : 'Calculando…'}</span><span className="mt-1 block">O Casa calcula automaticamente o próximo mês preservando o dia-base.</span></div><fieldset><legend className="text-sm font-semibold text-slate-200">Por quanto tempo quer repetir?</legend><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"><ChoiceButton active={recurringDuration==='3'} onClick={()=>setRecurringDuration('3')} label="3 meses"/><ChoiceButton active={recurringDuration==='6'} onClick={()=>setRecurringDuration('6')} label="6 meses"/><ChoiceButton active={recurringDuration==='12'} onClick={()=>setRecurringDuration('12')} label="12 meses"/><ChoiceButton active={recurringDuration==='ongoing'} onClick={()=>setRecurringDuration('ongoing')} label="Até eu parar"/></div><button type="button" onClick={()=>setRecurringDuration('custom')} className={`mt-2 min-h-10 rounded-xl border px-3 text-xs font-semibold ${recurringDuration==='custom'?'border-blue-500 bg-blue-950/40 text-blue-200':'border-slate-700 text-slate-400'}`}>Outro período</button>{recurringDuration==='custom'&&<label className="mt-2 block text-sm text-slate-300">Quantas próximas ocorrências?<input type="number" min="1" max="120" value={customRecurringMonths} onChange={event=>setCustomRecurringMonths(Math.max(1,Math.min(120,Number(event.target.value)||1)))} className="mt-1 min-h-11 w-full rounded-xl bg-slate-800 p-3"/><span className="mt-1 block text-[11px] text-slate-500">Ex.: 5 significa as próximas 5 ocorrências mensais.</span></label>}<p className="mt-2 text-[11px] text-slate-500">{recurringDuration==='ongoing'?'Continua mensalmente até você encerrar.':`${recurringDuration==='custom'?customRecurringMonths:Number(recurringDuration)} próximas ocorrências · término calculado automaticamente.`}</p></fieldset></div>
           </div>}
         </section>
 

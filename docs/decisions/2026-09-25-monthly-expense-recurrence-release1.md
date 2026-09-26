@@ -55,7 +55,9 @@ A Nova Despesa não pergunta frequência nem intervalo.
 
 Ao escolher **Repetir este gasto**, a pessoa vê somente:
 
-- primeira repetição;
-- até quando (opcional).
+- a primeira repetição calculada automaticamente a partir do gasto atual;
+- por quanto tempo deseja repetir: atalhos de 3, 6 ou 12 próximas ocorrências, outro número de meses ou até encerrar manualmente.
+
+A duração é contada em **próximas ocorrências**. Ex.: “6 meses” significa seis novas ocorrências futuras e não inclui o gasto atual já realizado. A data final continua sendo derivada internamente para o contrato canônico existente.
 
 O Casa explica que a repetição é mensal e preserva o mesmo dia-base.

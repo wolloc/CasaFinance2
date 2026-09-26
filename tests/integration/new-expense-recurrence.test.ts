@@ -100,3 +100,14 @@ test('wizard migrates legacy recurrence intent without recreating the economic e
   assert.match(wizard, /A despesa já está salva/);
   assert.match(wizard, /sem cadastrar o gasto novamente/);
 });
+
+
+test('recurrence duration is expressed as future occurrences instead of a manual end date', () => {
+  assert.match(wizard, /Por quanto tempo quer repetir\?/);
+  assert.match(wizard, /3 meses/);
+  assert.match(wizard, /6 meses/);
+  assert.match(wizard, /12 meses/);
+  assert.match(wizard, /Até eu parar/);
+  assert.match(wizard, /Quantas próximas ocorrências\?/);
+  assert.doesNotMatch(wizard, /Até quando\? <span/);
+});
