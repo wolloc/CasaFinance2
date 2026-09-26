@@ -56,8 +56,9 @@ test('perspectiva individual preserva responsabilidade e valor original do gasto
  assert.match(economicQuery,/memberAmounts\.get\(row\.id\)/);
  assert.match(economicQuery,/original_amount:String\(row\.amount\)/);
  assert.match(economicQuery,/household_amount:String\(householdAmount\)/);
- assert.match(browser,/Sua parte · total da compra/);
- assert.match(browser,/compra \{money\(original\)\}/);
+ assert.match(browser,/Sua parte · valor original/);
+ assert.match(browser,/valor original \{money\(original\)\}/);
+ assert.match(service,/original_amount:row\.source_transaction_id/);
 });
 
 test('listas de Gastos carregam categoria visual e responsabilidade sem inferir comprador',()=>{
@@ -72,7 +73,7 @@ test('listas de Gastos carregam categoria visual e responsabilidade sem inferir 
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
  assert.match(browser,/\[household\?\.id,month,mode,perspective,refreshKey,refreshVersion\]/);
- assert.match(screen,/<ExpenseMonthBrowser perspective=\{perspective\} onPerspectiveChange=\{onPerspectiveChange\} refreshKey=\{expenseListVersion\} onOpenTransaction=\{\(transactionId\)=>\{setDetailTransactionId\(transactionId\);setDetailActionsOpen\(false\)\}\} \/>/);
+ assert.match(screen,/onOpenTransaction=\{\(transactionId,recurringRuleId\)=>\{setDetailTransactionId\(transactionId\);setDetailRecurringRuleId\(recurringRuleId\?\?null\)/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
 
@@ -103,4 +104,15 @@ test('perspectiva de morador usa responsabilidade econômica e mantém comprador
  assert.match(service,/responsible_member_id/);
  assert.match(browser,/selectedMember/);
  assert.doesNotMatch(service,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
+});
+
+
+test('Gastos usa lista de página inteira e leva a recorrência para o detalhe do lançamento',()=>{
+ assert.match(browser,/return <section className="text-slate-100">/);
+ assert.doesNotMatch(browser,/return <section className="rounded-2xl border border-slate-800 bg-slate-900\/60 p-4/);
+ assert.match(service,/from\('recurring_occurrences'\)/);
+ assert.match(service,/recurring_rule_id/);
+ assert.match(screen,/Gerenciar esta recorrência/);
+ assert.match(screen,/focusRuleId=\{detailRecurringRuleId\}/);
+ assert.doesNotMatch(screen,/>Recorrências<span/);
 });
