@@ -72,7 +72,7 @@ test('listas de Gastos carregam categoria visual e responsabilidade sem inferir 
 
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
- assert.match(browser,/\[household\?\.id,month,customRange,rangeStart,rangeEnd,mode,perspective,refreshKey,refreshVersion\]/);
+ assert.match(browser,/\[household\?\.id,month,customRange,customRangeReady,rangeStart,rangeEnd,mode,perspective,refreshKey,refreshVersion\]/);
  assert.match(screen,/onOpenTransaction=\{\(transactionId,recurringRuleId\)=>\{setDetailTransactionId\(transactionId\);setDetailRecurringRuleId\(recurringRuleId\?\?null\)/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
