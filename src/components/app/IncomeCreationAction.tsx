@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase.js';
 import { listHouseholdCategories, type HouseholdCategory } from '../../finance/householdCategories.js';
 import { createIncomeFact, incomeNatureLabels, type IncomeConfidence, type IncomeNature } from '../../finance/incomeFacts.js';
 import { isTransactionalResource, listInvestmentReserveResources, type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
-import { listHouseholdFinancialAccounts } from '../../finance/householdFinancialAccounts.js';
+import { listIncomeDestinationAccounts } from '../../finance/householdFinancialAccounts.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
 
 const normalizeAmount=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
@@ -36,9 +36,9 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   const[categoryRows,balanceRows,financial]=await Promise.all([
    listHouseholdCategories(supabase,household.id),
    listInvestmentReserveResources(supabase,household.id),
-   listHouseholdFinancialAccounts(supabase,household.id),
+   listIncomeDestinationAccounts(supabase,household.id),
   ]);
-  const accountById=new Map(financial.accounts.map(account=>[account.id,account]));
+  const accountById=new Map(financial.map(account=>[account.id,account]));
   setCategories(categoryRows.filter(category=>category.type==='income'));
   setResources(balanceRows.filter(isTransactionalResource).flatMap(resource=>{
    const account=accountById.get(resource.account_id);
