@@ -67,3 +67,12 @@ test('Acertos realizados podem ser resolvidos diretamente da posição humana na
   assert.match(settlements,/pode ter a receber de/);
   assert.match(settlements,/Ainda não existe valor para acertar agora/);
 });
+
+test('Home mostra histórico de acertos como movimento neutro, não renda ou gasto',()=>{
+  assert.match(settlements,/Histórico de acertos/);
+  assert.match(settlements,/Movimentos neutros: reduzem o que alguém devia sem virar renda ou gasto/);
+  assert.match(settlements,/Acerto concluído/);
+  assert.match(settlements,/event\.kind==='explicit_settlement'/);
+  assert.match(settlements,/event\.state==='realized'/);
+  assert.match(settlements,/text-cyan-200/);
+});
