@@ -352,20 +352,21 @@ Selecionar somente um membro significa que o gasto é integralmente responsabili
 
 **Outra pessoa envolvida** permite selecionar terceiro já cadastrado ou cadastrar uma nova pessoa sem abandonar o fluxo. O mesmo componente contextual de busca/cadastro deve ser reutilizado sempre que o produto precisar selecionar um terceiro.
 
-#### Como foi pago?
+#### De onde saiu ou será cobrado?
 
-Opções conceituais:
+**DEFINIDO — seleção orientada pelo recurso real:** em vez de pedir primeiro uma categoria abstrata de pagamento, a Nova Despesa mostra os recursos financeiros já cadastrados — contas, poupança, carteira/dinheiro, benefícios e cartões — com identificação e titularidade suficientes para a pessoa reconhecer o recurso correto. **Outra pessoa pagou** permanece como alternativa explícita.
 
-- Conta / Pix;
-- Carteira / dinheiro;
-- VA/VR/benefício;
-- Cartão de crédito;
-- Pix por cartão de crédito;
-- Outra pessoa pagou.
+Ao selecionar uma conta, poupança, carteira ou benefício, o Casa deriva a rota de conta compatível sem perguntar novamente o tipo do recurso. Pix/débito podem ser tratados como detalhe da conta quando necessário, sem criar outro fato financeiro.
 
-O usuário informa o fato e o recurso utilizado; o Casa determina funding, caixa, compromisso e obrigação.
+Ao selecionar um cartão, o fluxo abre somente as possibilidades daquele cartão:
 
-Conta, carteira ou benefício efetivamente usados reduzem imediatamente o saldo do recurso correspondente. Compra em cartão não reduz conta bancária no momento da compra.
+- compra à vista;
+- compra parcelada;
+- Pix com este cartão.
+
+Se o Pix por cartão tiver parcelamento, essa característica continua disponível dentro do contexto do próprio cartão. Principal e encargos permanecem separados no motor.
+
+O usuário informa o acontecimento e o recurso utilizado; o Casa determina funding, caixa, compromisso e obrigação. Conta, carteira ou benefício efetivamente usados reduzem imediatamente o saldo do recurso correspondente. Compra ou Pix financiado no cartão não reduz conta bancária no momento da operação.
 
 ### Etapa 3 — somente quando necessária
 
