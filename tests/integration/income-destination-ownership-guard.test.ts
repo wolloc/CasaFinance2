@@ -8,13 +8,13 @@ const screen=await readFile(new URL('../../src/components/app/IncomeCreationActi
 test('owner-first income is enforced in both UI and canonical database writes',()=>{
  assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
  assert.match(migration,/account_ownerships/);
- assert.match(migration,/ownership\.account_id=new\.destination_account_id/);
- assert.match(migration,/ownership\.member_id=new\.beneficiary_member_id/);
+ assert.match(migration,/ownership\.account_id=p_planned_destination_account_id/);
+ assert.match(migration,/ownership\.member_id=p_beneficiary_member_id/);
  assert.match(migration,/raise exception 'income destination account must belong to beneficiary'/);
 });
 
 test('income ownership guard also protects direct or stale callers without changing cash semantics',()=>{
- assert.match(migration,/before insert or update of beneficiary_member_id,destination_account_id/);
- assert.match(migration,/new\.kind='income'/);
+ assert.match(migration,/create or replace function public\.create_income_fact/);
+ assert.match(migration,/p_planned_destination_account_id/);
  assert.doesNotMatch(migration,/transactions.*insert|money_movements.*insert|update public\.accounts/i);
 });
