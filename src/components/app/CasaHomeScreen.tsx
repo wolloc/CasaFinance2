@@ -76,7 +76,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
    <button type="button" aria-label="Mês anterior" disabled={previousDisabled} onClick={()=>{setPeriodPickerOpen(false);setReferenceMonth(previousMonth);}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"><ChevronLeft className="h-5 w-5"/></button>
    <button type="button" aria-expanded={periodPickerOpen} onClick={()=>setPeriodPickerOpen(value=>!value)} className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-xl text-center hover:bg-slate-900">
     <strong className="block capitalize">{monthLabel(referenceMonth)}</strong>
-    <span className="text-[11px] text-slate-500">Toque para escolher o mês</span>
+    <span className="text-xs text-slate-400">Toque para escolher o mês</span>
    </button>
    <button type="button" aria-label="Mês seguinte" disabled={referenceLoading} onClick={()=>{setPeriodPickerOpen(false);setReferenceMonth(shiftReferenceMonth(referenceMonth,1));}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"><ChevronRight className="h-5 w-5"/></button>
   </div>
