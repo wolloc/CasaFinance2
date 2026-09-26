@@ -14,7 +14,7 @@ export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
  const[loadError,setLoadError]=useState<string|null>(null);const[error,setError]=useState<string|null>(null);const[success,setSuccess]=useState<string|null>(null);
  const[editing,setEditing]=useState<HouseholdCategory|null>(null);const[formOpen,setFormOpen]=useState(false);
  const[name,setName]=useState('');const[type,setType]=useState<HouseholdCategoryType>('expense');
- const[icon,setIcon]=useState('tag');const[color,setColor]=useState('');
+ const[icon,setIcon]=useState('');const[color,setColor]=useState('');
 
  const clearLoadedContext=()=>{setCategories([]);setEditing(null);setFormOpen(false);};
  const refresh=async()=>{if(!supabase||!household)return;setLoading(true);setLoadError(null);setError(null);try{setCategories(await listHouseholdCategories(supabase,household.id));}catch{clearLoadedContext();setLoadError('Não foi possível conferir as categorias agora.');}finally{setLoading(false);}};
@@ -26,8 +26,10 @@ export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
    setName(category?.name??'');
    setType(category?.type??'expense');
    const visual=getCategoryVisual(category??{name:'',type:'expense'});
-   setIcon(category?.icon?.trim()||visual.iconName||'tag');
-   setColor(category?.color?.trim()||'');
+   const storedIcon=category?.icon?.trim()||'';
+   const storedColor=category?.color?.trim().toLocaleLowerCase('en-US')||'';
+   setIcon(storedIcon&&storedIcon!=='tag'?storedIcon:'');
+   setColor(storedColor&&storedColor!=='#64748b'?storedColor:'');
    setFormOpen(true);setError(null);
  };
  const save=async(event:FormEvent)=>{
@@ -67,7 +69,7 @@ export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
     <label className="block text-sm font-semibold">Nome<input autoFocus required maxLength={80} value={name} onChange={event=>setName(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-950 p-3 text-base" placeholder="Ex.: Mercado"/></label>
     <label className="block text-sm font-semibold">Usada em<select value={type} onChange={event=>setType(event.target.value as HouseholdCategoryType)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-950 p-3">{CATEGORY_TYPES.map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label>
 
-    <fieldset><legend className="mb-2 text-sm font-semibold">Ícone</legend><div className="grid grid-cols-6 gap-2 sm:grid-cols-9">{CATEGORY_ICON_OPTIONS.map(option=>{const SelectedIcon=option.Icon;const selected=icon===option.name;return <button key={option.name} type="button" title={option.label} aria-label={`Ícone ${option.label}`} aria-pressed={selected} onClick={()=>setIcon(option.name)} className={`flex aspect-square items-center justify-center rounded-xl border transition ${selected?'border-blue-400 bg-blue-500/15 text-blue-200':'border-slate-800 bg-slate-950 text-slate-500 hover:border-slate-600 hover:text-slate-300'}`}><SelectedIcon className="h-5 w-5"/></button>})}</div></fieldset>
+    <fieldset><legend className="mb-2 text-sm font-semibold">Ícone</legend><div className="grid grid-cols-6 gap-2 sm:grid-cols-9"><button type="button" title="Automático" aria-label="Ícone automático" aria-pressed={!icon} onClick={()=>setIcon('')} className={`flex aspect-square items-center justify-center rounded-xl border text-[10px] font-bold transition ${!icon?'border-blue-400 bg-blue-500/15 text-blue-200':'border-slate-800 bg-slate-950 text-slate-500 hover:border-slate-600 hover:text-slate-300'}`}>Auto</button>{CATEGORY_ICON_OPTIONS.map(option=>{const SelectedIcon=option.Icon;const selected=icon===option.name;return <button key={option.name} type="button" title={option.label} aria-label={`Ícone ${option.label}`} aria-pressed={selected} onClick={()=>setIcon(option.name)} className={`flex aspect-square items-center justify-center rounded-xl border transition ${selected?'border-blue-400 bg-blue-500/15 text-blue-200':'border-slate-800 bg-slate-950 text-slate-500 hover:border-slate-600 hover:text-slate-300'}`}><SelectedIcon className="h-5 w-5"/></button>})}</div></fieldset>
 
     <fieldset><legend className="mb-2 text-sm font-semibold">Cor</legend><div className="flex flex-wrap gap-2"><button type="button" aria-label="Cor automática" aria-pressed={!color} onClick={()=>setColor('')} className={`min-h-10 rounded-xl border px-3 text-xs font-bold ${!color?'border-blue-400 bg-blue-500/15 text-blue-200':'border-slate-800 text-slate-400'}`}>Automática</button>{CATEGORY_COLOR_OPTIONS.map(option=><button key={option} type="button" aria-label={`Cor ${option}`} aria-pressed={color===option} onClick={()=>setColor(option)} style={{backgroundColor:option}} className={`h-10 w-10 rounded-xl border-2 ${color===option?'border-white':'border-transparent'}`}/>)}</div></fieldset>
 
