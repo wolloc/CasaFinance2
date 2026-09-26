@@ -57,3 +57,13 @@ test('Home não transforma planejamento futuro normal em alerta de atenção',()
   assert.match(projectionReview,/Planejamentos futuros normais continuam na projeção sem virar alerta/);
   assert.doesNotMatch(projectionReview,/Atualizar previsões/);
 });
+
+test('Acertos realizados podem ser resolvidos diretamente da posição humana na Home',()=>{
+  assert.match(settlements,/Acertar agora/);
+  assert.match(settlements,/kind:'members'/);
+  assert.match(settlements,/debtorMemberId:row\.debtor_member_id/);
+  assert.match(settlements,/creditorMemberId:row\.creditor_member_id/);
+  assert.match(settlements,/amount:Number\(row\.realized_outstanding\)/);
+  assert.match(settlements,/pode ter a receber de/);
+  assert.match(settlements,/Ainda não existe valor para acertar agora/);
+});

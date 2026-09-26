@@ -224,6 +224,10 @@ Na Casa, o cartão deve permanecer **compacto**. **DEFINIDO e IMPLEMENTADO — n
 
 ### Acertos entre membros
 
+
+**DEFINIDO e IMPLEMENTADO — ação contextual:** quando existir posição realizada entre membros, a Home apresenta a frase humana de quem tem a receber de quem e oferece **Acertar agora** no próprio contexto. A ação pré-preenche devedor, credor e o valor máximo ainda devido, mas o fluxo canônico relê a posição e exige confirmação das contas de origem/destino antes de movimentar caixa. Posição apenas projetada continua informativa e não oferece liquidação antecipada.
+
+
 O acerto é uma conta-corrente contínua, sem reset mensal. Nasce da diferença entre responsabilidade econômica e funding realizado ou projetado.
 
 Exemplo: jantar de R$ 300 pago por Wallace com responsabilidade de R$ 150 para cada membro. Guilherme deve R$ 150 a Wallace.
