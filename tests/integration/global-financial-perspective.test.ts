@@ -28,8 +28,9 @@ test('perspectiva de gastos usa responsabilidade econômica e nunca comprador co
 
 test('perspectiva de entradas usa beneficiário canônico',()=>{
  assert.match(income,/beneficiary_member_id/);
- assert.match(income,/beneficiaryByTransaction/);
- assert.match(income,/beneficiaries\.get\(row\.id\)===perspective/);
+ assert.match(income,/beneficiariesByTransaction/);
+ assert.match(income,/beneficiaries\.get\(row\.id\)\?\.includes\(perspective\)/);
+ assert.match(income,/memberIds\.includes\(member\.id\)/);
  assert.doesNotMatch(income,/buyer_member_id/);
 });
 
