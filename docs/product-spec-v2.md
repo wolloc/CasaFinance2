@@ -227,6 +227,8 @@ Na Casa, o cartão deve permanecer **compacto**. **DEFINIDO e IMPLEMENTADO — n
 
 **DEFINIDO e IMPLEMENTADO — ação contextual:** quando existir posição realizada entre membros, a Home apresenta a frase humana de quem tem a receber de quem e oferece **Acertar agora** no próprio contexto. A ação pré-preenche devedor, credor e o valor máximo ainda devido, mas o fluxo canônico relê a posição e exige confirmação das contas de origem/destino antes de movimentar caixa. Posição apenas projetada continua informativa e não oferece liquidação antecipada.
 
+**DEFINIDO — contas compatíveis no acerto:** ao liquidar uma posição entre membros, a conta de origem é filtrada pelos recursos transacionais vinculados a quem paga e a conta de destino pelos recursos transacionais vinculados a quem recebe. Contas conjuntas permanecem elegíveis para ambos quando a titularidade canônica assim indicar. Trocar pagador/recebedor limpa uma conta previamente selecionada se ela deixar de ser compatível. A filtragem é prevenção de erro de UX e não muda a natureza neutra do acerto.
+
 
 O acerto é uma conta-corrente contínua, sem reset mensal. Nasce da diferença entre responsabilidade econômica e funding realizado ou projetado.
 
