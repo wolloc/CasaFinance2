@@ -24,6 +24,8 @@ test('category color is editable and persisted through the existing category row
 });
 
 test('stored category visual remains the single source reused by ledgers',()=>{
- assert.match(visuals,/stored && icons\[stored\] \? stored : inferredIconName/);
+ assert.match(visuals,/stored && stored!=='tag' && icons\[stored\] \? stored : inferredIconName/);
+ assert.match(visuals,/storedColor && storedColor!=='#64748b'/);
+ assert.match(setup,/Ícone automático/);
  assert.match(setup,/getCategoryVisual\(category\)/);
 });
