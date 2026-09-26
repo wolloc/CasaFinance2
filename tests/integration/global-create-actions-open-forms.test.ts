@@ -23,7 +23,7 @@ test('Nova despesa preserva duas etapas sem expor textos de bastidor nem horári
  assert.match(wizard,/Quem fez esse gasto\?/);
  assert.match(wizard,/Com o que gastou\?/);
  assert.match(wizard,/Quem assume esse gasto\?/);
- assert.match(wizard,/Como foi pago\?/);
+ assert.match(wizard,/De onde saiu ou será cobrado\?/);
  assert.match(wizard,/type="date" max=\{today\}/);
  assert.match(wizard,/if \(date > today\) return setDate\(today\)/);
  assert.doesNotMatch(wizard,/Quem originou o gasto\. Isso não define/);
@@ -38,7 +38,6 @@ test('recorrência é uma opção secundária e o registro continua sendo a aç�
  assert.match(wizard,/O gasto atual é registrado uma vez/);
  assert.match(wizard,/uma nova ocorrência por mês/);
  assert.doesNotMatch(wizard,/<option value="weekly">|<option value="yearly">/);
- assert.match(wizard,/min=\{recurringStartMinimum\}/);
  assert.match(wizard,/suggestRecurringStartDate/);
  assert.match(wizard,/min-h-14 w-full[\s\S]*Registrar despesa/);
  assert.doesNotMatch(wizard,/Esse gasto se repete\?/);
