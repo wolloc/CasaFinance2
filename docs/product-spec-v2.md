@@ -65,7 +65,7 @@ A ordem conceitual é:
 
 1. **Resumo principal** — quanto temos agora, quanto já tem destino, quanto ainda entra, quanto ainda sai e quanto o mês pode terminar tendo;
 2. **Precisa de atenção** — somente exceções acionáveis; quando não houver urgência, o estado deve ser compacto;
-3. **Este mês** — fluxo visual de entradas e compromissos, separando realizado de previsto;
+3. **Mês em resumo** — síntese compacta de quanto entrou, quanto ainda entra, quanto já foi comprometido e quanto ainda compromete; a exploração detalhada pertence a Entradas/Gastos;
 4. **Contas e recursos** — contas/dinheiro, benefícios, reservas e investimentos, mantendo disponibilidade separada de patrimônio;
 5. **Cartões** — fotografia compacta por cartão, com fatura atual, vencimento, limite livre e compromissos futuros; detalhes e pagamento ficam em Faturas/Cartão;
 6. **Próximos acontecimentos** — eventos dos próximos dias, como entradas, compromissos, faturas, recorrências e acertos, sem duplicar o centro de atenção;
@@ -149,9 +149,9 @@ Mostra somente situações acionáveis. Uma previsão futura normal não é aler
 
 Alertas com a mesma causa são consolidados.
 
-### Este mês
+### Mês em resumo
 
-Os indicadores seguem o **mês financeiro**, e não necessariamente a data da compra:
+A Home não replica as listas de Entradas e Gastos. Ela mostra apenas a síntese mensal necessária para orientar leitura rápida. Os indicadores seguem o **mês financeiro**, e não necessariamente a data da compra:
 
 - **Entrou**;
 - **Ainda entra**;
