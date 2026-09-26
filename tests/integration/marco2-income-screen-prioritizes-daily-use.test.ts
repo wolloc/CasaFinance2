@@ -12,11 +12,13 @@ test('Entradas abre como lista e a criação só aparece quando a ação global 
   assert.match(creation,/aria-label="Nova entrada"/);
 });
 
-test('recorrências ficam depois da lista principal e sob demanda', () => {
+test('criação recorrente fica sob demanda e gestão pertence à ocorrência', () => {
   const ledger = source.indexOf('<section className="space-y-3">');
-  const advanced = source.indexOf('<details');
+  const advanced = source.indexOf('Outras ações');
   assert.ok(ledger >= 0 && advanced > ledger);
-  assert.match(source, /Recorrências e outras ações/);
+  assert.match(source, /Gerenciar esta recorrência/);
+  assert.match(source, /recurringRuleByTransaction/);
+  assert.match(source, /focusRuleId=\{activeRecurringRuleId\}/);
 });
 
 test('contextual receipt stays visible when Home opens a delayed income', () => {
@@ -33,7 +35,10 @@ test('Entradas exposes monthly navigation custom range and listed total',()=>{
   assert.match(source,/Mês anterior/);
   assert.match(source,/Mês seguinte/);
   assert.match(source,/Escolher mês das entradas/);
-  assert.match(source,/Escolher período personalizado/);
+  assert.match(source,/Toque para escolher o período/);
+  assert.match(source,/Mês inteiro/);
+  assert.match(source,/Personalizado/);
+  assert.match(source,/periodPickerOpen/);
   assert.match(source,/Total listado/);
   assert.match(source,/rangeStart/);
   assert.match(source,/rangeEnd/);
