@@ -15,7 +15,7 @@ import { recurringExpenseBlockReason, recurringExpenseEndDate, recurringExpenseH
 import { clearPendingExpenseRecurrence, loadPendingExpenseRecurrence, savePendingExpenseRecurrence, type PendingExpenseRecurrence } from '../../finance/newExpenseRecurrenceRecovery.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
 import { consumeResourceExpenseIntent } from '../../finance/resourceExpenseIntent.js';
-import { minimumRecurringStartDate, suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
+import { suggestRecurringStartDate } from './newExpenseRecurrenceUx.js';
 
 type PaymentChoice = 'account' | 'cash' | 'benefit' | 'card' | 'card_pix' | 'external';
 type PurchaseMode = 'single' | 'installments';
@@ -111,7 +111,6 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
   );
   const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
-  const recurringStartMinimum = minimumRecurringStartDate(date || today, today);
 
   const reset = () => {
     const memberId = currentMemberId;
