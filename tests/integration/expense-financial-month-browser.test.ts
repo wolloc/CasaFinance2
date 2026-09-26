@@ -85,6 +85,8 @@ test('Gastos mantém total da visão compacto e categorias sob demanda sem virar
  assert.match(browser,/<details/);
  assert.match(browser,/não é meta ou orçamento/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
+ assert.match(browser,/FinancialMonthSummary[\s\S]*categories=\{financialSummary\.categories\}/);
+ assert.match(browser,/function FinancialMonthSummary\(\{total,realized,remaining,categories\}/);
 });
 
 test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcular motor financeiro',()=>{
