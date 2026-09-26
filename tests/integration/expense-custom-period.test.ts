@@ -51,3 +51,11 @@ test('incomplete custom dates cannot crash or query the Gastos surface',()=>{
  assert.match(browser,/disabled=\{customRange&&!customRangeReady\}/);
  assert.match(browser,/if\(customRange&&!customRangeReady\)\{setFinancialRows\(\[\]\);setEconomicRows\(\[\]\)/);
 });
+
+test('allocation rows are paginated within each transaction batch',()=>{
+ const economic=service.slice(service.indexOf('export async function listEconomicPeriodExpenses'));
+ assert.match(economic,/collectPages<AllocationRow&\{amount:string\|number\}>/);
+ assert.match(economic,/from\('economic_allocations'\)/);
+ assert.match(economic,/\.order\('transaction_id',\{ascending:true\}\)/);
+ assert.match(economic,/\.range\(from,to\)/);
+});
