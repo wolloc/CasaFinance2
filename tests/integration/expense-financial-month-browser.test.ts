@@ -22,7 +22,7 @@ test('Gastos realizados combina metadados do fato com o read model econômico ca
  assert.match(economicQuery,/from\('financial_transaction_positions'\)/);
  assert.match(economicQuery,/household_economic_amount/);
  assert.match(browser,/Gastos realizados/);
- assert.match(browser,/Compras parceladas aparecem uma vez/);
+ assert.match(browser,/Parceladas aparecem uma vez/);
 });
 
 test('Gastos prioriza o navegador mensal e leva histórico/correções para o lançamento',()=>{
@@ -48,15 +48,25 @@ test('falha de leitura mensal limpa linhas e exige retry sem mutação',()=>{
  assert.doesNotMatch(browser,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
-test('Gastos realizados mantém a Casa canônica e usa responsabilidade econômica na perspectiva individual',()=>{
+test('perspectiva individual preserva responsabilidade e valor original do gasto',()=>{
  const economicQuery=service.slice(service.indexOf('export async function listEconomicMonthExpenses'));
  assert.match(economicQuery,/\.eq\('economic_state','realized'\)/);
- assert.doesNotMatch(economicQuery,/\['confirmed','realized'\]/);
  assert.match(economicQuery,/from\('financial_transaction_positions'\)/);
- assert.match(economicQuery,/positions\.get\(row\.id\)\?\?row\.amount/);
  assert.match(economicQuery,/from\('economic_allocations'\)/);
- assert.match(economicQuery,/eq\('responsible_member_id',memberId\)/);
  assert.match(economicQuery,/memberAmounts\.get\(row\.id\)/);
+ assert.match(economicQuery,/original_amount:String\(row\.amount\)/);
+ assert.match(economicQuery,/household_amount:String\(householdAmount\)/);
+ assert.match(browser,/Sua parte · total da compra/);
+ assert.match(browser,/compra \{money\(original\)\}/);
+});
+
+test('listas de Gastos carregam categoria visual e responsabilidade sem inferir comprador',()=>{
+ assert.match(service,/categories\(name,type,icon,color\)/);
+ assert.match(service,/responsible_member_id,responsible_party_id/);
+ assert.match(browser,/getCategoryVisual/);
+ assert.match(browser,/Dividido/);
+ assert.match(browser,/Com outra pessoa/);
+ assert.doesNotMatch(service,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
 });
 
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
@@ -66,35 +76,31 @@ test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva g
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
 
-
-test('Gastos fica compacto e deixa categorias completas sob demanda sem virar orçamento',()=>{
- assert.match(browser,/Compromissos do mês/);
- assert.match(browser,/já realizado/);
- assert.match(browser,/ainda comprometido/);
- assert.match(browser,/Gasto realizado no mês/);
- assert.match(browser,/Ver todas as categorias/);
+test('Gastos mantém total da visão compacto e categorias sob demanda sem virar orçamento',()=>{
+ assert.match(browser,/Total da visão/);
+ assert.match(browser,/realizado/);
+ assert.match(browser,/comprometido/);
+ assert.match(browser,/Ver categorias/);
  assert.match(browser,/<details/);
- assert.match(browser,/não representa meta ou orçamento planejado/);
+ assert.match(browser,/não é meta ou orçamento/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
 });
 
-
-test('extrato mensal permite buscar sem alterar os totais consolidados do mês',()=>{
+test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcular motor financeiro',()=>{
  assert.match(browser,/Buscar gastos deste mês/);
  assert.match(browser,/Buscar compromisso/);
- assert.match(browser,/Buscar compra ou categoria/);
+ assert.match(browser,/Buscar compra, categoria ou pessoa/);
  assert.match(browser,/filteredFinancialRows/);
  assert.match(browser,/filteredEconomicRows/);
- assert.match(browser,/O resumo acima continua mostrando o mês inteiro/);
+ assert.match(browser,/responsibilityLabel/);
  assert.match(browser,/Limpar busca/);
  assert.match(browser,/setQuery\(''\)/);
 });
 
-
 test('perspectiva de morador usa responsabilidade econômica e mantém comprador como conceito separado',()=>{
  assert.match(browser,/FinancialPerspectiveSelector/);
- assert.match(browser,/responsabilidade econômica de/);
- assert.match(browser,/Comprador continua sendo um filtro diferente/);
  assert.match(service,/financial_member_commitment_responsibility_positions/);
  assert.match(service,/responsible_member_id/);
+ assert.match(browser,/selectedMember/);
+ assert.doesNotMatch(service,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
 });
