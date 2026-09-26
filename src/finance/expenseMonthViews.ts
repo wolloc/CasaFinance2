@@ -240,3 +240,126 @@ export async function listEconomicMonthExpenses(client:SupabaseClient,householdI
     }];
   }) as EconomicMonthExpense[];
 }
+
+
+function assertExpensePeriod(startDate:string,endDate:string){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||startDate>endDate){
+    throw new Error('Período de gastos inválido.');
+  }
+}
+
+export async function listFinancialPeriodExpenses(client:SupabaseClient,householdId:string,startDate:string,endDate:string,memberId?:string){
+  assertExpensePeriod(startDate,endDate);
+  const response=await client.from('financial_commitment_positions')
+    .select('commitment_key,source_type,source_transaction_id,source_installment_id,source_invoice_id,financial_date,financial_month,due_date,economic_date,effective_amount,realized_amount,remaining_amount,economic_state,commitment_state,description,category_id')
+    .eq('household_id',householdId)
+    .eq('economic_type','expense')
+    .gte('financial_date',startDate)
+    .lte('financial_date',endDate)
+    .in('commitment_state',['forecast','confirmed','realized'])
+    .order('financial_date',{ascending:true})
+    .order('commitment_key',{ascending:true});
+  if(response.error)throw response.error;
+
+  const baseRows=(response.data??[]) as Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'>[];
+  const sourceTransactionIds=[...new Set(baseRows.map(row=>row.source_transaction_id).filter((value):value is string=>Boolean(value)))];
+  const visuals=await loadTransactionVisuals(client,householdId,sourceTransactionIds);
+
+  const enrichedRows=baseRows.map(row=>({
+    ...row,
+    household_effective_amount:String(row.effective_amount),
+    original_amount:row.source_transaction_id?String(visuals.transactionMeta.get(row.source_transaction_id)?.amount??row.effective_amount):null,
+    recurring_rule_id:row.source_transaction_id?visuals.recurringRuleByTransaction.get(row.source_transaction_id)??null:null,
+    category:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.category??null:null,
+    responsibility:row.source_transaction_id?visuals.responsibility.get(row.source_transaction_id)??{member_ids:[],has_third_party:false}:{member_ids:[],has_third_party:false},
+  })) as FinancialMonthExpense[];
+
+  if(!memberId||enrichedRows.length===0)return enrichedRows;
+
+  const responsibility=await client.from('financial_member_commitment_responsibility_positions')
+    .select('commitment_key,responsibility_amount,realized_responsibility_amount,remaining_responsibility_amount')
+    .eq('household_id',householdId)
+    .eq('member_id',memberId)
+    .in('commitment_key',enrichedRows.map(row=>row.commitment_key));
+  if(responsibility.error)throw responsibility.error;
+
+  const amounts=new Map<string,{total:number;realized:number;remaining:number}>();
+  for(const row of responsibility.data??[]){
+    const current=amounts.get(row.commitment_key)??{total:0,realized:0,remaining:0};
+    current.total+=Number(row.responsibility_amount??0);
+    current.realized+=Number(row.realized_responsibility_amount??0);
+    current.remaining+=Number(row.remaining_responsibility_amount??0);
+    amounts.set(row.commitment_key,current);
+  }
+
+  return enrichedRows.flatMap(row=>{
+    const amount=amounts.get(row.commitment_key);
+    if(!amount||amount.total<=0)return[];
+    return[{...row,effective_amount:String(amount.total),realized_amount:String(amount.realized),remaining_amount:String(amount.remaining)}];
+  });
+}
+
+export async function listEconomicPeriodExpenses(client:SupabaseClient,householdId:string,startDate:string,endDate:string,memberId?:string){
+  assertExpensePeriod(startDate,endDate);
+  const transactionsResponse=await client.from('transactions')
+    .select('id,description,amount,transaction_date,economic_state,category_id,category:categories(name,type,icon,color)')
+    .eq('household_id',householdId)
+    .eq('type','expense')
+    .is('deleted_at',null)
+    .gte('transaction_date',startDate)
+    .lte('transaction_date',endDate)
+    .eq('economic_state','realized')
+    .order('transaction_date',{ascending:false});
+  if(transactionsResponse.error)throw transactionsResponse.error;
+
+  const transactions=(transactionsResponse.data??[]) as EconomicTransactionRow[];
+  if(transactions.length===0)return [];
+
+  const transactionIds=transactions.map(row=>row.id);
+  const[positionsResponse,allocationsResponse]=await Promise.all([
+    client.from('financial_transaction_positions')
+      .select('transaction_id,household_economic_amount,economic_state')
+      .eq('household_id',householdId)
+      .eq('economic_state','realized')
+      .in('transaction_id',transactionIds),
+    client.from('economic_allocations')
+      .select('transaction_id,responsible_member_id,responsible_party_id,amount')
+      .eq('household_id',householdId)
+      .in('transaction_id',transactionIds),
+  ]);
+  if(positionsResponse.error)throw positionsResponse.error;
+  if(allocationsResponse.error)throw allocationsResponse.error;
+
+  const positions=new Map(((positionsResponse.data??[]) as EconomicPositionRow[]).map(row=>[row.transaction_id,Number(row.household_economic_amount)]));
+  const responsibility=buildResponsibilityMap((allocationsResponse.data??[]) as AllocationRow[]);
+  const recurringResponse=await client.from('recurring_occurrences').select('transaction_id,recurring_rule_id').eq('household_id',householdId).in('transaction_id',transactionIds);
+  if(recurringResponse.error)throw recurringResponse.error;
+  const recurringRuleByTransaction=new Map<string,string>(((recurringResponse.data??[]) as RecurringOccurrenceRow[]).map(row=>[row.transaction_id,row.recurring_rule_id]));
+  const memberAmounts=new Map<string,number>();
+
+  if(memberId){
+    for(const allocation of allocationsResponse.data??[]){
+      if(allocation.responsible_member_id!==memberId)continue;
+      memberAmounts.set(allocation.transaction_id,(memberAmounts.get(allocation.transaction_id)??0)+Number(allocation.amount??0));
+    }
+  }
+
+  return transactions.flatMap(row=>{
+    const householdAmount=positions.get(row.id)??Number(row.amount);
+    const perspectiveAmount=memberId?(memberAmounts.get(row.id)??0):householdAmount;
+    if(memberId&&perspectiveAmount<=0)return[];
+    return[{
+      id:row.id,
+      description:row.description,
+      amount:String(perspectiveAmount),
+      original_amount:String(row.amount),
+      household_amount:String(householdAmount),
+      transaction_date:row.transaction_date,
+      economic_state:row.economic_state,
+      category_id:row.category_id,
+      category:normalizeCategory(row.category),
+      responsibility:responsibility.get(row.id)??{member_ids:[],has_third_party:false},
+      recurring_rule_id:recurringRuleByTransaction.get(row.id)??null,
+    }];
+  }) as EconomicMonthExpense[];
+}
