@@ -36,7 +36,7 @@ export async function getReferenceMonthContext(client:SupabaseClient,householdId
   return row;
 }
 
-export async function getHouseholdReferenceProjection(client:SupabaseClient,householdId:string,referenceMonth:string,horizonMonths=3):Promise<MonthlyProjection[]>{
+export async function getHouseholdReferenceProjection(client:SupabaseClient,householdId:string,referenceMonth:string,horizonMonths=4):Promise<MonthlyProjection[]>{
   const response=await client.rpc('financial_monthly_projection',{
     p_household_id:householdId,
     p_reference_month:normalizeReferenceMonth(referenceMonth),
@@ -46,7 +46,7 @@ export async function getHouseholdReferenceProjection(client:SupabaseClient,hous
   return(response.data??[]) as MonthlyProjection[];
 }
 
-export async function getMemberReferenceProjection(client:SupabaseClient,householdId:string,memberId:string,referenceMonth:string,horizonMonths=3):Promise<MemberMonthlyProjection[]>{
+export async function getMemberReferenceProjection(client:SupabaseClient,householdId:string,memberId:string,referenceMonth:string,horizonMonths=4):Promise<MemberMonthlyProjection[]>{
   const response=await client.rpc('financial_member_monthly_projection',{
     p_household_id:householdId,
     p_member_id:memberId,
