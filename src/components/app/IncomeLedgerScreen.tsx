@@ -12,6 +12,7 @@ import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { getCategoryVisual } from '../categoryVisuals.js';
 import { FinancialListSummaryCard } from './FinancialListSummaryCard.js';
+import { FinancialPageHeader } from './FinancialPageHeader.js';
 
 const money=(value:string|number)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const stateLabel:Record<string,string>={forecast:'Prevista',confirmed:'Confirmada',realized:'Recebida',cancelled:'Cancelada',reversed:'Estornada'};
@@ -79,7 +80,7 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
  const periodLabel=customRange?`${compactDate(rangeStart)} – ${compactDate(rangeEnd)}`:monthName(month);
 
  return <div className="space-y-5">
-  <header><h1 className="text-2xl font-black">Entradas</h1></header>
+  <FinancialPageHeader title="Entradas"/>
 
   <div className="relative">
    <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-1.5"><button type="button" aria-label="Mês anterior" onClick={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,-1));}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"><ChevronLeft className="h-5 w-5"/></button><button type="button" onClick={()=>setPeriodPickerOpen(value=>!value)} aria-expanded={periodPickerOpen} className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-xl text-center hover:bg-slate-900"><span className="block text-base font-black capitalize text-slate-100">{periodLabel}</span><span className="block text-[11px] text-slate-500">Toque para escolher o período</span></button><button type="button" aria-label="Mês seguinte" onClick={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,1));}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"><ChevronRight className="h-5 w-5"/></button></div>
