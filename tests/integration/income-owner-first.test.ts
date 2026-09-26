@@ -15,7 +15,7 @@ test('Nova Entrada starts from the beneficiary before destination and value',()=
 });
 
 test('income destination options use canonical account ownership',()=>{
- assert.match(screen,/listHouseholdFinancialAccounts/);
+ assert.match(screen,/listIncomeDestinationAccounts/);
  assert.match(screen,/account\.owner_member_ids/);
  assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
  assert.match(screen,/Conjunta/);
