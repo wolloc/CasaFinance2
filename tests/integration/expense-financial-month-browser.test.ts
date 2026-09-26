@@ -72,7 +72,7 @@ test('listas de Gastos carregam categoria visual e responsabilidade sem inferir 
 
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
  assert.match(browser,/refreshKey=0/);
- assert.match(browser,/\[household\?\.id,month,mode,perspective,refreshKey,refreshVersion\]/);
+ assert.match(browser,/\[household\?\.id,month,customRange,customRangeReady,rangeStart,rangeEnd,mode,perspective,refreshKey,refreshVersion\]/);
  assert.match(screen,/onOpenTransaction=\{\(transactionId,recurringRuleId\)=>\{setDetailTransactionId\(transactionId\);setDetailRecurringRuleId\(recurringRuleId\?\?null\)/);
  assert.match(screen,/setExpenseListVersion\(\(value\) => value \+ 1\)/);
 });
@@ -90,7 +90,7 @@ test('Gastos mantém total da visão compacto e categorias sob demanda sem virar
 });
 
 test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcular motor financeiro',()=>{
- assert.match(browser,/Buscar gastos deste mês/);
+ assert.match(browser,/Buscar gastos deste período/);
  assert.match(browser,/Buscar compromisso/);
  assert.match(browser,/Buscar compra, categoria ou pessoa/);
  assert.match(browser,/filteredFinancialRows/);
