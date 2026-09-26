@@ -25,7 +25,7 @@ const ratio=(value:number,total:number)=>total>0?Math.min(100,Math.max(0,(value/
 const unavailable=(message:string)=><p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">{message}</p>;
 type Dashboard=Awaited<ReturnType<typeof getFinancialDashboard>>;
 
-export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction,onAttentionAction,onSettlementAction,onOpenInvoices,onOpenCard}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;onCoverageAction?:(kind:CoverageActionKind,suggestedAmount:number)=>void;onAttentionAction?:(action:AttentionNavigationAction)=>void;onSettlementAction?:(intent:SettlementActionIntent)=>void;onOpenInvoices?:()=>void;onOpenCard?:(cardId:string)=>void}){
+export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction,onAttentionAction,onSettlementAction,onOpenCard}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;onCoverageAction?:(kind:CoverageActionKind,suggestedAmount:number)=>void;onAttentionAction?:(action:AttentionNavigationAction)=>void;onSettlementAction?:(intent:SettlementActionIntent)=>void;onOpenCard?:(cardId:string)=>void}){
  const{household,householdMembers}=useSupabaseAuth();
  const[dashboard,setDashboard]=useState<Dashboard|null>(null);
  const[memberProjection,setMemberProjection]=useState<MemberMonthlyProjection[]>([]);
