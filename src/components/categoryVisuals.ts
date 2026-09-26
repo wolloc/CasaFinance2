@@ -89,7 +89,7 @@ const icons: Record<string, LucideIcon> = {
 };
 
 export const CATEGORY_ICON_OPTIONS: Array<{name:string;label:string;Icon:LucideIcon}> = [
-  {name:'tag',label:'Geral',Icon:Tag},
+  {name:'sparkles',label:'Geral',Icon:Sparkles},
   {name:'shopping-basket',label:'Mercado',Icon:ShoppingBasket},
   {name:'utensils',label:'Restaurante',Icon:Utensils},
   {name:'home',label:'Casa',Icon:Home},
@@ -151,10 +151,11 @@ const inferredIconName = (category: CategoryVisualInput) => {
 
 export function getCategoryVisual(category: CategoryVisualInput) {
   const stored=(category.icon??'').trim().toLocaleLowerCase('en-US');
-  const iconName=stored && icons[stored] ? stored : inferredIconName(category);
+  const iconName=stored && stored!=='tag' && icons[stored] ? stored : inferredIconName(category);
+  const storedColor=category.color?.trim().toLocaleLowerCase('en-US')||'';
   return {
     Icon: icons[iconName]??(category.type==='income'?FolderHeart:Tag),
     iconName,
-    color: category.color?.trim()||null,
+    color: storedColor && storedColor!=='#64748b' ? storedColor : null,
   };
 }
