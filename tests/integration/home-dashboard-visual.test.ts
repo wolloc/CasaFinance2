@@ -40,6 +40,6 @@ test('projeção futura mostra tendência entre meses comparáveis',()=>{
 test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado dominante',()=>{
   for(const value of ['Contas e dinheiro','Benefícios','Reservas','Investimentos','Patrimônio financeiro acompanhado']) assert.match(home,new RegExp(value));
   assert.match(home,/role="button" tabIndex=\{0\} onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
-  assert.match(home,/Todas as faturas/);
+  assert.doesNotMatch(home,/Todas as faturas/);
   assert.doesNotMatch(home,/Ver cartão e fatura/);
 });
