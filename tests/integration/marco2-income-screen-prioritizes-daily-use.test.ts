@@ -23,7 +23,25 @@ test('contextual receipt stays visible when Home opens a delayed income', () => 
   assert.match(source, /initialMoneyMovementId&&<IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\}/);
 });
 
-test('empty state explains what the user should expect', () => {
-  assert.match(source, /Ainda não há entradas por aqui/);
-  assert.match(source, /salário, aluguel, freelance ou outra renda verdadeira/);
+test('empty state keeps the selected period explicit', () => {
+  assert.match(source, /Nenhuma entrada neste período/);
+  assert.match(source, /Altere o mês ou o período/);
+});
+
+
+test('Entradas exposes monthly navigation custom range and listed total',()=>{
+  assert.match(source,/Mês anterior/);
+  assert.match(source,/Mês seguinte/);
+  assert.match(source,/Escolher mês das entradas/);
+  assert.match(source,/Escolher período personalizado/);
+  assert.match(source,/Total listado/);
+  assert.match(source,/rangeStart/);
+  assert.match(source,/rangeEnd/);
+});
+
+test('Entradas turns category beneficiary date and state into scannable visual tags',()=>{
+  assert.match(source,/getCategoryVisual/);
+  assert.match(source,/beneficiaryByTransaction/);
+  assert.match(source,/formatDate\(row\.transaction_date\)/);
+  assert.match(source,/Detalhes e ações/);
 });
