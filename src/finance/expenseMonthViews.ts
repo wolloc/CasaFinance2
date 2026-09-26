@@ -205,7 +205,7 @@ export async function listEconomicMonthExpenses(client:SupabaseClient,householdI
   return transactions.flatMap(row=>{
     const householdAmount=positions.get(row.id)??Number(row.amount);
     const perspectiveAmount=memberId?(memberAmounts.get(row.id)??0):householdAmount;
-    if(perspectiveAmount<=0)return[];
+    if(memberId&&perspectiveAmount<=0)return[];
     return[{
       id:row.id,
       description:row.description,
