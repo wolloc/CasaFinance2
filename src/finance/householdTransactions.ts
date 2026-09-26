@@ -10,7 +10,7 @@ export type HouseholdTransaction = {
   id: string; household_id: string; created_by_member_id: string; buyer_member_id: string | null; category_id: string | null; invoice_id: string | null;
   type: TransactionKind; status: TransactionStatus; economic_state: EconomicState; description: string; amount: string; realized_amount: string;
   transaction_date: string; competence_date: string; due_date: string | null; settled_at: string | null; notes: string | null; deleted_at: string | null;
-  category?: { name: string; type: TransactionKind } | null; buyer?: { display_name: string } | null;
+  category?: { name: string; type: TransactionKind; icon: string | null; color: string | null } | null; buyer?: { display_name: string } | null;
   payment_instrument?: { kind: InstrumentKind; account_id: string | null; card_id: string | null } | null;
   mutation_dependencies: { has_recurring_occurrence: boolean; has_financial_obligation: boolean; has_external_payment_event: boolean; has_installment_plan: boolean; has_funding_event: boolean; direct_funding_total: number; direct_funding_account_count: number };
 };
@@ -29,7 +29,7 @@ export type TransactionAdjustmentEvent = {
   created_at: string;
 };
 
-const transactionColumns = 'id, household_id, created_by_member_id, buyer_member_id, category_id, invoice_id, type, status, economic_state, description, amount, realized_amount, transaction_date, competence_date, due_date, settled_at, notes, deleted_at, category:categories(name, type), buyer:household_members!transactions_buyer_member_id_fkey(profiles(display_name)), payment_instrument:transaction_payment_instruments(kind, account_id, card_id)';
+const transactionColumns = 'id, household_id, created_by_member_id, buyer_member_id, category_id, invoice_id, type, status, economic_state, description, amount, realized_amount, transaction_date, competence_date, due_date, settled_at, notes, deleted_at, category:categories(name, type, icon, color), buyer:household_members!transactions_buyer_member_id_fkey(profiles(display_name)), payment_instrument:transaction_payment_instruments(kind, account_id, card_id)';
 
 export async function listHouseholdTransactions(client: SupabaseClient, householdId: string) {
   const response = await client.from('transactions').select(transactionColumns).eq('household_id', householdId).is('deleted_at', null).in('type', ['expense', 'income']).order('transaction_date', { ascending: false }).order('created_at', { ascending: false });

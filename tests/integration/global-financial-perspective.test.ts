@@ -18,17 +18,19 @@ test('perspectiva financeira nasce no app e permanece entre Casa Gastos Entradas
 });
 
 test('perspectiva de gastos usa responsabilidade econômica e nunca comprador como atalho',()=>{
- assert.match(expenses,/Mostrando a responsabilidade econômica de/);
- assert.match(expenses,/Comprador continua sendo um filtro diferente/);
+ assert.match(expenses,/responsibilityLabel/);
  assert.match(expenseService,/financial_member_commitment_responsibility_positions/);
  assert.match(expenseService,/economic_allocations/);
  assert.match(expenseService,/responsible_member_id/);
+ assert.match(expenses,/Sua parte · total da compra/);
  assert.doesNotMatch(expenseService,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
 });
 
 test('perspectiva de entradas usa beneficiário canônico',()=>{
  assert.match(income,/beneficiary_member_id/);
- assert.match(income,/Mostrando entradas destinadas a/);
+ assert.match(income,/beneficiariesByTransaction/);
+ assert.match(income,/beneficiaries\.get\(row\.id\)\?\.includes\(perspective\)/);
+ assert.match(income,/memberIds\.includes\(member\.id\)/);
  assert.doesNotMatch(income,/buyer_member_id/);
 });
 

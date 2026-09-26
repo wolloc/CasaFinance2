@@ -23,7 +23,38 @@ test('contextual receipt stays visible when Home opens a delayed income', () => 
   assert.match(source, /initialMoneyMovementId&&<IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\}/);
 });
 
-test('empty state explains what the user should expect', () => {
-  assert.match(source, /Ainda não há entradas por aqui/);
-  assert.match(source, /salário, aluguel, freelance ou outra renda verdadeira/);
+test('empty state keeps the selected period explicit', () => {
+  assert.match(source, /Nenhuma entrada neste período/);
+  assert.match(source, /Altere o mês ou o período/);
+});
+
+
+test('Entradas exposes monthly navigation custom range and listed total',()=>{
+  assert.match(source,/Mês anterior/);
+  assert.match(source,/Mês seguinte/);
+  assert.match(source,/Escolher mês das entradas/);
+  assert.match(source,/Escolher período personalizado/);
+  assert.match(source,/Total listado/);
+  assert.match(source,/rangeStart/);
+  assert.match(source,/rangeEnd/);
+});
+
+test('Entradas turns category beneficiary date and state into scannable visual tags',()=>{
+  assert.match(source,/getCategoryVisual/);
+  assert.match(source,/beneficiariesByTransaction/);
+  assert.match(source,/formatDate\(row\.transaction_date\)/);
+  assert.match(source,/Detalhes e ações/);
+});
+
+
+test('Entradas derives its initial month from the household financial clock',()=>{
+  assert.match(source,/monthInTimeZone=\(timeZone:string\)=>dateInTimeZone\(timeZone\)\.slice\(0,7\)/);
+  assert.match(source,/monthInTimeZone\(household\?\.timezone\?\?'America\/Sao_Paulo'\)/);
+  assert.match(source,/monthInTimeZone\(household\.timezone\)/);
+});
+
+test('income visual tag remains deterministic when canonical movements involve more than one beneficiary',()=>{
+  assert.match(source,/new Map<string,string\[\]>\(\)/);
+  assert.match(source,/current\.includes\(item\.beneficiary_member_id\)/);
+  assert.match(source,/names\.join\(' \+ '\)/);
 });

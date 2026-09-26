@@ -13,8 +13,9 @@ test('Home does not discard canonical dashboard reads when recurrence maintenanc
 
 test('Income ledger still reads canonical income facts when recurrence maintenance fails',()=>{
  assert.match(income,/try\{await ensureRecurringIncomeHorizon/);
- assert.match(income,/catch\(error\)\{console\.warn\('Casa Finance: não foi possível atualizar o horizonte de rendas recorrentes/);
- assert.match(income,/const \[transactions,movement,memberMovements\]=await Promise\.all/);
+ assert.match(income,/catch\(loadError\)\{console\.warn\('Casa Finance: não foi possível atualizar o horizonte de rendas recorrentes/);
+ assert.match(income,/const\[transactions,movement\]=await Promise\.all/);
+ assert.match(income,/from\('money_movements'\).*beneficiary_member_id/);
 });
 
 
