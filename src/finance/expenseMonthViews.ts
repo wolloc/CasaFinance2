@@ -90,23 +90,32 @@ async function loadTransactionVisuals(client:SupabaseClient,householdId:string,t
     recurringRuleByTransaction:new Map<string,string>(),
   };
 
-  const[transactionsResponse,allocationsResponse,recurringResponse]=await Promise.all([
+  const[transactionsResponse,recurringResponse]=await Promise.all([
     client.from('transactions')
       .select('id,amount,category:categories(name,type,icon,color)')
       .eq('household_id',householdId)
       .in('id',transactionIds),
-    client.from('economic_allocations')
-      .select('transaction_id,responsible_member_id,responsible_party_id')
-      .eq('household_id',householdId)
-      .in('transaction_id',transactionIds),
     client.from('recurring_occurrences')
       .select('transaction_id,recurring_rule_id')
       .eq('household_id',householdId)
       .in('transaction_id',transactionIds),
   ]);
   if(transactionsResponse.error)throw transactionsResponse.error;
-  if(allocationsResponse.error)throw allocationsResponse.error;
   if(recurringResponse.error)throw recurringResponse.error;
+
+  const allocationRows:AllocationRow[]=[];
+  for(let from=0;;from+=500){
+    const allocationsResponse=await client.from('economic_allocations')
+      .select('transaction_id,responsible_member_id,responsible_party_id')
+      .eq('household_id',householdId)
+      .in('transaction_id',transactionIds)
+      .order('transaction_id',{ascending:true})
+      .range(from,from+499);
+    if(allocationsResponse.error)throw allocationsResponse.error;
+    const page=(allocationsResponse.data??[]) as AllocationRow[];
+    allocationRows.push(...page);
+    if(page.length<500)break;
+  }
 
   const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null}>();
   for(const row of (transactionsResponse.data??[]) as TransactionMetaRow[]){
@@ -118,7 +127,7 @@ async function loadTransactionVisuals(client:SupabaseClient,householdId:string,t
 
   return{
     transactionMeta,
-    responsibility:buildResponsibilityMap((allocationsResponse.data??[]) as AllocationRow[]),
+    responsibility:buildResponsibilityMap(allocationRows),
     recurringRuleByTransaction,
   };
 }
