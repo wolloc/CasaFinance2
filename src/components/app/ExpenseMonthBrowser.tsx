@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CreditCard, Landmark, LoaderCircle, Search, UserRound, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CreditCard, Landmark, Search, UserRound, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { supabase } from '../../lib/supabase.js';
