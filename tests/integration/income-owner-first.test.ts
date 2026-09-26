@@ -34,6 +34,10 @@ test('known income defaults to confirmed without pretending it was received',()=
  assert.match(screen,/saldo só muda quando o recebimento acontecer de verdade/);
 });
 
-test('this package does not redefine recurring income',()=>{
- assert.doesNotMatch(screen,/createRecurringIncomeRule|RecurringIncomeFrequency/);
+test('recurring income is created inside the owner-first flow without bypassing destination compatibility',()=>{
+ assert.match(screen,/createRecurringIncomeRule/);
+ assert.match(screen,/Repetir esta entrada/);
+ assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
+ assert.match(screen,/plannedDestinationAccountId/);
+ assert.match(screen,/A primeira ocorrência é esta entrada/);
 });
