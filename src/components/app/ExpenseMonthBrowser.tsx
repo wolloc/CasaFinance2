@@ -11,7 +11,8 @@ const currentMonth=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'A
 const monthName=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(`${value}-01T12:00:00Z`));
 const shiftMonth=(value:string,delta:number)=>{const [year,month]=value.split('-').map(Number);const date=new Date(Date.UTC(year,month-1+delta,1));return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}`;};
 const monthEnd=(value:string)=>{const[year,month]=value.split('-').map(Number);const date=new Date(Date.UTC(year,month,0));return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`;};
-const validDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value);\nconst compactDate=(value:string)=>validDate(value)?new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`)):'—';
+const validDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value);
+const compactDate=(value:string)=>validDate(value)?new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`)):'—';
 const formatDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`)).replace('.','');
 const sourceLabel=(row:FinancialMonthExpense)=>row.source_type==='card_installment'?'Parcela do cartão':row.source_type==='recurring_occurrence'?'Gasto recorrente':'Gasto do mês';
 const stateLabel=(state:string)=>state==='realized'?'Pago/realizado':state==='confirmed'?'Confirmado':'';
