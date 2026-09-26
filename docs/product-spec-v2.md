@@ -446,6 +446,10 @@ Renda verdadeira inclui salário, aluguel, freelance, bônus, presente e juros/r
 
 Categorias de despesa têm prioridade analítica maior na experiência. Entradas podem se apoiar principalmente em natureza, sem remover a capacidade de categorização de receitas para usuários que precisem dela. A categoria não deve ser obrigatória no registro e pode ser atribuída posteriormente.
 
+**DEFINIDO e IMPLEMENTADO — Nova Entrada owner-first:** a captura começa escolhendo de quem é a entrada. Somente contas transacionais cuja titularidade inclui a pessoa escolhida aparecem como destino; conta conjunta aparece para ambos os titulares e exibe a titularidade junto do nome. Uma entrada atual/conhecida começa como **Confirmada** por padrão, mas confirmação econômica não significa recebimento: o saldo só muda quando o recebimento real é registrado.
+
+**PENDENTE — simplificação da recorrência de entradas e entrada futura avulsa:** o contrato de recorrência de renda é independente do contrato mensal-only das despesas e não deve ser restringido silenciosamente. Antes de redesenhar frequências ou forçar a semântica de uma entrada futura isolada, consolidar a decisão de produto e então ajustar UX e documentação.
+
 Nova entrada permite recorrência: **Não**, **Todo mês**, **Toda semana** ou **Personalizar**. Ao alterar: **Só este mês** ou **Atualizar daqui pra frente**.
 
 Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto.
