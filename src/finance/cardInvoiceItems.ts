@@ -25,3 +25,26 @@ export async function listCardInvoiceItems(client: SupabaseClient, householdId: 
   if (response.error) throw response.error;
   return (response.data ?? []) as CardInvoiceItem[];
 }
+
+
+export type CardInvoiceExposure = {
+  card_id: string;
+  credit_limit: number|string;
+  current_invoice_remaining: number|string;
+  future_known_commitments: number|string;
+  available_limit: number|string;
+  utilization_ratio: number|string|null;
+  over_limit_amount: number|string;
+  next_due_date: string|null;
+  card_health: 'green'|'yellow'|'red';
+};
+
+export async function getCardInvoiceExposure(client:SupabaseClient, householdId:string, cardId:string):Promise<CardInvoiceExposure|null>{
+  const response=await client.from('financial_card_health_positions')
+    .select('card_id,credit_limit,current_invoice_remaining,future_known_commitments,available_limit,utilization_ratio,over_limit_amount,next_due_date,card_health')
+    .eq('household_id',householdId)
+    .eq('card_id',cardId)
+    .maybeSingle();
+  if(response.error)throw response.error;
+  return response.data as CardInvoiceExposure|null;
+}

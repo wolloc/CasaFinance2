@@ -11,7 +11,7 @@ test('card click routes to a card-scoped invoice journey',()=>{
  assert.match(app,/cardReviewIntent.*ContextualCardInvoices/s);
  assert.match(contextual,/Fatura anterior/);
  assert.match(contextual,/Próxima fatura/);
- assert.match(contextual,/Pagar fatura/);
+ assert.match(contextual,/Pagar tudo ou parte/);
  assert.match(contextual,/Lançamentos da fatura/);
  assert.doesNotMatch(contextual,/FinancialPerspectiveSelector/);
 });
@@ -33,4 +33,22 @@ test('Home makes each card the primary entry point without redundant all-invoice
 test('contextual card invoice does not create a second payment command',()=>{
  assert.doesNotMatch(contextual,/payHouseholdInvoice|\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
  assert.match(contextual,/onPay\?\.\(paymentInvoice\)/);
+});
+
+test('contextual invoice exposes card limit and future commitment from canonical card health read model',()=>{
+ assert.match(items,/financial_card_health_positions/);
+ assert.match(items,/available_limit/);
+ assert.match(items,/future_known_commitments/);
+ assert.match(contextual,/Limite livre/);
+ assert.match(contextual,/Futuro conhecido/);
+ assert.match(contextual,/Crédito comprometido/);
+ assert.match(contextual,/purchase_commitment_count/);
+ assert.match(contextual,/installment_count/);
+});
+
+test('invoice payment remains delegated and can be partial without creating a new expense',()=>{
+ assert.match(contextual,/Pagar tudo ou parte/);
+ assert.match(contextual,/você confirma quanto realmente pagou/);
+ assert.match(contextual,/onPay\?\.\(paymentInvoice\)/);
+ assert.doesNotMatch(contextual,/payHouseholdInvoice|\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
