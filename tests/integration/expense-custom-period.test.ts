@@ -39,7 +39,7 @@ test('period reads remain read-only and member responsibility stays canonical',(
 test('broad custom periods paginate base reads and batch metadata lookups',()=>{
  assert.match(service,/PERIOD_PAGE_SIZE=500/);
  assert.match(service,/\.range\(from,to\)/);
- assert.match(service,/chunkValues\(sourceTransactionIds\)/);
+ assert.match(service,/chunkValues\(transactionIds\)/);
  assert.match(service,/chunkValues\(enrichedRows\.map\(row=>row\.commitment_key\)\)/);
  assert.match(service,/chunkValues\(transactions\.map\(row=>row\.id\)\)/);
 });
@@ -57,5 +57,5 @@ test('allocation rows are paginated within each transaction batch',()=>{
  assert.match(economic,/collectPages<AllocationRow&\{amount:string\|number\}>/);
  assert.match(economic,/from\('economic_allocations'\)/);
  assert.match(economic,/\.order\('transaction_id',\{ascending:true\}\)/);
- assert.match(economic,/\.range\(from,to\)/);
+ assert.match(economic,/\.range\(from,to\)/);\n assert.match(service,/allocationRows\.push\(\.\.\.page\)/);
 });
