@@ -37,3 +37,5 @@ test('card utilization bar is visually capped while preserving the real percenta
  assert.match(screenSource,/Math\.min\(100,Math\.max\(0,usage\)\)/);
  assert.match(screenSource,/c\.card_health==='red'\?'bg-rose-400'/);
 });
+
+test('Casa month navigator opens a real monthly picker instead of resetting on center click',()=>{assert.match(screenSource,/Toque para escolher o mês/);assert.match(screenSource,/Escolher mês da Casa/);assert.match(screenSource,/type="month"/);assert.match(screenSource,/setPeriodPickerOpen\(value=>!value\)/);assert.match(screenSource,/setReferenceMonth\(normalizeReferenceMonth\(event\.target\.value\)\)/);assert.match(screenSource,/Mês atual/);assert.doesNotMatch(screenSource,/onClick=\{\(\)=>setReferenceMonth\(currentReferenceMonth\)\} className="min-h-10 flex-1/);});
