@@ -115,7 +115,7 @@ export const CATEGORY_ICON_OPTIONS: Array<{name:string;label:string;Icon:LucideI
   {name:'zap',label:'Energia',Icon:Zap},
   {name:'receipt-text',label:'Contas',Icon:ReceiptText},
   {name:'building',label:'Imóvel',Icon:Building2},
-  {name:'sparkles',label:'Especial',Icon:Sparkles},
+  {name:'circle-dollar-sign',label:'Financeiro',Icon:CircleDollarSign},
 ];
 
 export const CATEGORY_COLOR_OPTIONS = [
