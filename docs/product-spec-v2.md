@@ -261,6 +261,8 @@ O saldo final de um mês é o início do mês seguinte.
 
 Gastos possui duas lentes complementares sobre os mesmos fatos financeiros.
 
+**PROPOSTO — em homologação:** o seletor de período pode oferecer, além do mês inteiro, um intervalo personalizado. O mesmo intervalo não deve ser aplicado como um filtro genérico: em **Gastos realizados**, ele consulta a `transaction_date` do fato econômico; em **Compromissos**, consulta a `financial_date` do read model canônico. Assim, um intervalo atravessando meses continua respeitando as duas lentes e não recalcula competência, fatura ou responsabilidade no frontend.
+
 ### Gastos realizados
 
 **DEFINIDO:** a navegação cotidiana entre meses prioriza setas anterior/próximo, com o mês atual no centro. O seletor de mês continua disponível para saltos maiores, mas não é a interação principal.
