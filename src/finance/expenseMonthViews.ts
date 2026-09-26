@@ -34,6 +34,8 @@ export type FinancialMonthExpense = {
   category_id:string|null;
   category?:ExpenseCategory|null;
   responsibility:ResponsibilityVisual;
+  buyer_member_id:string|null;
+  instrument_kind:string|null;
 };
 
 export type EconomicMonthExpense = {
@@ -48,6 +50,8 @@ export type EconomicMonthExpense = {
   category?:ExpenseCategory|null;
   responsibility:ResponsibilityVisual;
   recurring_rule_id:string|null;
+  buyer_member_id:string|null;
+  instrument_kind:string|null;
 };
 
 type EconomicTransactionRow={
@@ -55,14 +59,17 @@ type EconomicTransactionRow={
   description:string;
   amount:string|number;
   transaction_date:string;
+  created_at:string;
   economic_state:string;
   category_id:string|null;
+  buyer_member_id:string|null;
   category?:ExpenseCategory|ExpenseCategory[]|null;
+  payment_instrument?:{kind:string|null}|Array<{kind:string|null}>|null;
 };
 
 type EconomicPositionRow={transaction_id:string;household_economic_amount:string|number;economic_state:string};
 type AllocationRow={transaction_id:string;responsible_member_id:string|null;responsible_party_id:string|null};
-type TransactionMetaRow={id:string;amount:string|number;category?:ExpenseCategory|ExpenseCategory[]|null};
+type TransactionMetaRow={id:string;amount:string|number;buyer_member_id:string|null;category?:ExpenseCategory|ExpenseCategory[]|null;payment_instrument?:{kind:string|null}|Array<{kind:string|null}>|null};
 type RecurringOccurrenceRow={transaction_id:string;recurring_rule_id:string};
 
 export function monthStart(month:string){return `${month}-01`;}
@@ -70,6 +77,9 @@ export function nextMonthStart(month:string){const [year,rawMonth]=month.split('
 
 function normalizeCategory(category:ExpenseCategory|ExpenseCategory[]|null|undefined){
   return Array.isArray(category)?category[0]??null:category??null;
+}
+function normalizeInstrument(instrument:{kind:string|null}|Array<{kind:string|null}>|null|undefined){
+  return Array.isArray(instrument)?instrument[0]?.kind??null:instrument?.kind??null;
 }
 
 function buildResponsibilityMap(rows:AllocationRow[]){
@@ -85,14 +95,14 @@ function buildResponsibilityMap(rows:AllocationRow[]){
 
 async function loadTransactionVisuals(client:SupabaseClient,householdId:string,transactionIds:string[]){
   if(transactionIds.length===0)return{
-    transactionMeta:new Map<string,{amount:number;category:ExpenseCategory|null}>(),
+    transactionMeta:new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null}>(),
     responsibility:new Map<string,ResponsibilityVisual>(),
     recurringRuleByTransaction:new Map<string,string>(),
   };
 
   const[transactionsResponse,recurringResponse]=await Promise.all([
     client.from('transactions')
-      .select('id,amount,category:categories(name,type,icon,color)')
+      .select('id,amount,buyer_member_id,category:categories(name,type,icon,color),payment_instrument:transaction_payment_instruments(kind)')
       .eq('household_id',householdId)
       .in('id',transactionIds),
     client.from('recurring_occurrences')
@@ -117,9 +127,9 @@ async function loadTransactionVisuals(client:SupabaseClient,householdId:string,t
     if(page.length<500)break;
   }
 
-  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null}>();
+  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null}>();
   for(const row of (transactionsResponse.data??[]) as TransactionMetaRow[]){
-    transactionMeta.set(row.id,{amount:Number(row.amount??0),category:normalizeCategory(row.category)});
+    transactionMeta.set(row.id,{amount:Number(row.amount??0),category:normalizeCategory(row.category),buyerMemberId:row.buyer_member_id,instrumentKind:normalizeInstrument(row.payment_instrument)});
   }
 
   const recurringRuleByTransaction=new Map<string,string>();
@@ -154,6 +164,8 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
     recurring_rule_id:row.source_transaction_id?visuals.recurringRuleByTransaction.get(row.source_transaction_id)??null:null,
     category:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.category??null:null,
     responsibility:row.source_transaction_id?visuals.responsibility.get(row.source_transaction_id)??{member_ids:[],has_third_party:false}:{member_ids:[],has_third_party:false},
+    buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
+    instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;
@@ -188,14 +200,15 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
 
 export async function listEconomicMonthExpenses(client:SupabaseClient,householdId:string,month:string,memberId?:string){
   const transactionsResponse=await client.from('transactions')
-    .select('id,description,amount,transaction_date,economic_state,category_id,category:categories(name,type,icon,color)')
+    .select('id,description,amount,transaction_date,created_at,economic_state,category_id,buyer_member_id,category:categories(name,type,icon,color),payment_instrument:transaction_payment_instruments(kind)')
     .eq('household_id',householdId)
     .eq('type','expense')
     .is('deleted_at',null)
     .gte('transaction_date',monthStart(month))
     .lt('transaction_date',nextMonthStart(month))
     .eq('economic_state','realized')
-    .order('transaction_date',{ascending:false});
+    .order('transaction_date',{ascending:false})
+    .order('created_at',{ascending:false});
   if(transactionsResponse.error)throw transactionsResponse.error;
 
   const transactions=(transactionsResponse.data??[]) as EconomicTransactionRow[];
@@ -246,6 +259,8 @@ export async function listEconomicMonthExpenses(client:SupabaseClient,householdI
       category:normalizeCategory(row.category),
       responsibility:responsibility.get(row.id)??{member_ids:[],has_third_party:false},
       recurring_rule_id:recurringRuleByTransaction.get(row.id)??null,
+      buyer_member_id:row.buyer_member_id,
+      instrument_kind:normalizeInstrument(row.payment_instrument),
     }];
   }) as EconomicMonthExpense[];
 }
@@ -273,7 +288,7 @@ async function collectPages<T>(load:(from:number,to:number)=>PromiseLike<{data:T
 }
 
 async function loadTransactionVisualsBatched(client:SupabaseClient,householdId:string,transactionIds:string[]){
-  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null}>();
+  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null}>();
   const responsibility=new Map<string,ResponsibilityVisual>();
   const recurringRuleByTransaction=new Map<string,string>();
   for(const ids of chunkValues(transactionIds)){
@@ -348,7 +363,7 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
   assertExpensePeriod(startDate,endDate);
   const transactions=await collectPages<EconomicTransactionRow>((from,to)=>
     client.from('transactions')
-      .select('id,description,amount,transaction_date,economic_state,category_id,category:categories(name,type,icon,color)')
+      .select('id,description,amount,transaction_date,created_at,economic_state,category_id,buyer_member_id,category:categories(name,type,icon,color),payment_instrument:transaction_payment_instruments(kind)')
       .eq('household_id',householdId)
       .eq('type','expense')
       .is('deleted_at',null)
@@ -356,6 +371,7 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
       .lte('transaction_date',endDate)
       .eq('economic_state','realized')
       .order('transaction_date',{ascending:false})
+      .order('created_at',{ascending:false})
       .order('id',{ascending:true})
       .range(from,to)
   );
@@ -414,6 +430,8 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
       category:normalizeCategory(row.category),
       responsibility:responsibility.get(row.id)??{member_ids:[],has_third_party:false},
       recurring_rule_id:recurringRuleByTransaction.get(row.id)??null,
+      buyer_member_id:row.buyer_member_id,
+      instrument_kind:normalizeInstrument(row.payment_instrument),
     }];
   }) as EconomicMonthExpense[];
 }
