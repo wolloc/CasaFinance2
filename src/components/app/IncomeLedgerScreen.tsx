@@ -13,6 +13,7 @@ import { FinancialPerspectiveSelector, type FinancialPerspective } from './Finan
 import { getCategoryVisual } from '../categoryVisuals.js';
 import { FinancialListSummaryCard } from './FinancialListSummaryCard.js';
 import { FinancialPageHeader } from './FinancialPageHeader.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const money=(value:string|number)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const stateLabel:Record<string,string>={forecast:'Prevista',confirmed:'Confirmada',realized:'Recebida',cancelled:'Cancelada',reversed:'Estornada'};
@@ -42,6 +43,7 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
  const[rangeStart,setRangeStart]=useState(`${initialHouseholdMonth}-01`);
  const[rangeEnd,setRangeEnd]=useState(monthEnd(initialHouseholdMonth));
  const[periodPickerOpen,setPeriodPickerOpen]=useState(false);
+ const[incomeSaved,setIncomeSaved]=useState(false);
 
  useEffect(()=>{if(!household)return;const current=monthInTimeZone(household.timezone);setMonth(current);setRangeStart(`${current}-01`);setRangeEnd(monthEnd(current));setCustomRange(false);setPeriodPickerOpen(false);},[household?.id,household?.timezone]);
 
@@ -73,6 +75,7 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
  }catch{if(active){setRows([]);setBeneficiariesByTransaction(new Map());setRecurringRuleByTransaction(new Map());setError('Não foi possível carregar as rendas da Casa. Nenhuma renda foi presumida como ausente ou resolvida.');}}finally{if(active)setLoading(false);}};void load();return()=>{active=false;};},[household?.id,household?.timezone,perspective,refreshKey,initialReviewMoneyMovementId]);
 
  const refresh=()=>setRefreshKey(value=>value+1);
+ useEffect(()=>{if(!incomeSaved)return;const timer=window.setTimeout(()=>setIncomeSaved(false),3500);return()=>window.clearTimeout(timer);},[incomeSaved]);
  const visibleRows=useMemo(()=>rows.filter(row=>customRange?(row.transaction_date>=rangeStart&&row.transaction_date<=rangeEnd):row.transaction_date.startsWith(month)),[rows,customRange,rangeStart,rangeEnd,month]);
  const total=useMemo(()=>visibleRows.reduce((sum,row)=>sum+(row.economic_state==='cancelled'||row.economic_state==='reversed'?0:Number(row.amount)),0),[visibleRows]);
  const categorySummary=useMemo(()=>{const byCategory=new Map<string,number>();for(const row of visibleRows){if(row.economic_state==='cancelled'||row.economic_state==='reversed')continue;const name=row.category?.name?.trim()||'Sem categoria';byCategory.set(name,(byCategory.get(name)??0)+Number(row.amount));}return[...byCategory.entries()].map(([name,amount])=>({name,amount})).sort((a,b)=>b.amount-a.amount);},[visibleRows]);
@@ -94,7 +97,8 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
 
   {!loading&&!error&&initialReviewMoneyMovementId&&<p className={`rounded-xl border p-3 text-xs ${reviewTransactionId?'border-cyan-900 bg-cyan-950/20 text-cyan-200':'border-slate-700 bg-slate-900 text-slate-300'}`}>{reviewTransactionId?'Esta entrada futura foi sinalizada pela revisão da projeção. O Casa releu o movimento e o fato econômico atual. Revise ou corrija a previsão abaixo; nenhum recebimento foi registrado.':'A entrada sinalizada pela revisão da projeção mudou ou já foi resolvida. Nada entrou no caixa.'}</p>}
   {initialMoneyMovementId&&<IncomeReceiptAction initialMoneyMovementId={initialMoneyMovementId} onCompleted={refresh}/>}
-  <IncomeCreationAction onCreated={refresh} openRequestId={createRequestId}/>
+  <IncomeCreationAction onCreated={()=>{refresh();setIncomeSaved(true);}} openRequestId={createRequestId}/>
+  {incomeSaved&&<FinancialSaveFeedback message="Entrada registrada. A lista e as projeções foram atualizadas."/>}
 
   <section className="space-y-3">{loading?<LoaderCircle className="mx-auto h-5 w-5 animate-spin"/>:error?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">{error}</p>:visibleRows.length===0?<div className="rounded-2xl border border-dashed border-slate-700 p-6 text-center"><p className="text-sm font-semibold text-slate-300">Nenhuma entrada neste período.</p><p className="mt-1 text-xs text-slate-500">Altere o mês ou o período para consultar outros lançamentos.</p></div>:visibleRows.map(row=>{const targeted=row.id===reviewTransactionId;const visual=getCategoryVisual(row.category??{name:'Sem categoria',type:'income'});const beneficiary=beneficiaryLabel(beneficiariesByTransaction.get(row.id));const recurringRuleId=recurringRuleByTransaction.get(row.id);const Icon=visual.Icon;return <article key={row.id} role="button" tabIndex={0} onClick={()=>setDetailTransaction(row)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();setDetailTransaction(row)}}} className={`cursor-pointer rounded-2xl border bg-slate-900 p-4 transition-colors hover:border-slate-600 ${targeted?'border-cyan-500 ring-1 ring-cyan-500/40':'border-slate-800'}`}><div className="flex items-start gap-3"><span style={visual.color?{color:visual.color}:undefined} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-300"><Icon className="h-5 w-5"/></span><div className="min-w-0 flex-1"><div className="flex justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-bold">{row.description}</h3><div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-300">{formatDate(row.transaction_date)}</span><span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-300">{row.category?.name??'Sem categoria'}</span>{beneficiary&&<span className="rounded-full bg-blue-950 px-2 py-1 text-[10px] font-semibold text-blue-300">{beneficiary}</span>}{recurringRuleId&&<span className="rounded-full bg-violet-950 px-2 py-1 text-[10px] font-semibold text-violet-300">Recorrente</span>}<span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${stateTone[row.economic_state]??'bg-slate-800 text-slate-300'}`}>{stateLabel[row.economic_state]??row.economic_state}</span></div></div><strong className="shrink-0 text-emerald-300">+ {money(row.amount)}</strong></div>{Number(row.realized_amount)>0&&Number(row.realized_amount)!==Number(row.amount)&&<p className="mt-2 text-xs text-emerald-300">Recebido {money(row.realized_amount)}</p>}{targeted&&<span className="mt-2 inline-block rounded-full bg-cyan-950 px-2 py-1 text-[10px] font-bold text-cyan-300">Revisar projeção</span>}</div></div></article>})}</section>
 

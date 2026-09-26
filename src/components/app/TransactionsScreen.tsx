@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { HouseholdTransactionsSetup } from '../auth/HouseholdTransactionsSetup.js';
 import type { TransactionKind } from '../../finance/householdTransactions.js';
@@ -20,6 +20,7 @@ import { ExpenseRoleCorrectionAction } from './ExpenseRoleCorrectionAction.js';
 import { ExpenseMonthBrowser } from './ExpenseMonthBrowser.js';
 import { NewExpenseWizard } from './NewExpenseWizard.js';
 import { ScreenErrorBoundary } from './ScreenErrorBoundary.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 import type { FinancialPerspective } from './FinancialPerspectiveSelector.js';
 
 export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0 }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number; onGrantLoan?:()=>void }) {
@@ -34,12 +35,13 @@ export function TransactionsScreen({ mode, perspective, onPerspectiveChange, cre
   const [detailRecurringRuleId,setDetailRecurringRuleId]=useState<string|null>(null);
   const [detailActionsOpen,setDetailActionsOpen]=useState(false);
   const [detailRecurringOpen,setDetailRecurringOpen]=useState(false);
+  useEffect(()=>{if(!expenseSaved)return;const timer=window.setTimeout(()=>setExpenseSaved(false),3500);return()=>window.clearTimeout(timer);},[expenseSaved]);
 
   if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} createRequestId={createRequestId} /></ScreenErrorBoundary>;
 
   return <div className="space-y-4">
     <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); }} />
-    {expenseSaved && <p role="status" className="rounded-xl border border-emerald-900 bg-emerald-950/30 p-3 text-sm text-emerald-200">Despesa registrada. O Casa atualizou o fato econômico e os efeitos financeiros correspondentes.</p>}
+    {expenseSaved && <FinancialSaveFeedback message="Despesa registrada. A lista e os efeitos financeiros foram atualizados."/>}
 
     {projectionExpenseIntent && <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent?.commitmentKey} />}
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
