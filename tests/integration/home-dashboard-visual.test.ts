@@ -43,3 +43,5 @@ test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado 
   assert.doesNotMatch(home,/Todas as faturas/);
   assert.doesNotMatch(home,/Ver cartão e fatura/);
 });
+
+test('Home dá mais hierarquia a Contas e recursos sem chamar patrimônio de dinheiro livre',()=>{assert.match(home,/Contas e recursos/);assert.match(home,/Saldo de uso, benefícios, reservas e investimentos continuam separados/);assert.match(home,/Este total não significa dinheiro livre/);assert.match(home,/border-blue-950\/70/);assert.match(home,/Toque para agir sobre cada recurso/);});
