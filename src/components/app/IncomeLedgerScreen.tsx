@@ -11,6 +11,7 @@ import { IncomeFactManagement } from './IncomeFactManagement.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { getCategoryVisual } from '../categoryVisuals.js';
+import { FinancialListSummaryCard } from './FinancialListSummaryCard.js';
 
 const money=(value:string|number)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const stateLabel:Record<string,string>={forecast:'Prevista',confirmed:'Confirmada',realized:'Recebida',cancelled:'Cancelada',reversed:'Estornada'};
@@ -109,5 +110,5 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
 
 function IncomeSummary({total,count,categories}:{total:number;count:number;categories:Array<{name:string;amount:number}>}){
  const percentage=(value:number)=>total>0?Math.round((value/total)*100):0;
- return <div className="rounded-xl bg-slate-900/70 px-3 py-2"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-wide text-slate-500">Total listado</p><strong className="text-lg text-emerald-300">{money(total)}</strong></div><span className="text-[11px] text-slate-500">{count} {count===1?'entrada':'entradas'}</span></div>{categories.length>0&&<details className="mt-2 border-t border-slate-800 pt-2"><summary className="flex min-h-9 cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-300"><span>Ver categorias</span><span className="text-[10px] font-normal text-slate-500">{categories.length}</span></summary><div className="mt-3 space-y-2">{categories.map(category=><div key={category.name} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-slate-300">{category.name}</span><strong className="shrink-0 text-emerald-300">{money(category.amount)} · {percentage(category.amount)}%</strong></div>)}</div></details>}</div>;
+ return <FinancialListSummaryCard tone="income" total={money(total)} meta={<span>{count} {count===1?'entrada':'entradas'}</span>}>{categories.length>0&&<details className="mt-2 border-t border-slate-800 pt-2"><summary className="flex min-h-9 cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-300"><span>Ver categorias</span><span className="text-[10px] font-normal text-slate-500">{categories.length}</span></summary><div className="mt-3 space-y-2">{categories.map(category=><div key={category.name} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-slate-300">{category.name}</span><strong className="shrink-0 text-emerald-300">{money(category.amount)} · {percentage(category.amount)}%</strong></div>)}</div></details>}</FinancialListSummaryCard>;
 }
