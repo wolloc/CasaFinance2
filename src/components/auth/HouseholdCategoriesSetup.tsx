@@ -25,7 +25,6 @@ export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
    setEditing(category??null);
    setName(category?.name??'');
    setType(category?.type??'expense');
-   const visual=getCategoryVisual(category??{name:'',type:'expense'});
    const storedIcon=category?.icon?.trim()||'';
    const storedColor=category?.color?.trim().toLocaleLowerCase('en-US')||'';
    setIcon(storedIcon&&storedIcon!=='tag'?storedIcon:'');
