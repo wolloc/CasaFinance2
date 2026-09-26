@@ -258,6 +258,17 @@ Recebíveis não melhoram o **Deve sobrar** principal antes do recebimento; pag�
 
 ### Olhando pra frente
 
+
+**DEFINIDO — horizonte padrão:** a Casa mostra o mês de referência + os próximos 3 meses. Horizontes maiores continuam navegáveis por mês, mas não são somados em um total de “riqueza futura”.
+
+**DEFINIDO — estados da leitura futura:** cada mês separa:
+- **Realizado** — entradas e saídas que já aconteceram;
+- **Comprometido** — obrigações concretas ainda abertas, inclusive pendências anteriores carregadas;
+- **Planejado** — entradas confiáveis ainda esperadas e recorrências futuras ainda não materializadas.
+
+Entradas planejadas participam apenas da projeção do mês em que são esperadas. Não aumentam saldo atual, patrimônio atual nem um acumulado de renda futura.
+
+
 A visão é cumulativa por mês financeiro:
 
 ```text

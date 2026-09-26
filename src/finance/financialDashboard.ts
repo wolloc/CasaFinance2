@@ -18,7 +18,7 @@ type AccountBalanceRow = { type:string; resource_restriction:string|null; curren
 const currentMonth=(timeZone:string)=>monthStartInTimeZone(timeZone);
 const summarizeResources=(rows:AccountBalanceRow[]):ResourceSummary=>rows.reduce((summary,row)=>{const amount=Number(row.current_balance??0);if(row.is_investment)summary.investments+=amount;else if(row.resource_restriction==='reserve')summary.reserves+=amount;else if(row.type==='meal_benefit')summary.benefits+=amount;else if(!row.is_restricted)summary.availableCash+=amount;return summary;},{availableCash:0,benefits:0,reserves:0,investments:0});
 
-export async function getMemberFinancialPerspective(client:SupabaseClient,householdId:string,memberId:string,timeZone:string=DEFAULT_HOUSEHOLD_TIMEZONE):Promise<MemberMonthlyProjection[]>{const response=await client.rpc('financial_member_monthly_projection',{p_household_id:householdId,p_member_id:memberId,p_reference_month:currentMonth(timeZone),p_horizon_months:3});if(response.error)throw response.error;return(response.data??[])as MemberMonthlyProjection[];}
+export async function getMemberFinancialPerspective(client:SupabaseClient,householdId:string,memberId:string,timeZone:string=DEFAULT_HOUSEHOLD_TIMEZONE):Promise<MemberMonthlyProjection[]>{const response=await client.rpc('financial_member_monthly_projection',{p_household_id:householdId,p_member_id:memberId,p_reference_month:currentMonth(timeZone),p_horizon_months:4});if(response.error)throw response.error;return(response.data??[])as MemberMonthlyProjection[];}
 
 export async function getFinancialDashboard(client:SupabaseClient,householdId:string,timeZone:string=DEFAULT_HOUSEHOLD_TIMEZONE){
   const [household,members,health,confidence,attention,projection,cards,settlements,accountBalances,guidance]=await Promise.all([
@@ -27,7 +27,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     client.rpc('financial_household_health_position',{p_household_id:householdId}),
     client.from('financial_projection_confidence_positions').select('confidence_state,confidence_label').eq('household_id',householdId).maybeSingle(),
     client.rpc('financial_priority_attention_items',{p_household_id:householdId}),
-    client.rpc('financial_monthly_projection',{p_household_id:householdId,p_reference_month:currentMonth(timeZone),p_horizon_months:3}),
+    client.rpc('financial_monthly_projection',{p_household_id:householdId,p_reference_month:currentMonth(timeZone),p_horizon_months:4}),
     client.from('financial_card_health_positions').select('card_id,card_name,credit_limit,current_invoice_remaining,future_known_commitments,available_limit,utilization_ratio,over_limit_amount,next_due_date,card_health').eq('household_id',householdId).order('card_name'),
     client.from('financial_member_settlement_positions').select('debtor_member_id,creditor_member_id,realized_outstanding,projected_outstanding,scheduled_settlement_amount,net_position').eq('household_id',householdId),
     client.from('financial_account_balances').select('type,resource_restriction,current_balance,is_restricted,is_investment').eq('household_id',householdId),
