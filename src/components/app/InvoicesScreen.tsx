@@ -35,7 +35,7 @@ export function InvoicesScreen({perspective,onPerspectiveChange,onPay}:{perspect
       .finally(()=>setLoading(false));
   },[household?.id,refreshKey]);
 
-  if(cardReviewIntent)return <ContextualCardInvoices cardId={cardReviewIntent.cardId} onPay={onPay}/>;
+  if(cardReviewIntent?.source==='home-card')return <ContextualCardInvoices cardId={cardReviewIntent.cardId} onPay={onPay}/>;
 
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
   const selectedMember=perspective==='household'?null:householdMembers.find(member=>member.id===perspective)??null;
