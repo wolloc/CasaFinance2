@@ -220,7 +220,7 @@ Cada cartão apresenta uma fotografia financeira, incluindo conceitualmente:
 
 **Fatura atual** e **limite comprometido** são conceitos diferentes. Uma compra parcelada pode colocar apenas uma parcela na fatura corrente e, ao mesmo tempo, comprometer no limite a exposição remanescente conforme a lógica do emissor.
 
-Na Casa, o cartão deve permanecer **compacto**. **PROPOSTO:** o próprio card do cartão deve ser a entrada principal e única para o detalhe contextual de Faturas/Cartão, evitando um segundo CTA redundante como “Todas as faturas”. Dentro do cartão/fatura, **Pagar fatura** usa uma conta escolhida como origem do caixa e reaproveita o comando canônico de pagamento, sem criar nova despesa. O mesmo dado pode continuar acessível por Gastos > Compromissos filtrando o cartão; são jornadas diferentes sobre a mesma fonte de verdade.
+Na Casa, o cartão deve permanecer **compacto**. **DEFINIDO e IMPLEMENTADO — navegação contextual por cartão:** o próprio card do cartão é a entrada principal para seu detalhe contextual, sem CTA redundante “Todas as faturas” na Home. A jornada abre diretamente aquele cartão, navega entre fatura anterior/atual/próxima, lista os compromissos canônicos vinculados à fatura e oferece **Pagar fatura** dentro do contexto. O pagamento reutiliza o comando canônico existente, movimenta somente caixa/liquidação e não cria nova despesa. A visão consolidada de cartões/faturas continua disponível quando o acesso nasce de alertas e revisões globais.
 
 ### Acertos entre membros
 
@@ -534,8 +534,11 @@ O Casa deve sempre conseguir responder:
 - investimento/reserva usam aporte/resgate de principal; poupança permanece também apta a pagamentos e transferências;
 - complexidade do motor deve permanecer oculta quando o contexto permitir derivação segura.
 
+**IMPLEMENTADO:**
+
+- cartão na Casa abre diretamente seu contexto de fatura, com navegação temporal, itens da fatura e pagamento canônico.
+
 **PROPOSTO:**
 
 - transformar os recursos exibidos em “Onde está nosso dinheiro” em pontos de entrada para ações contextuais;
 - reduzir a importância visual da ação global “Acerto”, deslocando sua liquidação para transferências e contextos onde a posição entre pessoas realmente existe;
-- consolidar a jornada de cartão em clique no card → fatura/detalhe → pagar fatura.
