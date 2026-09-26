@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, CalendarClock, CreditCard, Landmark, LoaderCircle, UserRound, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarClock, CreditCard, Landmark, LoaderCircle, PiggyBank, UserRound, Utensils, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
@@ -86,12 +86,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const expenseCategories = useMemo(() => categories.filter((category) => category.type === 'expense'), [categories]);
   const spendableAccounts = useMemo(() => accounts.filter((account) => account.type !== 'investment'), [accounts]);
   const repaymentAccountChoices = useMemo(() => spendableAccounts.filter((account) => account.type !== 'meal_benefit'), [spendableAccounts]);
-  const accountChoices = useMemo(() => {
-    if (paymentChoice === 'cash') return spendableAccounts.filter((account) => account.type === 'cash');
-    if (paymentChoice === 'benefit') return spendableAccounts.filter((account) => account.type === 'meal_benefit');
-    return spendableAccounts.filter((account) => account.type !== 'cash' && account.type !== 'meal_benefit');
-  }, [paymentChoice, spendableAccounts]);
-  const selectedAccount = accountChoices.find((account) => account.id === accountId) ?? accounts.find((account) => account.id === accountId) ?? null;
+  const selectedAccount = accounts.find((account) => account.id === accountId) ?? null;
   const cardPayment = paymentChoice === 'card' || paymentChoice === 'card_pix';
   const externalPayment = paymentChoice === 'external';
   const financedTotal = Number(amount || 0) + (paymentChoice === 'card_pix' ? Number(financialCharges || 0) : 0);
@@ -111,6 +106,16 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     responsibility === 'split-custom' && parties.some((party) => Number(customResponsibility[`party:${party.id}`] ?? 0) > 0)
   );
   const recurringBlockedReason = recurringExpenseBlockReason({ paymentChoice, purchaseMode, hasPartyResponsibility });
+  const accountResourceSubtitle=(account:HouseholdAccount)=>{
+    const kind=account.type==='cash'?'Dinheiro':account.type==='checking'?'Conta corrente · Pix / débito':account.type==='savings'?'Poupança · Pix / débito':account.type==='meal_benefit'?'Vale / benefício':'Carteira digital';
+    const ownerIds=account.owner_member_ids?.length?account.owner_member_ids:account.owner_member_id?[account.owner_member_id]:[];
+    const owners=ownerIds.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));
+    return owners.length?kind+' · '+owners.join(' + '):kind;
+  };
+  const cardResourceSubtitle=(card:HouseholdCard)=>{
+    const owner=householdMembers.find(member=>member.id===card.owner_member_id)?.display_name;
+    return [card.institution,owner?'Titular: '+owner:null,card.last_four?'final '+card.last_four:null].filter(Boolean).join(' · ')||'Cartão de crédito';
+  };
 
   const reset = () => {
     const memberId = currentMemberId;
@@ -151,17 +156,28 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setOpen(true); void loadContext();
   }, [openRequestId, handledRequestId, household?.id, currentMemberId]);
 
-  useEffect(() => { setAccountId(''); }, [paymentChoice]);
+  const chooseAccountResource = (account: HouseholdAccount) => {
+    const nextChoice: PaymentChoice = account.type === 'cash' ? 'cash' : account.type === 'meal_benefit' ? 'benefit' : 'account';
+    setPaymentChoice(nextChoice); setAccountId(account.id); setCardId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseCardResource = (card: HouseholdCard) => {
+    setPaymentChoice('card'); setCardId(card.id); setAccountId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseExternalPayment = () => {
+    setPaymentChoice('external'); setAccountId(''); setCardId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseCardRoute = (route:'single'|'installments'|'pix') => {
+    if(route==='pix'){setPaymentChoice('card_pix');setPurchaseMode('single');return;}
+    setPaymentChoice('card');setPurchaseMode(route);
+  };
 
   useEffect(() => {
     if (!open || !resourceIntent || accounts.length === 0) return;
     const account = accounts.find((item) => item.id === resourceIntent.accountId);
     if (!account) { setResourceIntent(null); return; }
-    const intendedChoice: PaymentChoice = account.type === 'cash' ? 'cash' : account.type === 'meal_benefit' ? 'benefit' : 'account';
-    if (paymentChoice !== intendedChoice) { setPaymentChoice(intendedChoice); return; }
-    setAccountId(account.id);
+    chooseAccountResource(account);
     setResourceIntent(null);
-  }, [open, resourceIntent, accounts, paymentChoice]);
+  }, [open, resourceIntent, accounts]);
 
   useEffect(() => {
     if (!recurring || recurringBlockedReason || recurringStartDateTouched) return;
@@ -430,13 +446,11 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
           {responsibility === 'split-custom' && <div className="mt-3 space-y-2 rounded-xl border border-slate-700 p-3"><p className="text-xs text-slate-400">Informe apenas quem participa. A soma deve fechar exatamente o total.</p>{householdMembers.map((member) => <AllocationField key={`member:${member.id}`} label={member.display_name} value={customResponsibility[`member:${member.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`member:${member.id}`]: value }))} />)}{parties.map((party) => <AllocationField key={`party:${party.id}`} label={party.name} value={customResponsibility[`party:${party.id}`] ?? ''} onChange={(value) => setCustomResponsibility((current) => ({ ...current, [`party:${party.id}`]: value }))} />)}</div>}
         </fieldset>
 
-        <fieldset><legend className="text-sm font-semibold text-slate-200">Como foi pago? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2"><PaymentButton active={paymentChoice === 'account'} onClick={() => setPaymentChoice('account')} icon={<Landmark className="h-4 w-4" />} label="Conta / Pix" /><PaymentButton active={paymentChoice === 'cash'} onClick={() => setPaymentChoice('cash')} icon={<WalletCards className="h-4 w-4" />} label="Carteira / dinheiro" /><PaymentButton active={paymentChoice === 'benefit'} onClick={() => setPaymentChoice('benefit')} icon={<WalletCards className="h-4 w-4" />} label="VA/VR/benefício" /><PaymentButton active={paymentChoice === 'card'} onClick={() => setPaymentChoice('card')} icon={<CreditCard className="h-4 w-4" />} label="Cartão de crédito" /><PaymentButton active={paymentChoice === 'card_pix'} onClick={() => setPaymentChoice('card_pix')} icon={<CreditCard className="h-4 w-4" />} label="Pix por cartão" /><PaymentButton active={externalPayment} onClick={() => setPaymentChoice('external')} icon={<UserRound className="h-4 w-4" />} label="Outra pessoa pagou" /></div></fieldset>
-
-        {!cardPayment && !externalPayment && <label className="block text-sm text-slate-300">Qual recurso foi usado?<select required value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{accountChoices.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>{accountChoices.length === 0 && <span className="mt-1 block text-xs text-amber-300">Nenhum recurso desse tipo está cadastrado na Casa.</span>}</label>}
+        <fieldset><legend className="text-sm font-semibold text-slate-200">De onde saiu ou será cobrado? <span className="text-rose-300">*</span></legend><p className="mt-1 text-xs text-slate-500">Escolha o recurso real usado. O Casa abre somente as opções compatíveis.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{spendableAccounts.map(account=><ResourceChoice key={account.id} active={!cardPayment&&!externalPayment&&accountId===account.id} onClick={()=>chooseAccountResource(account)} icon={<AccountTypeIcon type={account.type}/>} title={account.name} subtitle={accountResourceSubtitle(account)}/>)}{cards.map(card=><ResourceChoice key={card.id} active={cardPayment&&cardId===card.id} onClick={()=>chooseCardResource(card)} icon={<CreditCard className="h-5 w-5"/>} title={card.name} subtitle={cardResourceSubtitle(card)}/>)}<ResourceChoice active={externalPayment} onClick={chooseExternalPayment} icon={<UserRound className="h-5 w-5"/>} title="Outra pessoa pagou" subtitle="Pagamento fora dos recursos da Casa"/></div>{spendableAccounts.length===0&&cards.length===0&&<p className="mt-2 text-xs text-amber-300">Nenhum recurso financeiro está cadastrado. Cadastre uma conta, carteira ou cartão em Ajustes.</p>}</fieldset>
 
         {!cardPayment && !externalPayment && selectedAccount && <p className="rounded-xl bg-emerald-950/30 p-3 text-xs text-emerald-200">{(selectedAccount.owner_member_ids?.length ?? 0) === 1 ? `O dinheiro sai de ${selectedAccount.name}. O Casa identifica automaticamente quem bancou pela titularidade confirmada desse recurso.` : `O dinheiro sai de ${selectedAccount.name}. Como o recurso é compartilhado, o Casa usa a participação dos titulares para calcular os acertos.`}</p>}
 
-        {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><label className="block text-sm text-slate-300">Qual cartão?<select required value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3"><option value="">Selecione</option>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select></label><fieldset><legend className="text-sm text-slate-300">{paymentChoice === 'card_pix' ? 'Como ficou no cartão?' : 'Como foi a compra?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode === 'single'} onClick={() => setPurchaseMode('single')} label="À vista" /><ChoiceButton active={purchaseMode === 'installments'} onClick={() => setPurchaseMode('installments')} label="Parcelado" /></div></fieldset>{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} onBlur={() => { if (financialCharges && Number.isFinite(Number(financialCharges))) setFinancialCharges(Number(financialCharges).toFixed(2)); }} className="min-h-11 w-full bg-transparent outline-none" /></div></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}</div>}
+        {cardPayment && <div className="space-y-3 rounded-2xl border border-violet-900/60 bg-violet-950/20 p-4"><div><p className="text-sm font-semibold text-violet-100">{cards.find(card=>card.id===cardId)?.name??'Cartão selecionado'}</p><p className="mt-1 text-xs text-slate-400">Como esta operação ficou no cartão?</p></div><div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><ChoiceButton active={paymentChoice==='card'&&purchaseMode==='single'} onClick={()=>chooseCardRoute('single')} label="Compra à vista"/><ChoiceButton active={paymentChoice==='card'&&purchaseMode==='installments'} onClick={()=>chooseCardRoute('installments')} label="Compra parcelada"/><ChoiceButton active={paymentChoice==='card_pix'} onClick={()=>chooseCardRoute('pix')} label="Pix com este cartão"/></div>{paymentChoice==='card_pix'&&<fieldset><legend className="text-sm text-slate-300">O Pix foi parcelado?</legend><div className="mt-2 grid grid-cols-2 gap-2"><ChoiceButton active={purchaseMode==='single'} onClick={()=>setPurchaseMode('single')} label="Não"/><ChoiceButton active={purchaseMode==='installments'} onClick={()=>setPurchaseMode('installments')} label="Sim"/></div></fieldset>}{purchaseMode === 'installments' && <label className="block text-sm text-slate-300">Quantas parcelas?<input type="number" min="2" max="120" value={installmentCount} onChange={(event) => setInstallmentCount(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl bg-slate-800 p-3" /></label>}{paymentChoice === 'card_pix' && <><label className="block text-sm text-slate-300">Encargos financeiros<div className="mt-1 flex min-h-12 items-center rounded-xl bg-slate-800 px-3"><span className="mr-2 text-slate-500">R$</span><input required inputMode="decimal" type="number" min="0" step="0.01" value={financialCharges} onChange={(event) => setFinancialCharges(event.target.value)} onBlur={() => { if (financialCharges && Number.isFinite(Number(financialCharges))) setFinancialCharges(Number(financialCharges).toFixed(2)); }} className="min-h-11 w-full bg-transparent outline-none" /></div></label><div className="rounded-xl bg-slate-950/60 p-3 text-xs"><MoneyRow label="Valor do Pix" value={Number(amount || 0)} /><MoneyRow label="Encargos" value={Number(financialCharges || 0)} /><div className="mt-2 border-t border-slate-800 pt-2"><MoneyRow label="Total no cartão" value={financedTotal} strong /></div></div></>}</div>}
 
         {externalPayment && <div className="space-y-4 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-4">
           <div><p className="text-sm font-semibold text-slate-200">Quem pagou?</p><input value={partySearch} onChange={(event) => { setPartySearch(event.target.value); setPayerPartyId(''); }} placeholder="Busque pelo nome" className="mt-2 min-h-12 w-full rounded-xl bg-slate-800 p-3" /><div className="mt-2 space-y-2">{partyMatches.map((party) => <button key={party.id} type="button" onClick={() => { setPayerPartyId(party.id); setPartySearch(party.name); }} className={`w-full rounded-xl border p-3 text-left text-sm ${payerPartyId === party.id ? 'border-emerald-500 bg-emerald-950/50 text-emerald-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{party.name}</button>)}{partySearch.trim() && !exactParty && <button type="button" disabled={creatingParty} onClick={() => void registerPartyInline('payer')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-200 disabled:opacity-50">{creatingParty && <LoaderCircle className="h-4 w-4 animate-spin" />}Cadastrar “{partySearch.trim()}”</button>}</div></div>
@@ -471,9 +485,8 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   </div>;
 }
 
-function PaymentButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) {
-  return <button type="button" onClick={onClick} aria-pressed={active} className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{icon}<span>{label}</span></button>;
-}
+function AccountTypeIcon({type}:{type:HouseholdAccount['type']}){const Icon=type==='cash'?Banknote:type==='savings'?PiggyBank:type==='meal_benefit'?Utensils:type==='checking'?Landmark:WalletCards;return <Icon className="h-5 w-5"/>;}
+function ResourceChoice({active,onClick,icon,title,subtitle}:{active:boolean;onClick:()=>void;icon:ReactNode;title:string;subtitle:string}){return <button type="button" onClick={onClick} aria-pressed={active} className={`flex min-h-[68px] items-center gap-3 rounded-2xl border p-3 text-left ${active?'border-blue-500 bg-blue-950/40':'border-slate-700 bg-slate-800'}`}><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active?'bg-blue-500/15 text-blue-200':'bg-slate-900 text-slate-300'}`}>{icon}</span><span className="min-w-0"><strong className="block truncate text-sm">{title}</strong><span className="mt-0.5 block truncate text-xs text-slate-500">{subtitle}</span></span></button>;}
 function ChoiceButton({ active, onClick, label }: { key?: string; active: boolean; onClick: () => void; label: string }) {
   return <button type="button" onClick={onClick} aria-pressed={active} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${active ? 'border-blue-500 bg-blue-950/50 text-blue-100' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>{label}</button>;
 }
