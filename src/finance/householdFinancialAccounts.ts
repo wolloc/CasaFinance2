@@ -18,6 +18,29 @@ export type HouseholdAccount = {
 
 export type AccountOwnership = { account_id: string; member_id: string };
 
+
+export async function listIncomeDestinationAccounts(client: SupabaseClient, householdId: string) {
+  const [accounts, ownerships] = await Promise.all([
+    client.from('accounts')
+      .select(accountColumns)
+      .eq('household_id', householdId)
+      .is('deactivated_at', null)
+      .in('type', ['cash','checking','savings','digital_wallet'])
+      .is('resource_restriction', null)
+      .order('name'),
+    client.from('account_ownerships')
+      .select('account_id,member_id')
+      .eq('household_id', householdId),
+  ]);
+  if (accounts.error) throw accounts.error;
+  if (ownerships.error) throw ownerships.error;
+  const ownershipRows=(ownerships.data ?? []) as AccountOwnership[];
+  return ((accounts.data ?? []) as HouseholdAccount[]).map((account)=>({
+    ...account,
+    owner_member_ids: ownershipRows.filter((ownership)=>ownership.account_id===account.id).map((ownership)=>ownership.member_id),
+  }));
+}
+
 export type HouseholdCard = {
   id: string;
   household_id: string;
