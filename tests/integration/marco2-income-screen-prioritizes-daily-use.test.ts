@@ -48,7 +48,8 @@ test('Entradas turns category beneficiary date and state into scannable visual t
   assert.match(source,/getCategoryVisual/);
   assert.match(source,/beneficiariesByTransaction/);
   assert.match(source,/formatDate\(row\.transaction_date\)/);
-  assert.match(source,/Detalhes e ações/);
+  assert.match(source,/role="button"/);
+  assert.match(source,/Detalhe da entrada/);
 });
 
 
@@ -62,4 +63,21 @@ test('income visual tag remains deterministic when canonical movements involve m
   assert.match(source,/new Map<string,string\[\]>\(\)/);
   assert.match(source,/current\.includes\(item\.beneficiary_member_id\)/);
   assert.match(source,/names\.join\(' \+ '\)/);
+});
+
+
+test('Entradas follows Gastos hierarchy: period, perspective, total and categories',()=>{
+  const period=source.indexOf('Toque para escolher o período');
+  const perspective=source.indexOf('<FinancialPerspectiveSelector');
+  const total=source.indexOf('<IncomeSummary');
+  assert.ok(period>=0&&perspective>period&&total>perspective);
+  assert.match(source,/Ver categorias/);
+  assert.match(source,/categorySummary/);
+});
+
+test('income item opens contextual detail instead of exposing maintenance in every row',()=>{
+  assert.match(source,/setDetailTransaction\(row\)/);
+  assert.match(source,/aria-label="Detalhe da entrada"/);
+  assert.match(source,/IncomeFactManagement transaction=\{detailTransaction\}/);
+  assert.doesNotMatch(source,/<summary className="cursor-pointer list-none text-xs font-semibold text-slate-500 hover:text-slate-300">Detalhes e ações<\/summary>/);
 });
