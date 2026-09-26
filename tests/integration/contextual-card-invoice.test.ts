@@ -17,9 +17,11 @@ test('card click routes to a card-scoped invoice journey',()=>{
 });
 
 test('contextual invoice items reuse the canonical financial commitment read model',()=>{
- assert.match(items,/financial_commitment_positions/);
+ assert.match(items,/financial_card_commitment_positions/);
  assert.match(items,/source_invoice_id/);
- assert.match(items,/economic_type.*expense/s);
+ assert.match(contextual,/Estornado/);
+ assert.match(contextual,/Cancelado/);
+ assert.match(contextual,/Saldo inicial do cartão/);
  assert.doesNotMatch(items,/\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
 });
 
