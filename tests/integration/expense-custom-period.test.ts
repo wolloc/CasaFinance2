@@ -34,3 +34,20 @@ test('period reads remain read-only and member responsibility stays canonical',(
  assert.match(periodSource,/economic_allocations/);
  assert.doesNotMatch(browser,/\.filter\([^\n]*financial_date/);
 });
+
+
+test('broad custom periods paginate base reads and batch metadata lookups',()=>{
+ assert.match(service,/PERIOD_PAGE_SIZE=500/);
+ assert.match(service,/\.range\(from,to\)/);
+ assert.match(service,/chunkValues\(sourceTransactionIds\)/);
+ assert.match(service,/chunkValues\(enrichedRows\.map\(row=>row\.commitment_key\)\)/);
+ assert.match(service,/chunkValues\(transactions\.map\(row=>row\.id\)\)/);
+});
+
+test('incomplete custom dates cannot crash or query the Gastos surface',()=>{
+ assert.match(browser,/validDate/);
+ assert.match(browser,/customRangeReady/);
+ assert.match(browser,/Escolha as datas/);
+ assert.match(browser,/disabled=\{customRange&&!customRangeReady\}/);
+ assert.match(browser,/if\(customRange&&!customRangeReady\)\{setFinancialRows\(\[\]\);setEconomicRows\(\[\]\)/);
+});
