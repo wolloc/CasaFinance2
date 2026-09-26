@@ -66,7 +66,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   if(!resources.some(resource=>resource.account_id===plannedDestinationAccountId&&resource.ownerMemberIds.includes(memberId)))setPlannedDestinationAccountId('');
  };
  const recurrenceCount=recurringDuration==='ongoing'?null:recurringDuration==='custom'?customRecurringCount:Number(recurringDuration);
- const recurrenceEndDate=recurring&&recurrenceCount?recurringIncomeEndDate(expectedDate,recurringFrequency,recurrenceCount):'';
+ const recurrenceEndDate=(()=>{if(!recurring||!recurrenceCount||!expectedDate)return'';try{return recurringIncomeEndDate(expectedDate,recurringFrequency,recurrenceCount);}catch{return'';}})();
  const chooseRecurringFrequency=(frequency:RecurringIncomeFrequency)=>{setRecurringFrequency(frequency);setRecurringDuration(frequency==='monthly'?'12':'3');setCustomRecurringCount(frequency==='monthly'?5:2);};
 
  const submit=async(event:FormEvent)=>{
@@ -78,6 +78,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   if(!beneficiaryMemberId){setError('Informe de quem é esta entrada.');return;}
   if(!plannedDestinationAccountId||!compatibleResources.some(resource=>resource.account_id===plannedDestinationAccountId)){setError('Escolha uma conta compatível com a pessoa que recebe esta entrada.');return;}
   if(!description.trim()){setError('Conte ao Casa de onde vem esta entrada.');return;}
+  if(!expectedDate){setError('Informe quando esta entrada é esperada.');return;}
   if(!Number.isFinite(numericAmount)||numericAmount<=0){setError('Informe um valor maior que zero.');return;}
   setSaving(true);setError(null);
   try{
