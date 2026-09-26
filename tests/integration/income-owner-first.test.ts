@@ -14,12 +14,15 @@ test('Nova Entrada starts from the beneficiary before destination and value',()=
  assert.match(screen,/autoFocus=\{index===0\}/);
 });
 
-test('income destination options use canonical account ownership',()=>{
+test('income destination cards use canonical account ownership',()=>{
  assert.match(screen,/listIncomeDestinationAccounts/);
  assert.match(screen,/account\.owner_member_ids/);
  assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
  assert.match(screen,/Conjunta/);
  assert.match(screen,/Titular/);
+ assert.match(screen,/DestinationIcon/);
+ assert.match(screen,/aria-pressed=\{active\}/);
+ assert.doesNotMatch(screen,/Onde deve entrar\?<select/);
 });
 
 test('changing beneficiary drops an incompatible previously selected account',()=>{
@@ -28,10 +31,14 @@ test('changing beneficiary drops an incompatible previously selected account',()
  assert.match(screen,/Escolha uma conta compatível com a pessoa que recebe esta entrada/);
 });
 
-test('known income defaults to confirmed without pretending it was received',()=>{
+test('known income defaults to confirmed with human language and without pretending it was received',()=>{
  assert.match(screen,/useState<IncomeConfidence>\('confirmed'\)/);
- assert.match(screen,/Confirmada significa que a entrada é conhecida; não significa recebida/);
+ assert.match(screen,/Essa entrada já está confirmada\?/);
+ assert.match(screen,/Sim, já sei que vou receber/);
+ assert.match(screen,/Ainda é uma expectativa/);
+ assert.match(screen,/Ela só vira recebida quando o dinheiro realmente entrar/);
  assert.match(screen,/saldo só muda quando o recebimento acontecer de verdade/);
+ assert.doesNotMatch(screen,/Situação<select/);
 });
 
 test('recurring income is created inside the owner-first flow without bypassing destination compatibility',()=>{
