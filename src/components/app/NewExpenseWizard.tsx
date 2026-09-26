@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, CalendarClock, CreditCard, Landmark, LoaderCircle, UserRound, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarClock, CreditCard, Landmark, LoaderCircle, PiggyBank, UserRound, Utensils, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount, type HouseholdCard } from '../../finance/householdFinancialAccounts.js';
@@ -86,12 +86,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   const expenseCategories = useMemo(() => categories.filter((category) => category.type === 'expense'), [categories]);
   const spendableAccounts = useMemo(() => accounts.filter((account) => account.type !== 'investment'), [accounts]);
   const repaymentAccountChoices = useMemo(() => spendableAccounts.filter((account) => account.type !== 'meal_benefit'), [spendableAccounts]);
-  const accountChoices = useMemo(() => {
-    if (paymentChoice === 'cash') return spendableAccounts.filter((account) => account.type === 'cash');
-    if (paymentChoice === 'benefit') return spendableAccounts.filter((account) => account.type === 'meal_benefit');
-    return spendableAccounts.filter((account) => account.type !== 'cash' && account.type !== 'meal_benefit');
-  }, [paymentChoice, spendableAccounts]);
-  const selectedAccount = accountChoices.find((account) => account.id === accountId) ?? accounts.find((account) => account.id === accountId) ?? null;
+  const selectedAccount = accounts.find((account) => account.id === accountId) ?? null;
   const cardPayment = paymentChoice === 'card' || paymentChoice === 'card_pix';
   const externalPayment = paymentChoice === 'external';
   const financedTotal = Number(amount || 0) + (paymentChoice === 'card_pix' ? Number(financialCharges || 0) : 0);
@@ -151,17 +146,28 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
     setOpen(true); void loadContext();
   }, [openRequestId, handledRequestId, household?.id, currentMemberId]);
 
-  useEffect(() => { setAccountId(''); }, [paymentChoice]);
+  const chooseAccountResource = (account: HouseholdAccount) => {
+    const nextChoice: PaymentChoice = account.type === 'cash' ? 'cash' : account.type === 'meal_benefit' ? 'benefit' : 'account';
+    setPaymentChoice(nextChoice); setAccountId(account.id); setCardId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseCardResource = (card: HouseholdCard) => {
+    setPaymentChoice('card'); setCardId(card.id); setAccountId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseExternalPayment = () => {
+    setPaymentChoice('external'); setAccountId(''); setCardId(''); setPurchaseMode('single'); setFinancialCharges('0');
+  };
+  const chooseCardRoute = (route:'single'|'installments'|'pix') => {
+    if(route==='pix'){setPaymentChoice('card_pix');setPurchaseMode('single');return;}
+    setPaymentChoice('card');setPurchaseMode(route);
+  };
 
   useEffect(() => {
     if (!open || !resourceIntent || accounts.length === 0) return;
     const account = accounts.find((item) => item.id === resourceIntent.accountId);
     if (!account) { setResourceIntent(null); return; }
-    const intendedChoice: PaymentChoice = account.type === 'cash' ? 'cash' : account.type === 'meal_benefit' ? 'benefit' : 'account';
-    if (paymentChoice !== intendedChoice) { setPaymentChoice(intendedChoice); return; }
-    setAccountId(account.id);
+    chooseAccountResource(account);
     setResourceIntent(null);
-  }, [open, resourceIntent, accounts, paymentChoice]);
+  }, [open, resourceIntent, accounts]);
 
   useEffect(() => {
     if (!recurring || recurringBlockedReason || recurringStartDateTouched) return;
