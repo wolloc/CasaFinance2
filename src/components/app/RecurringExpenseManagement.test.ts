@@ -6,8 +6,10 @@ const ui = await readFile(new URL('./RecurringExpenseManagement.tsx', import.met
 const screen = await readFile(new URL('./TransactionsScreen.tsx', import.meta.url), 'utf8');
 const service = await readFile(new URL('../../finance/recurringExpenses.ts', import.meta.url), 'utf8');
 
-test('Gastos exposes prospective recurring series management', () => {
-  assert.match(screen, /RecurringExpenseManagement/);
+test('Gastos exposes prospective recurring series management from the selected transaction', () => {
+  assert.match(screen, /RecurringExpenseManagement focusRuleId=\{detailRecurringRuleId\}/);
+  assert.match(screen, /Gerenciar esta recorrência/);
+  assert.match(ui, /focusRuleId/);
   assert.match(ui, /Alterar futuro/);
   assert.match(ui, /Encerrar/);
   assert.match(ui, /Vale a partir de/);

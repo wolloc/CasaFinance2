@@ -6,8 +6,10 @@ const ui = await readFile(new URL('./RecurringIncomeManagement.tsx', import.meta
 const ledger = await readFile(new URL('./IncomeLedgerScreen.tsx', import.meta.url), 'utf8');
 const service = await readFile(new URL('../../finance/recurringIncome.ts', import.meta.url), 'utf8');
 
-test('recurring income management is exposed inside Entradas', () => {
-  assert.match(ledger, /RecurringIncomeManagement/);
+test('recurring income management is exposed from the recurring entry', () => {
+  assert.match(ledger, /RecurringIncomeManagement refreshKey=\{refreshKey\} focusRuleId=\{activeRecurringRuleId\}/);
+  assert.match(ledger, /Gerenciar esta recorrência/);
+  assert.match(ui, /focusRuleId/);
   assert.match(ui, /Entradas que se repetem/);
   assert.match(ui, /Mudar próximos meses/);
   assert.match(ui, /Parar recorrência/);
