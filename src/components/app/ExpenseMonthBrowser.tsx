@@ -35,6 +35,7 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   const[rangeStart,setRangeStart]=useState(()=>`${currentMonth()}-01`);
   const[rangeEnd,setRangeEnd]=useState(()=>monthEnd(currentMonth()));
   const[periodPickerOpen,setPeriodPickerOpen]=useState(false);
+  const customRangeReady=validDate(rangeStart)&&validDate(rangeEnd)&&rangeStart<=rangeEnd;
 
   useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}if(customRange&&!customRangeReady){setFinancialRows([]);setEconomicRows([]);setError(false);setLoading(false);return()=>{cancelled=true;};}setLoading(true);setError(false);setFinancialRows([]);setEconomicRows([]);const memberId=perspective==='household'?undefined:perspective;const request=customRange?(mode==='financial'?listFinancialPeriodExpenses(supabase,household.id,rangeStart,rangeEnd,memberId):listEconomicPeriodExpenses(supabase,household.id,rangeStart,rangeEnd,memberId)):(mode==='financial'?listFinancialMonthExpenses(supabase,household.id,month,memberId):listEconomicMonthExpenses(supabase,household.id,month,memberId));request.then(rows=>{if(cancelled)return;if(mode==='financial')setFinancialRows(rows as FinancialMonthExpense[]);else setEconomicRows(rows as EconomicMonthExpense[]);}).catch(()=>{if(cancelled)return;setFinancialRows([]);setEconomicRows([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,month,customRange,customRangeReady,rangeStart,rangeEnd,mode,perspective,refreshKey,refreshVersion]);
 
