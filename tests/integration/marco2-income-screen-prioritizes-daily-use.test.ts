@@ -12,10 +12,10 @@ test('Entradas abre como lista e a criação só aparece quando a ação global 
   assert.match(creation,/aria-label="Nova entrada"/);
 });
 
-test('criação recorrente fica sob demanda e gestão pertence à ocorrência', () => {
-  const ledger = source.indexOf('<section className="space-y-3">');
-  const advanced = source.indexOf('Outras ações');
-  assert.ok(ledger >= 0 && advanced > ledger);
+test('criação recorrente pertence à Nova Entrada e gestão continua na ocorrência', () => {
+  assert.match(creation,/Repetir esta entrada/);
+  assert.match(creation,/createRecurringIncomeRule/);
+  assert.doesNotMatch(source,/<RecurringIncomeAction/);
   assert.match(source, /Gerenciar esta recorrência/);
   assert.match(source, /recurringRuleByTransaction/);
   assert.match(source, /focusRuleId=\{activeRecurringRuleId\}/);

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CircleDollarSign, LoaderCircle, X } from 'lucide-react';
+import { CalendarClock, CircleDollarSign, LoaderCircle, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdCategories, type HouseholdCategory } from '../../finance/householdCategories.js';
@@ -7,6 +7,7 @@ import { createIncomeFact, incomeNatureLabels, type IncomeConfidence, type Incom
 import { isTransactionalResource, listInvestmentReserveResources, type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
 import { listIncomeDestinationAccounts } from '../../finance/householdFinancialAccounts.js';
 import { dateInTimeZone, DEFAULT_HOUSEHOLD_TIMEZONE } from '../../finance/householdClock.js';
+import { createRecurringIncomeRule, recurringIncomeEndDate, type RecurringIncomeFrequency } from '../../finance/recurringIncome.js';
 
 const normalizeAmount=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
 type IncomeDestination=InvestmentReserveResource&{ownerMemberIds:string[]};
@@ -23,7 +24,11 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
  const[plannedDestinationAccountId,setPlannedDestinationAccountId]=useState('');
  const[incomeNature,setIncomeNature]=useState<IncomeNature>('salary');
  const[economicState,setEconomicState]=useState<IncomeConfidence>('confirmed');
- const[notes,setNotes]=useState('');
+ const[notes]=useState('');
+ const[recurring,setRecurring]=useState(false);
+ const[recurringFrequency,setRecurringFrequency]=useState<RecurringIncomeFrequency>('monthly');
+ const[recurringDuration,setRecurringDuration]=useState<'1'|'2'|'3'|'6'|'12'|'ongoing'|'custom'>('12');
+ const[customRecurringCount,setCustomRecurringCount]=useState(5);
  const[loading,setLoading]=useState(true);
  const[saving,setSaving]=useState(false);
  const[loadError,setLoadError]=useState<string|null>(null);
@@ -49,7 +54,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
  }catch{clearLoadedContext();setLoadError('Não foi possível conferir os dados necessários para registrar esta entrada.');}finally{setLoading(false);}};
 
  useEffect(()=>{void load();},[household?.id]);
- useEffect(()=>{if(openRequestId>0&&openRequestId!==handledRequestId){setHandledRequestId(openRequestId);setOpen(true);setError(null);setExpectedDate(dateInTimeZone(household?.timezone??DEFAULT_HOUSEHOLD_TIMEZONE));setBeneficiaryMemberId('');setPlannedDestinationAccountId('');setEconomicState('confirmed');}},[openRequestId,handledRequestId,household?.timezone]);
+ useEffect(()=>{if(openRequestId>0&&openRequestId!==handledRequestId){setHandledRequestId(openRequestId);setOpen(true);setError(null);setExpectedDate(dateInTimeZone(household?.timezone??DEFAULT_HOUSEHOLD_TIMEZONE));setBeneficiaryMemberId('');setPlannedDestinationAccountId('');setEconomicState('confirmed');setRecurring(false);setRecurringFrequency('monthly');setRecurringDuration('12');setCustomRecurringCount(5);}},[openRequestId,handledRequestId,household?.timezone]);
 
  const compatibleResources=beneficiaryMemberId?resources.filter(resource=>resource.ownerMemberIds.includes(beneficiaryMemberId)):[];
  const ownerLabel=(resource:IncomeDestination)=>{
@@ -60,6 +65,9 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   setBeneficiaryMemberId(memberId);
   if(!resources.some(resource=>resource.account_id===plannedDestinationAccountId&&resource.ownerMemberIds.includes(memberId)))setPlannedDestinationAccountId('');
  };
+ const recurrenceCount=recurringDuration==='ongoing'?null:recurringDuration==='custom'?customRecurringCount:Number(recurringDuration);
+ const recurrenceEndDate=(()=>{if(!recurring||!recurrenceCount||!expectedDate)return'';try{return recurringIncomeEndDate(expectedDate,recurringFrequency,recurrenceCount);}catch{return'';}})();
+ const chooseRecurringFrequency=(frequency:RecurringIncomeFrequency)=>{setRecurringFrequency(frequency);setRecurringDuration(frequency==='monthly'?'12':'3');setCustomRecurringCount(frequency==='monthly'?5:2);};
 
  const submit=async(event:FormEvent)=>{
   event.preventDefault();
@@ -70,11 +78,16 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   if(!beneficiaryMemberId){setError('Informe de quem é esta entrada.');return;}
   if(!plannedDestinationAccountId||!compatibleResources.some(resource=>resource.account_id===plannedDestinationAccountId)){setError('Escolha uma conta compatível com a pessoa que recebe esta entrada.');return;}
   if(!description.trim()){setError('Conte ao Casa de onde vem esta entrada.');return;}
+  if(!expectedDate){setError('Informe quando esta entrada é esperada.');return;}
   if(!Number.isFinite(numericAmount)||numericAmount<=0){setError('Informe um valor maior que zero.');return;}
   setSaving(true);setError(null);
   try{
-   await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature,economicState,notes});
-   setDescription('');setAmount('');setCategoryId('');setNotes('');setPlannedDestinationAccountId('');setOpen(false);onCreated?.();
+   if(recurring){
+    await createRecurringIncomeRule(supabase,{householdId:household.id,description,amount:normalized,startDate:expectedDate,endDate:recurrenceEndDate,frequency:recurringFrequency,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature,economicState,notes});
+   }else{
+    await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature,economicState,notes});
+   }
+   setDescription('');setAmount('');setCategoryId('');setPlannedDestinationAccountId('');setRecurring(false);setOpen(false);onCreated?.();
   }catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível criar a entrada.');}
   finally{setSaving(false);}
  };
@@ -94,7 +107,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
      <label className="text-sm font-semibold">De onde vem?<input value={description} onChange={e=>setDescription(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base" placeholder="Ex.: Salário Itaú"/></label>
      <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Tipo<select value={incomeNature} onChange={e=>setIncomeNature(e.target.value as IncomeNature)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3">{Object.entries(incomeNatureLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm font-semibold">Quando?<input type="date" value={expectedDate} onChange={e=>setExpectedDate(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label></div>
      <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold">Situação<select value={economicState} onChange={e=>setEconomicState(e.target.value as IncomeConfidence)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="confirmed">Confirmada</option><option value="forecast">Ainda é previsão</option></select><span className="mt-1 block text-xs font-normal text-slate-500">Confirmada significa que a entrada é conhecida; não significa recebida.</span></label><label className="text-sm font-semibold">Categoria <span className="font-normal text-slate-500">(opcional)</span><select value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Sem categoria</option>{categories.map(category=><option key={category.id} value={category.id}>{category.name}</option>)}</select></label></div>
-     <details className="rounded-xl border border-slate-800 bg-slate-950/50 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-300">Adicionar observação</summary><textarea value={notes} onChange={e=>setNotes(e.target.value)} className="mt-3 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"/></details>
+     <section className="rounded-2xl border border-slate-800 bg-slate-950/45 p-4" aria-label="Recorrência opcional da entrada"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300"><CalendarClock className="h-5 w-5"/></span><div className="min-w-0 flex-1"><p className="font-semibold text-slate-200">Repetir esta entrada</p><p className="mt-0.5 text-xs text-slate-500">Opcional · cada recebimento continua sendo uma ocorrência separada.</p></div><button type="button" aria-pressed={recurring} onClick={()=>setRecurring(value=>!value)} className={`min-h-10 shrink-0 rounded-xl px-3 text-sm font-bold ${recurring?'bg-slate-800 text-slate-200':'bg-emerald-500/10 text-emerald-300'}`}>{recurring?'Remover':'Adicionar'}</button></div>{recurring&&<div className="mt-4 space-y-4 border-t border-slate-800 pt-4"><fieldset><legend className="text-sm font-semibold text-slate-200">Como ela se repete?</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" aria-pressed={recurringFrequency==='monthly'} onClick={()=>chooseRecurringFrequency('monthly')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringFrequency==='monthly'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Todo mês</button><button type="button" aria-pressed={recurringFrequency==='yearly'} onClick={()=>chooseRecurringFrequency('yearly')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringFrequency==='yearly'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Todo ano</button></div></fieldset><fieldset><legend className="text-sm font-semibold text-slate-200">Por quanto tempo?</legend><div className="mt-2 grid grid-cols-2 gap-2">{(recurringFrequency==='monthly'?(['3','6','12'] as const):(['1','2','3'] as const)).map(value=><button key={value} type="button" aria-pressed={recurringDuration===value} onClick={()=>setRecurringDuration(value)} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringDuration===value?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>{value} {recurringFrequency==='monthly'?(value==='1'?'mês':'meses'):(value==='1'?'ano':'anos')}</button>)}<button type="button" aria-pressed={recurringDuration==='ongoing'} onClick={()=>setRecurringDuration('ongoing')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringDuration==='ongoing'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Até eu parar</button></div><button type="button" onClick={()=>setRecurringDuration('custom')} className={`mt-2 min-h-10 rounded-xl border px-3 text-xs font-semibold ${recurringDuration==='custom'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Outro período</button>{recurringDuration==='custom'&&<label className="mt-2 block text-sm text-slate-300">Quantas ocorrências?<input type="number" min="1" max="120" value={customRecurringCount} onChange={e=>setCustomRecurringCount(Math.max(1,Math.min(120,Number(e.target.value)||1)))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"/><span className="mt-1 block text-[11px] text-slate-500">Conta a partir da primeira entrada informada.</span></label>}<p className="mt-2 text-[11px] text-slate-500">{recurringDuration==='ongoing'?'A série continua até você encerrar.':`${recurrenceCount} ocorrências na série · término calculado automaticamente.`}</p></fieldset><p className="rounded-xl bg-slate-900/70 p-3 text-xs text-slate-400">A primeira ocorrência é esta entrada de {expectedDate}. As próximas ficam projetadas e nenhuma altera o saldo até o recebimento real.</p></div>}</section>
      {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}
      <button disabled={saving||!beneficiaryMemberId||compatibleResources.length===0} className="min-h-12 rounded-2xl bg-emerald-600 px-4 font-bold disabled:opacity-50">{saving?'Salvando…':'Salvar entrada'}</button>
     </form>}

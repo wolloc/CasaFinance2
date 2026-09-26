@@ -79,3 +79,16 @@ export async function closeRecurringIncomeRule(client: SupabaseClient, household
   const normalizedReason=reason.trim();const identity=[householdId,ruleId,effectiveFrom,normalizedReason] as const;
   return runRetryStableRpc(client,'close-recurring-income',identity,'close_recurring_income_rule_idempotent',{p_household_id:householdId,p_rule_id:ruleId,p_effective_from:effectiveFrom,p_reason:normalizedReason});
 }
+
+
+export function recurringIncomeEndDate(startDate:string,frequency:RecurringIncomeFrequency,occurrenceCount:number){
+  const [year,month,day]=startDate.split('-').map(Number);
+  if(!year||!month||!day)throw new Error('Data inicial da recorrência inválida.');
+  if(!Number.isInteger(occurrenceCount)||occurrenceCount<1)throw new Error('Quantidade de ocorrências inválida.');
+  const steps=occurrenceCount-1;
+  const targetYear=frequency==='yearly'?year+steps:year+Math.floor((month-1+steps)/12);
+  const targetMonth=frequency==='yearly'?month:((month-1+steps)%12)+1;
+  const lastDay=new Date(Date.UTC(targetYear,targetMonth,0)).getUTCDate();
+  const targetDay=Math.min(day,lastDay);
+  return `${targetYear}-${String(targetMonth).padStart(2,'0')}-${String(targetDay).padStart(2,'0')}`;
+}

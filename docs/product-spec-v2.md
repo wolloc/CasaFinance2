@@ -450,9 +450,9 @@ Categorias de despesa têm prioridade analítica maior na experiência. Entradas
 
 **DEFINIDO e IMPLEMENTADO — Nova Entrada owner-first:** a captura começa escolhendo de quem é a entrada. Somente contas transacionais cuja titularidade inclui a pessoa escolhida aparecem como destino; conta conjunta aparece para ambos os titulares e exibe a titularidade junto do nome. Uma entrada atual/conhecida começa como **Confirmada** por padrão, mas confirmação econômica não significa recebimento: o saldo só muda quando o recebimento real é registrado.
 
-**PENDENTE — simplificação da recorrência de entradas e entrada futura avulsa:** o contrato de recorrência de renda é independente do contrato mensal-only das despesas e não deve ser restringido silenciosamente. Antes de redesenhar frequências ou forçar a semântica de uma entrada futura isolada, consolidar a decisão de produto e então ajustar UX e documentação.
+**DEFINIDO — recorrência dentro de Nova Entrada:** o fluxo owner-first permite transformar a própria entrada em uma série sem abrir uma ação paralela. O contrato existente de renda recorrente é preservado: **Todo mês** ou **Todo ano**. A pessoa escolhe a duração em linguagem humana (atalhos de duração, outro número de ocorrências ou até encerrar). A primeira ocorrência é a própria entrada informada; as seguintes são projeções independentes e nenhuma altera saldo antes do recebimento real. A gestão posterior continua pelo detalhe da ocorrência, preservando histórico.
 
-Nova entrada permite recorrência: **Não**, **Todo mês**, **Toda semana** ou **Personalizar**. Ao alterar: **Só este mês** ou **Atualizar daqui pra frente**.
+**PENDENTE — entrada futura avulsa:** a simplificação de uma entrada futura isolada continua separada da decisão de recorrência.
 
 Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto.
 
