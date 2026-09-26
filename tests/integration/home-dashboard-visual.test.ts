@@ -13,10 +13,14 @@ test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
   assert.match(home,/confidence\.confidence_label/);
 });
 
-test('fluxo mensal separa realizado de previsto também visualmente',()=>{
-  for(const value of ['já entrou','ainda esperado','já realizado\/pago','ainda pela frente','Quanto das entradas consideradas já chegou','Quanto dos compromissos considerados já aconteceu']) assert.match(home,new RegExp(value));
-  assert.match(home,/ratio\(entered,incomeTotal\)/);
-  assert.match(home,/ratio\(paid,commitmentTotal\)/);
+test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
+  for(const value of ['Mês em resumo','Entrou','Ainda entra','Já comprometido','Ainda compromete','Detalhes de entradas e gastos ficam nas áreas próprias']) assert.match(home,new RegExp(value));
+  assert.match(home,/realized_true_income_in_month/);
+  assert.match(home,/expected_reliable_income_remaining/);
+  assert.match(home,/realized_commitments_in_month/);
+  assert.match(home,/projected_recurring_commitments/);
+  assert.doesNotMatch(home,/Quanto das entradas consideradas já chegou/);
+  assert.doesNotMatch(home,/Quanto dos compromissos considerados já aconteceu/);
 });
 
 test('Home resume top categorias pelo gasto econômico realizado sem chamar de orçamento',()=>{
