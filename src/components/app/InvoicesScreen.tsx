@@ -8,6 +8,7 @@ import { consumeInvoiceReviewIntent } from '../../finance/invoiceReviewIntent.js
 import { consumeProjectionInvoiceReviewIntent } from '../../finance/projectionInvoiceReviewIntent.js';
 import { consumeCardReviewIntent } from '../../finance/cardReviewIntent.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
+import { ContextualCardInvoices } from './ContextualCardInvoices.js';
 
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const date=(value:string)=>new Intl.DateTimeFormat('pt-BR',{timeZone:'UTC'}).format(new Date(`${value}T00:00:00Z`));
@@ -33,6 +34,8 @@ export function InvoicesScreen({perspective,onPerspectiveChange,onPay}:{perspect
       .catch(()=>{setRows([]);setCards([]);setError(true);})
       .finally(()=>setLoading(false));
   },[household?.id,refreshKey]);
+
+  if(cardReviewIntent)return <ContextualCardInvoices cardId={cardReviewIntent.cardId} onPay={onPay}/>;
 
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
   const selectedMember=perspective==='household'?null:householdMembers.find(member=>member.id===perspective)??null;
