@@ -49,7 +49,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
  }catch{clearLoadedContext();setLoadError('Não foi possível conferir os dados necessários para registrar esta entrada.');}finally{setLoading(false);}};
 
  useEffect(()=>{void load();},[household?.id]);
- useEffect(()=>{if(openRequestId>0&&openRequestId!==handledRequestId){setHandledRequestId(openRequestId);setOpen(true);setError(null);setExpectedDate(dateInTimeZone(household?.timezone??DEFAULT_HOUSEHOLD_TIMEZONE));setEconomicState('confirmed');}},[openRequestId,handledRequestId,household?.timezone]);
+ useEffect(()=>{if(openRequestId>0&&openRequestId!==handledRequestId){setHandledRequestId(openRequestId);setOpen(true);setError(null);setExpectedDate(dateInTimeZone(household?.timezone??DEFAULT_HOUSEHOLD_TIMEZONE));setBeneficiaryMemberId('');setPlannedDestinationAccountId('');setEconomicState('confirmed');}},[openRequestId,handledRequestId,household?.timezone]);
 
  const compatibleResources=beneficiaryMemberId?resources.filter(resource=>resource.ownerMemberIds.includes(beneficiaryMemberId)):[];
  const ownerLabel=(resource:IncomeDestination)=>{
