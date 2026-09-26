@@ -209,6 +209,10 @@ Exemplo: saldo `-R$ 350`, LIS total `R$ 2.000`, LIS utilizado `R$ 350` e LIS dis
 
 ### Cartões no Dashboard
 
+
+**DEFINIDO e IMPLEMENTADO — fatura contextual:** tocar em um cartão abre a fatura como contexto completo, com total, pago, valor em aberto, vencimento, compras/parcelas, limite total, limite livre, compromissos futuros e lançamentos canônicos daquela fatura. A ação **Pagar tudo ou parte** delega para o fluxo canônico de pagamento, que relê o saldo e permite confirmar pagamento total ou parcial. Pagamento de fatura movimenta caixa e funding, mas nunca reconhece novamente a despesa.
+
+
 Cada cartão apresenta uma fotografia financeira, incluindo conceitualmente:
 
 - valor da fatura do período;
