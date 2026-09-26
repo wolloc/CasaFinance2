@@ -12,7 +12,7 @@ const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').repla
 const money = (value: string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const frequencyLabel: Record<RecurringExpenseFrequency,string> = { weekly: 'Semanal', monthly: 'Mensal', yearly: 'Anual' };
 
-export function RecurringExpenseManagement({ onChanged }: { onChanged?: () => void }) {
+export function RecurringExpenseManagement({ onChanged, focusRuleId }: { onChanged?: () => void; focusRuleId?: string | null }) {
   const { household } = useSupabaseAuth();
   const [rules, setRules] = useState<RecurringExpenseRule[]>([]);
   const [selected, setSelected] = useState<RecurringExpenseRule | null>(null);
@@ -29,11 +29,11 @@ export function RecurringExpenseManagement({ onChanged }: { onChanged?: () => vo
   const load = async () => {
     if (!supabase || !household) return;
     setLoading(true); setError(null);
-    try { setRules(await listRecurringExpenseRules(supabase, household.id)); }
+    try { const loaded=await listRecurringExpenseRules(supabase, household.id); setRules(loaded); if(focusRuleId&&!loaded.some(rule=>rule.id===focusRuleId))setError('Esta recorrência não está mais ativa.'); }
     catch { setError('Não foi possível carregar as séries de gastos.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [household?.id]);
+  useEffect(() => { load(); }, [household?.id, focusRuleId]);
 
   const open = (rule: RecurringExpenseRule, nextMode: 'revise'|'close') => {
     setSelected(rule); setMode(nextMode); setEffectiveFrom(localDate()); setReason(''); setError(null); setSuccess(null);
@@ -63,9 +63,10 @@ export function RecurringExpenseManagement({ onChanged }: { onChanged?: () => vo
     finally { setSaving(false); }
   };
 
+  const visibleRules=focusRuleId?rules.filter(rule=>rule.id===focusRuleId):rules;
   return <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
-    <div className="flex items-start gap-3"><CalendarRange className="mt-0.5 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">Gerenciar gastos recorrentes</h2><p className="mt-1 text-sm text-slate-400">Altere ou encerre somente daqui para frente. Se uma ocorrência já virou fatura, recebeu funding ou produziu outro efeito financeiro concreto, o Casa bloqueia a mudança.</p></div></div>
-    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : rules.length === 0 ? <p className="mt-4 text-sm text-slate-400">Nenhuma série ativa.</p> : <div className="mt-4 space-y-3">{rules.map((rule) => <article key={rule.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3"><div className="flex justify-between gap-3"><div><strong>{rule.template_description}</strong><p className="mt-1 text-xs text-slate-400">{rule.frequency==='monthly'&&rule.interval_count===1?'Mensal':`${frequencyLabel[rule.frequency]} · legado`} · {money(rule.estimated_amount)}{rule.next_occurrence_date ? ` · próxima ${rule.next_occurrence_date}` : ''}</p></div><div className="flex gap-2"><button type="button" onClick={() => open(rule,'revise')} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold">Alterar futuro</button><button type="button" onClick={() => open(rule,'close')} className="rounded-lg border border-rose-800 px-3 py-2 text-xs font-bold text-rose-300">Encerrar</button></div></div></article>)}</div>}
+    <div className="flex items-start gap-3"><CalendarRange className="mt-0.5 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">{focusRuleId?'Gerenciar esta recorrência':'Gerenciar gastos recorrentes'}</h2><p className="mt-1 text-sm text-slate-400">Altere ou encerre somente daqui para frente. Se uma ocorrência já virou fatura, recebeu funding ou produziu outro efeito financeiro concreto, o Casa bloqueia a mudança.</p></div></div>
+    {loading ? <LoaderCircle className="mx-auto mt-4 h-5 w-5 animate-spin"/> : visibleRules.length === 0 ? <p className="mt-4 text-sm text-slate-400">Nenhuma série ativa.</p> : <div className="mt-4 space-y-3">{visibleRules.map((rule) => <article key={rule.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3"><div className="flex justify-between gap-3"><div><strong>{rule.template_description}</strong><p className="mt-1 text-xs text-slate-400">{rule.frequency==='monthly'&&rule.interval_count===1?'Mensal':`${frequencyLabel[rule.frequency]} · legado`} · {money(rule.estimated_amount)}{rule.next_occurrence_date ? ` · próxima ${rule.next_occurrence_date}` : ''}</p></div><div className="flex gap-2"><button type="button" onClick={() => open(rule,'revise')} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold">Alterar futuro</button><button type="button" onClick={() => open(rule,'close')} className="rounded-lg border border-rose-800 px-3 py-2 text-xs font-bold text-rose-300">Encerrar</button></div></div></article>)}</div>}
 
     {selected && mode && <form onSubmit={submit} className="mt-4 grid gap-3 rounded-xl border border-amber-900/60 bg-slate-950 p-3">
       <div><strong>{mode === 'revise' ? 'Alterar daqui pra frente' : 'Encerrar série'}</strong><p className="text-xs text-slate-400">{selected.template_description}</p></div>
