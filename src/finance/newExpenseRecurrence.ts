@@ -34,3 +34,16 @@ export function recurringExpenseHorizonDate(startDate: string) {
   return `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 }
 
+
+
+export function recurringExpenseEndDate(startDate: string, occurrenceCount: number) {
+  const [year, month, day] = startDate.split('-').map(Number);
+  if (!year || !month || !day) throw new Error('Data inicial da recorrência inválida.');
+  if (!Number.isInteger(occurrenceCount) || occurrenceCount < 1) throw new Error('Quantidade de ocorrências inválida.');
+  const targetMonthIndex = month - 1 + occurrenceCount - 1;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const targetMonth = (targetMonthIndex % 12) + 1;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  const targetDay = Math.min(day, lastDay);
+  return `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+}
