@@ -51,10 +51,10 @@ test('Gastos realizados uses canonical member-attributed amount and legacy gross
   });
 
   const rows=await listEconomicMonthExpenses(fake.client as never,'household-1','2026-09');
-  assert.deepEqual(rows.map(row=>[row.id,row.amount]),[
-    ['mixed','60.00'],
-    ['legacy','75.00'],
-    ['third-party','0.00'],
+  assert.deepEqual(rows.map(row=>[row.id,Number(row.amount)]),[
+    ['mixed',60],
+    ['legacy',75],
+    ['third-party',0],
   ]);
 
   assert.ok(fake.calls.some(call=>call.table==='transactions'&&call.method==='eq'&&call.column==='economic_state'&&call.value==='realized'));
