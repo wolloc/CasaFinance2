@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarRange, ChevronLeft, ChevronRight, LoaderCircle, Repeat2, X } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, Repeat2, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
