@@ -23,14 +23,14 @@ export async function listHouseholdCategories(client: SupabaseClient, householdI
   return (response.data ?? []) as HouseholdCategory[];
 }
 
-export async function createHouseholdCategory(client: SupabaseClient, householdId: string, input: { name: string; type: HouseholdCategoryType }) {
-  const response = await client.from('categories').insert({ household_id: householdId, name: input.name.trim(), type: input.type }).select(columns).single();
+export async function createHouseholdCategory(client: SupabaseClient, householdId: string, input: { name: string; type: HouseholdCategoryType; icon?: string | null; color?: string | null }) {
+  const response = await client.from('categories').insert({ household_id: householdId, name: input.name.trim(), type: input.type, icon: input.icon?.trim() || null, color: input.color?.trim() || null }).select(columns).single();
   if (response.error) throw response.error;
   return response.data as HouseholdCategory;
 }
 
-export async function updateHouseholdCategory(client: SupabaseClient, householdId: string, categoryId: string, input: { name: string; type: HouseholdCategoryType }) {
-  const response = await client.from('categories').update({ name: input.name.trim(), type: input.type, updated_at: new Date().toISOString() }).eq('id', categoryId).eq('household_id', householdId).select(columns).single();
+export async function updateHouseholdCategory(client: SupabaseClient, householdId: string, categoryId: string, input: { name: string; type: HouseholdCategoryType; icon?: string | null; color?: string | null }) {
+  const response = await client.from('categories').update({ name: input.name.trim(), type: input.type, icon: input.icon?.trim() || null, color: input.color?.trim() || null, updated_at: new Date().toISOString() }).eq('id', categoryId).eq('household_id', householdId).select(columns).single();
   if (response.error) throw response.error;
   return response.data as HouseholdCategory;
 }
