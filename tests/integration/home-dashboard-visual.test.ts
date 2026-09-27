@@ -63,7 +63,7 @@ test('member position is informational on Home and no longer exposes a generic s
   assert.match(settlements,/posição de hoje/);
   assert.doesNotMatch(settlements,/Acertar agora/);
   assert.match(settlements,/pode ter a receber de/);
-  assert.match(settlements,/Ainda não existe valor para acertar agora/);
+  assert.match(settlements,/Ainda não é uma diferença realizada entre vocês/);
 });
 
 test('Home mostra histórico entre membros como movimento neutro, não renda ou gasto',()=>{
