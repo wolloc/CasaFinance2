@@ -9,8 +9,8 @@ test('Nova Despesa starts payment selection from concrete registered resources',
   assert.match(wizard,/spendableAccounts\.map\(account=>/);
   assert.match(wizard,/cards\.map\(card=>/);
   assert.match(wizard,/ResourceChoice/);
-  assert.match(wizard,/accountResourceSubtitle/);
-  assert.match(wizard,/cardResourceSubtitle/);
+  assert.match(wizard,/accountResourceMeta/);
+  assert.match(wizard,/cardResourceMeta/);
   assert.doesNotMatch(wizard,/label="Conta \/ Pix"/);
   assert.doesNotMatch(wizard,/Qual recurso foi usado\?/);
 });
