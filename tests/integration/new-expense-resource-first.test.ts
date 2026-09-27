@@ -43,9 +43,11 @@ test('resource-first routing does not merge payment with economic responsibility
 
 test('resource cards stay compact and avoid redundant payment-mode labels',()=>{
   assert.match(wizard,/grid grid-cols-2 gap-2/);
-  assert.match(wizard,/min-h-\[54px\]/);
+  assert.match(wizard,/min-h-\[58px\]/);
   assert.match(wizard,/h-7 w-7/);
   assert.match(wizard,/account\.institution/);
+  assert.match(wizard,/detail=\{meta\.detail\}/);
+  assert.match(wizard,/card\.last_four/);
   assert.doesNotMatch(wizard,/Conta corrente · Pix \/ débito/);
   assert.doesNotMatch(wizard,/Poupança · Pix \/ débito/);
   assert.doesNotMatch(wizard,/const kind=account\.type==='cash'\?'Dinheiro'/);
