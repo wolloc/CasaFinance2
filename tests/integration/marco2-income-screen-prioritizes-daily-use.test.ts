@@ -6,7 +6,7 @@ const source = await readFile(new URL('../../src/components/app/IncomeLedgerScre
 const creation = await readFile(new URL('../../src/components/app/IncomeCreationAction.tsx', import.meta.url), 'utf8');
 
 test('Entradas abre como lista e a criação só aparece quando a ação global solicita', () => {
-  assert.match(source, /<IncomeCreationAction onCreated=\{refresh\} openRequestId=\{createRequestId\}\/>/);
+  assert.match(source, /<IncomeCreationAction onCreated=\{\(\)=>\{refresh\(\);setIncomeSaved\(true\);\}\} openRequestId=\{createRequestId\}\/>/);
   assert.match(creation,/if\(!open\)return null/);
   assert.match(creation,/openRequestId>0/);
   assert.match(creation,/aria-label="Nova entrada"/);
@@ -39,7 +39,7 @@ test('Entradas exposes monthly navigation custom range and listed total',()=>{
   assert.match(source,/Mês inteiro/);
   assert.match(source,/Personalizado/);
   assert.match(source,/periodPickerOpen/);
-  assert.match(source,/Total listado/);
+  assert.match(source,/<IncomeSummary total=\{total\} count=\{visibleRows\.length\} categories=\{categorySummary\}\/>/);
   assert.match(source,/rangeStart/);
   assert.match(source,/rangeEnd/);
 });
