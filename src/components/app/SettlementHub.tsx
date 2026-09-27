@@ -32,7 +32,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
 
   if(loading)return <section><FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/><LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
   return <section>
-    <FinancialSectionHeading title="Valores com pessoas" description="Veja a posição entre vocês e os valores a receber ou pagar com outras pessoas." icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>
+    <FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>
     {!error&&<button type="button" onClick={()=>onResolve?.({kind:'third-party-create'})} className="mb-4 min-h-10 rounded-xl border border-slate-700 px-3 text-sm font-semibold text-slate-300">Adicionar valor com outra pessoa</button>}
     {error&&<div className="rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">Não foi possível conferir os valores com pessoas agora. O Casa limpou a leitura anterior e não vai presumir que uma posição foi resolvida ou que não há nada em aberto.</p><button type="button" onClick={retry} className="mt-3 min-h-10 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
     {!error&&realized.length===0&&thirdPartyRows.length===0&&projected.length===0&&<div className="rounded-2xl border border-dashed border-slate-800 p-4"><p className="text-sm font-semibold text-slate-300">Tudo equilibrado entre as pessoas por enquanto.</p><p className="mt-1 text-xs text-slate-500">Quando surgir uma diferença entre vocês ou um valor com outra pessoa, o Casa mostra aqui.</p></div>}
