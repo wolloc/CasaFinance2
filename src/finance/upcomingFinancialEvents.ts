@@ -10,6 +10,7 @@ export type UpcomingFinancialEvent={
   card_id:string|null;
   payer_member_id:string|null;
   receiver_member_id:string|null;
+  is_recurring:boolean;
 };
 
 type CommitmentRow={
@@ -134,7 +135,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       direction:'in',
       title:incomeTitles.get(income.money_movement_id as string)??'Entrada confiável prevista',
       amount:Number(income.reliable_remaining_amount??0),
-      card_id:null,payer_member_id:null,receiver_member_id:null,
+      card_id:null,payer_member_id:null,receiver_member_id:null,is_recurring:false,
     });
   }
 
@@ -153,7 +154,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       direction:'out',
       title:row.description,
       amount:memberId?(memberAmounts.get(row.commitment_key)??0):Number(row.remaining_amount),
-      card_id:null,payer_member_id:null,receiver_member_id:null,
+      card_id:null,payer_member_id:null,receiver_member_id:null,is_recurring:row.source_type==='recurring_occurrence',
     });
   }
 
@@ -171,7 +172,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       title:`Fatura ${cardNames.get(invoice.card_id)??'do cartão'}`,
       amount,
       card_id:invoice.card_id,
-      payer_member_id:null,receiver_member_id:null,
+      payer_member_id:null,receiver_member_id:null,is_recurring:false,
     });
   }
 
@@ -188,7 +189,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
         direction:'out',
         title:row.description,
         amount:memberId?(memberAmounts.get(row.commitment_key)??0):Number(row.remaining_amount),
-        card_id:null,payer_member_id:null,receiver_member_id:null,
+        card_id:null,payer_member_id:null,receiver_member_id:null,is_recurring:row.source_type==='recurring_occurrence',
       });
     }
   }
@@ -204,7 +205,7 @@ export async function listUpcomingFinancialEvents(client:SupabaseClient,househol
       direction:memberId?(payer===memberId?'out':'in'):'neutral',
       title:memberId?(payer===memberId?'Acerto que você pretende pagar':'Acerto que você pretende receber'):'Acerto entre membros',
       amount:Number(schedule.amount??0),
-      card_id:null,payer_member_id:payer,receiver_member_id:receiver,
+      card_id:null,payer_member_id:payer,receiver_member_id:receiver,is_recurring:false,
     });
   }
 

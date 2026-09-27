@@ -665,3 +665,22 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - a perspectiva individual mostra somente a parte comprovadamente atribuída ao membro; valores sem atribuição individual comprovável permanecem apenas na visão da Casa;
 - na visão individual, a linguagem muda para **deve a você / você deve** e o valor exibido é somente a parte daquele membro;
 - **Casa não significa 50/50** e ausência de atribuição nunca é convertida silenciosamente em metade para cada membro.
+
+
+## Recorrência Release 1 — fechamento de experiência — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- recorrência futura normal não aparece em **Precisa de atenção** apenas porque vence hoje ou nos próximos dias;
+- recorrências previstas continuam visíveis em **Próximos 7 dias**, identificadas discretamente como **Recorrente**;
+- recorrência vencida e ainda aberta continua chegando à atenção pelo compromisso vencido canônico;
+- gestão de gastos recorrentes usa linguagem humana: **Mudar próximos meses** e **Parar recorrência**;
+- a gestão exibe próxima ocorrência e término da série, inclusive **Até você parar**;
+- alteração futura continua criando nova versão canônica sem reescrever fatos passados;
+- encerramento continua prospectivo e preserva ocorrências já realizadas ou com efeitos financeiros dependentes.
+
+**PENDENTE DE HOMOLOGAÇÃO PM:**
+
+- validar visualmente criação → primeira repetição → projeção → confirmação/pagamento → mudança futura → encerramento;
+- validar conta e cartão com dados reais de homologação;
+- confirmar que a ausência de alerta para recorrência normal e sua presença em próximos acontecimentos corresponde à expectativa final.
