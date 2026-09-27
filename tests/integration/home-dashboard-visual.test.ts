@@ -14,7 +14,7 @@ test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
 });
 
 test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
-  for(const value of ['Mês em resumo','Entrou','Ainda entra','Já comprometido','Ainda compromete','Detalhes de entradas e gastos ficam nas áreas próprias']) assert.match(home,new RegExp(value));
+  for(const value of ['Mês em resumo','Entrou','Ainda entra','Já comprometido','Ainda compromete']) assert.match(home,new RegExp(value));
   assert.match(home,/realized_true_income_in_month/);
   assert.match(home,/expected_reliable_income_remaining/);
   assert.match(home,/realized_commitments_in_month/);
@@ -43,13 +43,13 @@ test('projeção futura mostra tendência entre meses comparáveis',()=>{
 });
 
 test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado dominante',()=>{
-  for(const value of ['Contas e dinheiro','Benefícios','Reservas','Investimentos','Patrimônio financeiro acompanhado']) assert.match(home,new RegExp(value));
+  for(const value of ['Contas e dinheiro','Benefícios','Dinheiro reservado','Investimentos','Valor acompanhado']) assert.match(home,new RegExp(value));
   assert.match(home,/role="button" tabIndex=\{0\} onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
   assert.doesNotMatch(home,/Todas as faturas/);
   assert.doesNotMatch(home,/Ver cartão e fatura/);
 });
 
-test('Home dá mais hierarquia a Contas e recursos sem chamar patrimônio de dinheiro livre',()=>{assert.match(home,/Contas e recursos/);assert.match(home,/Saldo de uso, benefícios, reservas e investimentos continuam separados/);assert.match(home,/Este total não significa dinheiro livre/);assert.match(home,/border-blue-950\/70/);assert.match(home,/Toque para agir sobre cada recurso/);});
+test('Home simplifica recursos sem repetir explicações técnicas',()=>{assert.match(home,/Onde está nosso dinheiro/);assert.match(home,/Valor acompanhado/);assert.match(home,/Dinheiro reservado/);assert.doesNotMatch(home,/Este total não significa dinheiro livre/);assert.doesNotMatch(home,/Saldo de uso, benefícios, reservas e investimentos continuam separados/);});
 
 test('Home não transforma planejamento futuro normal em alerta de atenção',()=>{
   assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55\)/);
@@ -77,10 +77,10 @@ test('Home mostra histórico entre membros como movimento neutro, não renda ou 
 
 test('Olhando pra frente separa realizado comprometido e planejado sem inflar riqueza futura',()=>{
   for(const value of ['Realizado','Comprometido','Planejado','já aconteceu','já existe para pagar','ainda pode mudar']) assert.match(home,new RegExp(value,'i'));
-  assert.match(home,/Mês de referência \+ próximos 3 meses/i);
+  assert.match(home,/mês de referência/i);
   assert.match(home,/remaining_commitments_in_month/);
   assert.match(home,/prior_pending_outflow/);
   assert.match(home,/projected_recurring_commitments/);
   assert.match(home,/expected_reliable_income_remaining/);
-  assert.match(home,/não aumentam o saldo atual nem são somadas como riqueza futura acumulada/i);
+  assert.doesNotMatch(home,/não aumentam o saldo atual nem são somadas como riqueza futura acumulada/i);
 });
