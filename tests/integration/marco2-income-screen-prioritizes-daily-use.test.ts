@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx', import.meta.url), 'utf8');
 const creation = await readFile(new URL('../../src/components/app/IncomeCreationAction.tsx', import.meta.url), 'utf8');
+const period = await readFile(new URL('../../src/components/app/FinancialPeriodNavigator.tsx', import.meta.url), 'utf8');
 
 test('Entradas abre como lista e a criação só aparece quando a ação global solicita', () => {
   assert.match(source, /<IncomeCreationAction onCreated=\{\(\)=>\{refresh\(\);setIncomeSaved\(true\);\}\} openRequestId=\{createRequestId\}\/>/);
@@ -34,12 +35,12 @@ test('empty state keeps the selected period explicit', () => {
 
 
 test('Entradas exposes monthly navigation custom range and listed total',()=>{
-  assert.match(source,/Mês anterior/);
-  assert.match(source,/Mês seguinte/);
-  assert.match(source,/Escolher mês das entradas/);
-  assert.match(source,/Toque para escolher o período/);
-  assert.match(source,/Mês inteiro/);
-  assert.match(source,/Personalizado/);
+  assert.match(source,/FinancialPeriodNavigator/);
+  assert.match(source,/monthAriaLabel="Escolher mês das entradas"/);
+  assert.match(period,/Mês anterior/);
+  assert.match(period,/Mês seguinte/);
+  assert.match(period,/Mês inteiro/);
+  assert.match(period,/Personalizado/);
   assert.match(source,/periodPickerOpen/);
   assert.match(source,/<IncomeSummary total=\{total\} count=\{visibleRows\.length\} categories=\{categorySummary\}\/>/);
   assert.match(source,/rangeStart/);
@@ -69,10 +70,10 @@ test('income visual tag remains deterministic when canonical movements involve m
 
 
 test('Entradas follows Gastos hierarchy: period, perspective, total and categories',()=>{
-  const period=source.indexOf('Toque para escolher o período');
+  const periodPosition=source.indexOf('<FinancialPeriodNavigator');
   const perspective=source.indexOf('<FinancialPerspectiveSelector');
   const total=source.indexOf('<IncomeSummary');
-  assert.ok(period>=0&&perspective>period&&total>perspective);
+  assert.ok(periodPosition>=0&&perspective>periodPosition&&total>perspective);
   assert.match(source,/Ver categorias/);
   assert.match(source,/categorySummary/);
 });
