@@ -78,7 +78,8 @@ test('Home mostra histórico de acertos como movimento neutro, não renda ou gas
 });
 
 test('Olhando pra frente separa realizado comprometido e planejado sem inflar riqueza futura',()=>{
-  for(const value of ['Realizado','Comprometido','Planejado','já aconteceu','já existe para pagar','ainda pode mudar','mês de referência + próximos 3 meses']) assert.match(home,new RegExp(value,'i'));
+  for(const value of ['Realizado','Comprometido','Planejado','já aconteceu','já existe para pagar','ainda pode mudar']) assert.match(home,new RegExp(value,'i'));
+  assert.match(home,/Mês de referência \+ próximos 3 meses/i);
   assert.match(home,/remaining_commitments_in_month/);
   assert.match(home,/prior_pending_outflow/);
   assert.match(home,/projected_recurring_commitments/);
