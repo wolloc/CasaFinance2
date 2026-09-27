@@ -18,11 +18,13 @@ test('bottom navigation follows the Product Spec v2 canonical tabs', () => {
   assert.deepEqual([...indexes].sort((a, b) => a - b), indexes);
 });
 
-test('Faturas is contextual to Casa instead of a bottom tab', () => {
-  assert.match(appSource, /setScreen\('invoices'\)/);
-  assert.match(appSource, />Faturas</);
-  assert.match(appSource, /screen === 'invoices' \? 'home' : screen/);
-  assert.match(appSource, /Voltar para Casa/);
+test('Cartões e faturas open contextually as a dismissible layer instead of a new app screen', () => {
+  assert.match(appSource, /invoiceModalOpen/);
+  assert.match(appSource, /aria-label="Cartões e faturas"/);
+  assert.match(appSource, /aria-label="Fechar cartões e faturas"/);
+  assert.match(appSource, /<InvoicesScreen/);
+  assert.doesNotMatch(appSource, /setScreen\('invoices'\)/);
+  assert.doesNotMatch(appSource, /screen==='invoices'/);
 });
 
 test('Gastos and Entradas use independent fixed transaction modes', () => {

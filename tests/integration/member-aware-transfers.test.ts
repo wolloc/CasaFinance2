@@ -30,12 +30,12 @@ test('position transfer can cross zero instead of rejecting an over-settlement',
   assert.match(migration,/debtor_member_id,creditor_member_id/);
   assert.match(migration,/destination_owner,source_owner,p_amount/);
   assert.match(hub,/Number\(row\.net_position\)>0/);
-  assert.match(hub,/money\(row\.net_position\)/);
+  assert.match(hub,/money\(currentAmount\)/);
 });
 
 test('Home explains both directions of a member pair using net effects',()=>{
-  assert.match(hub,/oppositeOf/);
-  assert.match(hub,/eventsFor/);
+  assert.match(hub,/memberPairs/);
+  assert.match(hub,/pairEvents/);
   assert.match(hub,/Transferência entre vocês/);
-  assert.match(hub,/eventImpact\(event,row\)/);
+  assert.match(hub,/projectedAmount/);
 });

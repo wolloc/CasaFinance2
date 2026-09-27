@@ -69,8 +69,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const gap=guidance?Number(guidance.coverage_gap):null;
  const hasPartialFailure=Object.values(availability).some(value=>!value);
  const selector=<FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>;
- const perspectiveLabel=perspective==='household'?'Nossa Casa':selectedMember?.display_name??'Membro';
- const perspectiveContext=<p className="-mt-4 text-center text-xs text-slate-500">Perspectiva: <strong className="text-slate-300">{perspectiveLabel}</strong></p>;
  const trackingMonth=referenceContext?.tracking_started_on?normalizeReferenceMonth(referenceContext.tracking_started_on):null;
  const previousMonth=referenceMonth?shiftReferenceMonth(referenceMonth,-1):'';
  const previousDisabled=!referenceMonth||referenceLoading||Boolean(trackingMonth&&previousMonth<trackingMonth);
@@ -101,7 +99,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   return <div className="space-y-7">
    <FinancialPageHeader title="Casa"/>
    {monthNavigator}
-   {selector}{perspectiveContext}
+   {selector}
    {referenceLoading?<LoaderCircle className="mx-auto mt-12 h-7 w-7 animate-spin text-blue-400"/>:referenceError||!referenceContext?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível confirmar este período. O Casa não reutilizou dados do mês atual.</p>:!referenceContext.can_navigate?<p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">Este mês é anterior ao início do acompanhamento financeiro da Casa.</p>:isPast?<>
     <section className="rounded-[2rem] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 p-5">
      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-300">Fotografia histórica</p>
@@ -125,7 +123,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const current=memberProjection[0];
   const cardRows=memberCards.map(card=>({card,responsibility:card.member_responsibilities.find(item=>item.member_id===perspective)})).filter(item=>Number(item.responsibility?.member_responsibility_exposure??0)>0);
   const attributedResourceTotal=memberResources.reduce((sum,item)=>sum+Number(item.attributed_amount),0);
-  return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{perspectiveContext}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
+  return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section><FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/><div className="rounded-[2rem] border border-blue-900/70 bg-gradient-to-br from-blue-950 via-indigo-950 to-slate-900 p-5 shadow-xl shadow-blue-950/20">
     <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">Posso movimentar hoje</p><strong className="mt-1 block text-3xl">{money(current.opening_liquidity)}</strong><p className="mt-1 text-[11px] text-white/70">Liquidez atribuída a você agora.</p>
     <div className="mt-5 grid grid-cols-2 gap-2"><article className="rounded-2xl bg-white/10 p-3"><p className="text-[11px] text-white/70">Ainda entra</p><strong className="mt-1 block">{money(current.expected_reliable_income_remaining)}</strong></article><article className="rounded-2xl bg-white/10 p-3"><p className="text-[11px] text-white/70">Ainda pode sair</p><strong className="mt-1 block">{money(current.projected_funding_remaining)}</strong></article></div>
@@ -156,7 +154,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  return <div className="space-y-7">
   <FinancialPageHeader title="Casa"/>
   {monthNavigator}
-  {selector}{perspectiveContext}
+  {selector}
   {hasPartialFailure&&<p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">Algumas análises não puderam ser confirmadas agora. O Casa mantém visíveis apenas os dados que conseguiu ler e não substitui informações ausentes por R$ 0,00.</p>}
 
   <section>
