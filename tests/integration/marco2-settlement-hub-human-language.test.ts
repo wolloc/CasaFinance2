@@ -5,7 +5,8 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 
 test('settlement hub explains realized and projected positions without funding jargon', () => {
-  assert.match(source, /Veja a posição entre vocês e os valores a receber ou pagar com outras pessoas/);
+  assert.match(source, /Valores com pessoas/);
+  assert.doesNotMatch(source, /Veja a posição entre vocês e os valores a receber ou pagar com outras pessoas/);
   assert.match(source, /Entre vocês · posição de hoje/);
   assert.match(source, /Entre vocês · tendência/);
   assert.match(source, /É uma previsão ligada a compromissos futuros\. Ainda não é uma diferença realizada entre vocês/);
