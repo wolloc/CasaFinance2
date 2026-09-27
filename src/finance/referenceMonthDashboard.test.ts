@@ -39,7 +39,7 @@ test('month navigation respects the financial cutover and keeps a return-to-curr
   assert.match(homeSource,/previousMonth<trackingMonth/);
   assert.match(homeSource,/setReferenceMonth\(currentReferenceMonth\)/);
   assert.match(periodSource,/Mês anterior/);
-  assert.match(homeSource,/aria-label="Mês seguinte"/);
+  assert.match(periodSource,/aria-label="Mês seguinte"/);
 });
 
 test('historical individual perspective refuses to fabricate old liquidity ownership',()=>{
