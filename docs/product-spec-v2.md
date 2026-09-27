@@ -684,3 +684,15 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - validar visualmente criação → primeira repetição → projeção → confirmação/pagamento → mudança futura → encerramento;
 - validar conta e cartão com dados reais de homologação;
 - confirmar que a ausência de alerta para recorrência normal e sua presença em próximos acontecimentos corresponde à expectativa final.
+
+
+## Feedbacks de ações financeiras — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- Entrada e Despesa mantêm o feedback compartilhado já existente após salvar;
+- Empréstimos, pagamento de parcela, recorrências e Valores com pessoas passam a reutilizar o mesmo componente visual de sucesso;
+- ações financeiras longas exibem indicador de processamento no próprio CTA, sem trocar a posição da ação;
+- mensagens de sucesso usam `aria-live="polite"` para acessibilidade;
+- erros continuam próximos ao contexto que precisa ser corrigido, sem transformar falha em toast global distante do formulário;
+- nenhum feedback visual altera regra financeira, persistência ou idempotência.
