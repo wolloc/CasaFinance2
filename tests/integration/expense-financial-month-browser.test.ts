@@ -22,7 +22,7 @@ test('Gastos realizados combina metadados do fato com o read model econômico ca
  assert.match(economicQuery,/from\('financial_transaction_positions'\)/);
  assert.match(economicQuery,/household_economic_amount/);
  assert.match(browser,/Gastos realizados/);
- assert.match(browser,/Parceladas aparecem uma vez/);
+ assert.doesNotMatch(browser,/Parceladas aparecem uma vez/);
 });
 
 test('Gastos prioriza o navegador mensal e leva histórico/correções para o lançamento',()=>{
