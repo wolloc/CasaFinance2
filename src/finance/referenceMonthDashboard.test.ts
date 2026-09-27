@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { normalizeReferenceMonth, shiftReferenceMonth } from './referenceMonthDashboard.js';
 
 const homeSource=await readFile(new URL('../components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
+const periodSource=await readFile(new URL('../components/app/FinancialPeriodNavigator.tsx',import.meta.url),'utf8');
 const serviceSource=await readFile(new URL('./referenceMonthDashboard.ts',import.meta.url),'utf8');
 
 test('reference month helpers are calendar safe across year boundaries',()=>{
@@ -37,8 +38,8 @@ test('past current and future cannot reuse the same visual semantics',()=>{
 test('month navigation respects the financial cutover and keeps a return-to-current action',()=>{
   assert.match(homeSource,/previousMonth<trackingMonth/);
   assert.match(homeSource,/setReferenceMonth\(currentReferenceMonth\)/);
-  assert.match(homeSource,/Mês anterior/);
-  assert.match(homeSource,/aria-label="Mês seguinte"/);
+  assert.match(periodSource,/Mês anterior/);
+  assert.match(periodSource,/aria-label="Mês seguinte"/);
 });
 
 test('historical individual perspective refuses to fabricate old liquidity ownership',()=>{

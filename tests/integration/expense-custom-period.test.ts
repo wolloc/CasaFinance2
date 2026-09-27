@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const service=await readFile(new URL('../../src/finance/expenseMonthViews.ts',import.meta.url),'utf8');
 const browser=await readFile(new URL('../../src/components/app/ExpenseMonthBrowser.tsx',import.meta.url),'utf8');
+const period=await readFile(new URL('../../src/components/app/FinancialPeriodNavigator.tsx',import.meta.url),'utf8');
 
 test('custom period keeps economic and financial clocks separate and canonical',()=>{
  const financial=service.slice(service.indexOf('export async function listFinancialPeriodExpenses'),service.indexOf('export async function listEconomicPeriodExpenses'));
@@ -20,8 +21,8 @@ test('custom period keeps economic and financial clocks separate and canonical',
 test('Gastos period picker routes each lens to its matching period read',()=>{
  assert.match(browser,/customRange\?\(mode==='financial'\?listFinancialPeriodExpenses/);
  assert.match(browser,/listEconomicPeriodExpenses/);
- assert.match(browser,/Mês inteiro/);
- assert.match(browser,/Personalizado/);
+ assert.match(period,/Mês inteiro/);
+ assert.match(period,/Personalizado/);
  assert.match(browser,/Compromissos do período/);
  assert.doesNotMatch(browser,/Impactos financeiros do \{periodNoun\}/);
  assert.doesNotMatch(browser,/Compras realizadas no \{periodNoun\}, usando a data econômica do fato/);
@@ -48,7 +49,8 @@ test('incomplete custom dates cannot crash or query the Gastos surface',()=>{
  assert.match(browser,/validDate/);
  assert.match(browser,/customRangeReady/);
  assert.match(browser,/Escolha as datas/);
- assert.match(browser,/disabled=\{customRange&&!customRangeReady\}/);
+ assert.match(browser,/rangeReady=\{customRangeReady\}/);
+ assert.match(period,/disabled=\{customRange&&!rangeReady\}/);
  assert.match(browser,/if\(customRange&&!customRangeReady\)\{setFinancialRows\(\[\]\);setEconomicRows\(\[\]\)/);
 });
 
