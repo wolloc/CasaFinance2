@@ -52,3 +52,43 @@ export async function createLoanPrincipal(client: SupabaseClient, input: {
     p_notes: notes,
   });
 }
+
+
+export async function createLoanPrincipalWithSchedule(client:SupabaseClient,input:{
+  householdId:string;
+  direction:'granted'|'taken';
+  counterpartyId:string;
+  accountId:string;
+  amount:string;
+  occurredAt:string;
+  firstDueDate:string;
+  installmentCount:number;
+  totalInterest:string;
+  totalFee:string;
+  costResponsibleMemberId?:string|null;
+  description:string;
+  notes?:string;
+}){
+  const description=input.description.trim()||'Empréstimo';
+  const notes=input.notes?.trim()||null;
+  const identity=[
+    input.householdId,input.direction,input.counterpartyId,input.accountId,input.amount,input.occurredAt,
+    input.firstDueDate,input.installmentCount,input.totalInterest||'0',input.totalFee||'0',
+    input.costResponsibleMemberId??null,description,notes
+  ] as const;
+  return runRetryStableRpc(client,'create-loan-principal-with-schedule',identity,'create_loan_principal_with_schedule_idempotent',{
+    p_household_id:input.householdId,
+    p_direction:input.direction,
+    p_counterparty_id:input.counterpartyId,
+    p_account_id:input.accountId,
+    p_amount:input.amount,
+    p_occurred_at:input.occurredAt,
+    p_first_due_date:input.firstDueDate,
+    p_installment_count:input.installmentCount,
+    p_total_interest:input.totalInterest||'0',
+    p_total_fee:input.totalFee||'0',
+    p_cost_responsible_member_id:input.costResponsibleMemberId??null,
+    p_description:description,
+    p_notes:notes,
+  });
+}

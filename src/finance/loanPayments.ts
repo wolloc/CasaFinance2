@@ -16,3 +16,34 @@ export async function recordLoanPayment(client:SupabaseClient,input:{householdId
   releaseRetryStableRequestKey('loan-payment',identity);
   return result.data as string;
 }
+
+
+export async function recordScheduledLoanPayment(client:SupabaseClient,input:{
+ householdId:string;
+ scheduleItemId:string;
+ sourceAccountId:string;
+ funderMemberId:string;
+ principalAmount:string;
+ interestAmount:string;
+ feeAmount:string;
+ paidAt:string;
+ notes?:string;
+}){
+ const identity=[input.householdId,input.scheduleItemId,input.sourceAccountId,input.funderMemberId,input.principalAmount||'0',input.interestAmount||'0',input.feeAmount||'0',input.paidAt,input.notes?.trim()||null] as const;
+ const requestKey=getRetryStableRequestKey('scheduled-loan-payment',identity);
+ const result=await client.rpc('record_scheduled_loan_payment',{
+  p_household_id:input.householdId,
+  p_schedule_item_id:input.scheduleItemId,
+  p_source_account_id:input.sourceAccountId,
+  p_funder_member_id:input.funderMemberId,
+  p_principal_amount:input.principalAmount||'0',
+  p_interest_amount:input.interestAmount||'0',
+  p_fee_amount:input.feeAmount||'0',
+  p_paid_at:input.paidAt,
+  p_notes:input.notes?.trim()||null,
+  p_request_key:requestKey,
+ });
+ if(result.error)throw result.error;
+ releaseRetryStableRequestKey('scheduled-loan-payment',identity);
+ return result.data as string;
+}
