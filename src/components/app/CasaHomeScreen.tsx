@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { CalendarRange, ChevronLeft, ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, PiggyBank, TrendingUp, WalletCards, X } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
-import { listEconomicMonthExpenses } from '../../finance/expenseMonthViews.js';
 import { ensureRecurringExpenseHorizon, recurringExpenseRollingHorizonDate } from '../../finance/recurringExpenses.js';
 import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
@@ -24,7 +23,6 @@ const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'short',
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
 const healthText={green:'Saudável',yellow:'Atenção',red:'Crítico'}as const;
 const healthClass={green:'text-emerald-300',yellow:'text-amber-300',red:'text-rose-300'}as const;
-const ratio=(value:number,total:number)=>total>0?Math.min(100,Math.max(0,(value/total)*100)):0;
 const unavailable=(message:string)=><p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">{message}</p>;
 type Dashboard=Awaited<ReturnType<typeof getFinancialDashboard>>;
 
@@ -39,9 +37,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const[memberError,setMemberError]=useState(false);
  const[loading,setLoading]=useState(true);
  const[error,setError]=useState(false);
- const[spendInsight,setSpendInsight]=useState<{total:number;categories:Array<{name:string;amount:number}>}|null>(null);
- const[spendInsightLoading,setSpendInsightLoading]=useState(true);
- const[spendInsightError,setSpendInsightError]=useState(false);
  const[referenceMonth,setReferenceMonth]=useState('');
  const[periodPickerOpen,setPeriodPickerOpen]=useState(false);
  const[referenceContext,setReferenceContext]=useState<ReferenceMonthContext|null>(null);
@@ -56,7 +51,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);const load=async()=>{try{try{await ensureRecurringExpenseHorizon(supabase,household.id,recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone)));}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled)setDashboard(nextDashboard);}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household){setHouseholdResourceRows([]);return()=>{cancelled=true;};}listHouseholdResourcePositions(supabase,household.id).then(rows=>{if(!cancelled)setHouseholdResourceRows(rows);}).catch(()=>{if(!cancelled)setHouseholdResourceRows([]);});return()=>{cancelled=true;};},[household?.id]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'||!referenceMonth||referenceMonth!==currentReferenceMonth){setMemberProjection([]);setMemberCards([]);setMemberResources([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);setMemberCards([]);setMemberResources([]);Promise.all([getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone),listCardOverviews(supabase,household.id),listMemberResourcePositions(supabase,household.id,perspective)]).then(([rows,cardRows,resourceRows])=>{if(cancelled)return;setMemberProjection(rows);setMemberCards(cardRows);setMemberResources(resourceRows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective,referenceMonth,currentReferenceMonth]);
- useEffect(()=>{let cancelled=false;if(!supabase||!household||!referenceMonth){setSpendInsight(null);setSpendInsightLoading(false);return()=>{cancelled=true;};}setSpendInsightLoading(true);setSpendInsightError(false);const month=referenceMonth.slice(0,7);listEconomicMonthExpenses(supabase,household.id,month,perspective==='household'?undefined:perspective).then(rows=>{if(cancelled)return;const byCategory=new Map<string,number>();let total=0;for(const row of rows){const amount=Number(row.amount);total+=amount;const name=row.category?.name?.trim()||'Sem categoria';byCategory.set(name,(byCategory.get(name)??0)+amount);}const categories=[...byCategory.entries()].map(([name,amount])=>({name,amount})).sort((a,b)=>b.amount-a.amount).slice(0,3);setSpendInsight({total,categories});}).catch(()=>{if(cancelled)return;setSpendInsight(null);setSpendInsightError(true);}).finally(()=>{if(!cancelled)setSpendInsightLoading(false);});return()=>{cancelled=true;};},[household?.id,perspective,referenceMonth]);
+
 
  if(loading)return <LoaderCircle className="mx-auto mt-16 h-7 w-7 animate-spin text-blue-400"/>;
  if(error||!dashboard)return <p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">Não foi possível carregar nenhuma fonte da posição financeira. Nenhum valor foi substituído por zero.</p>;
