@@ -179,7 +179,7 @@ revoke all on function public.create_loan_principal_with_schedule_idempotent(
   uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,uuid,text,text,text
 ) from public,anon;
 grant execute on function public.create_loan_principal_with_schedule_idempotent(
-  uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,text,text,text
+  uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,uuid,text,text,text
 ) to authenticated;
 
 create or replace function public.allocate_loan_payment_to_schedule()
