@@ -43,8 +43,8 @@ test('Home explains the financial equation and separates liquidity from patrimon
  assert.match(home,/Livre depois deles/);
  assert.match(home,/Mês em resumo/);
  assert.match(home,/Onde está nosso dinheiro/);
- assert.match(home,/Patrimônio financeiro acompanhado/);
+ assert.match(home,/Valor acompanhado/);
  assert.match(home,/Contas e dinheiro/);
- assert.match(home,/Reservas/);
+ assert.match(home,/Dinheiro reservado/);
  assert.match(home,/Investimentos/);
 });
