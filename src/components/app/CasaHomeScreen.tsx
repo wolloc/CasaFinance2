@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarRange, ChevronLeft, ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards, X } from 'lucide-react';
+import { CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
@@ -10,6 +10,7 @@ import { FinancialPriorityCenter, type AttentionNavigationAction } from './Finan
 import { SettlementHub } from './SettlementHub.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
+import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
 import { listCardOverviews, type CardOverview } from '../../finance/cardOverview.js';
 import { listHouseholdResourcePositions, listMemberResourcePositions, type HouseholdResourcePosition, type MemberResourcePosition } from '../../finance/memberResources.js';
 import { UpcomingFinancialEvents } from './UpcomingFinancialEvents.js';
@@ -68,17 +69,23 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const trackingMonth=referenceContext?.tracking_started_on?normalizeReferenceMonth(referenceContext.tracking_started_on):null;
  const previousMonth=referenceMonth?shiftReferenceMonth(referenceMonth,-1):'';
  const previousDisabled=!referenceMonth||referenceLoading||Boolean(trackingMonth&&previousMonth<trackingMonth);
- const monthNavigator=referenceMonth?<div className="relative" aria-label="Período de referência">
-  <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-1.5">
-   <button type="button" aria-label="Mês anterior" disabled={previousDisabled} onClick={()=>{setPeriodPickerOpen(false);setReferenceMonth(previousMonth);}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"><ChevronLeft className="h-5 w-5"/></button>
-   <button type="button" aria-expanded={periodPickerOpen} onClick={()=>setPeriodPickerOpen(value=>!value)} className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-xl text-center hover:bg-slate-900">
-    <strong className="block capitalize">{monthLabel(referenceMonth)}</strong>
-    <span className="text-xs text-slate-400">Toque para escolher o mês</span>
-   </button>
-   <button type="button" aria-label="Mês seguinte" disabled={referenceLoading} onClick={()=>{setPeriodPickerOpen(false);setReferenceMonth(shiftReferenceMonth(referenceMonth,1));}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"><ChevronRight className="h-5 w-5"/></button>
-  </div>
-  {periodPickerOpen&&<div className="absolute left-0 right-0 z-30 mt-2 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm">Escolher mês da Casa</strong><p className="mt-1 text-xs text-slate-500">A Home usa mês financeiro canônico; os valores abaixo são relidos para o período escolhido.</p></div><button type="button" aria-label="Fechar escolha de mês" onClick={()=>setPeriodPickerOpen(false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-800"><X className="h-4 w-4"/></button></div><label className="mt-3 block text-xs font-semibold text-slate-400">Mês<input aria-label="Escolher mês da Casa" type="month" min={trackingMonth?.slice(0,7)} value={referenceMonth.slice(0,7)} onChange={event=>setReferenceMonth(normalizeReferenceMonth(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl bg-slate-950 px-3 text-sm text-slate-100"/></label><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setReferenceMonth(currentReferenceMonth)} className="min-h-11 rounded-xl border border-slate-700 text-xs font-bold text-slate-300"><CalendarRange className="mr-1 inline h-4 w-4"/>Mês atual</button><button type="button" onClick={()=>setPeriodPickerOpen(false)} className="min-h-11 rounded-xl bg-blue-600 text-sm font-bold">Aplicar</button></div></div>}
- </div>:null;
+ const monthNavigator=referenceMonth?<FinancialPeriodNavigator
+  label={monthLabel(referenceMonth)}
+  open={periodPickerOpen}
+  onToggle={()=>setPeriodPickerOpen(value=>!value)}
+  onClose={()=>setPeriodPickerOpen(false)}
+  onPrevious={()=>{setPeriodPickerOpen(false);setReferenceMonth(previousMonth);}}
+  onNext={()=>{setPeriodPickerOpen(false);setReferenceMonth(shiftReferenceMonth(referenceMonth,1));}}
+  previousDisabled={previousDisabled}
+  nextDisabled={referenceLoading}
+  monthValue={referenceMonth.slice(0,7)}
+  monthAriaLabel="Escolher mês da Casa"
+  monthMin={trackingMonth?.slice(0,7)}
+  onMonthChange={value=>setReferenceMonth(normalizeReferenceMonth(value))}
+  onUseCurrentMonth={()=>setReferenceMonth(currentReferenceMonth)}
+  pickerTitle="Escolher mês da Casa"
+  pickerDescription="A Home usa mês financeiro canônico; os valores abaixo são relidos para o período escolhido."
+ />:null;
 
  if(referenceMonth&&currentReferenceMonth&&referenceMonth!==currentReferenceMonth){
   const selectedMember=householdMembers.find(m=>m.id===perspective)??null;
