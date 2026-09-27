@@ -8,7 +8,7 @@ test('settlement hub explains realized and projected positions without funding j
   assert.match(source, /Veja a posição entre vocês e os valores a receber ou pagar com outras pessoas/);
   assert.match(source, /Entre vocês · posição de hoje/);
   assert.match(source, /Entre vocês · tendência/);
-  assert.match(source, /É uma previsão ligada a compromissos futuros\\. Ainda não é uma diferença realizada entre vocês/);
+  assert.match(source, /É uma previsão ligada a compromissos futuros\. Ainda não é uma diferença realizada entre vocês/);
   assert.doesNotMatch(source, />.*funding.*</i);
 });
 
@@ -18,7 +18,7 @@ test('settlement hub empty state is reassuring but not misleading', () => {
 });
 
 test('read failure remains explicit and retryable', () => {
-  assert.match(source, /não vai presumir que uma dívida foi resolvida ou que não há nada em aberto/);
+  assert.match(source, /não vai presumir que uma posição foi resolvida ou que não há nada em aberto/);
   assert.match(source, /Tentar novamente/);
 });
 
