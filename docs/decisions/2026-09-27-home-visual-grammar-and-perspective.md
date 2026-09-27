@@ -68,3 +68,21 @@ Usar o mesmo motor/jornada de empréstimos em dois pontos de entrada contextuais
 Não criar um segundo motor ou um segundo modelo de dados.
 
 A rota antiga de empréstimo a partir de Gastos foi deprecada; o mesmo `LoanAdjustment` é reutilizado nos dois pontos contextuais.
+
+
+## Refinamento visual — Valores com pessoas e cartões
+
+**DEFINIDO**
+
+- O seletor de perspectiva é autoexplicativo. Não repetir abaixo dele textos como "Perspectiva: Nossa Casa / Wallace / Guilherme".
+- **Valores com pessoas** deve mostrar primeiro a relação e o saldo, e só depois os detalhes:
+  - membros: uma linha por dupla, com posição atual e tendência;
+  - terceiros: uma linha por pessoa, com saldo líquido e próximo vencimento;
+  - histórico, compromissos e ações ficam dentro do detalhe expandido.
+- Não usar na Home títulos como "A Casa deve para X" ou "X deve para a Casa" como nome principal da relação. O nome da pessoa é a âncora visual; a direção aparece como "A receber" ou "A pagar".
+- Cartões e faturas acessados a partir da Casa devem abrir como uma camada contextual com fechamento por X, preservando a Home por trás.
+- O motor de faturas e pagamentos não muda; esta decisão é somente de navegação e apresentação.
+
+**PENDENTE**
+
+A seção **Onde está nosso dinheiro** ainda merece uma rodada visual própria para aumentar a densidade útil de cada recurso sem voltar a poluir a Home. Não alterar o modelo financeiro para resolver apenas apresentação.
