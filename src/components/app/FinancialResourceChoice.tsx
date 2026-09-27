@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 export function FinancialResourceChoice({
  active,onClick,icon,institution,name,ownerLabel,tone='blue'
 }:{
+ key?:string;
  active:boolean;
  onClick:()=>void;
  icon:ReactNode;
