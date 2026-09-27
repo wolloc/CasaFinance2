@@ -24,7 +24,7 @@ test('settings preserves household invite and account contextual review',()=>{
 test('recurring management remains contextual instead of a primary Settings destination',()=>{
  assert.doesNotMatch(source,/RecurringExpenseManagement|RecurringIncomeManagement|setArea\('recurring'\)/);
  assert.match(expenseScreen,/RecurringExpenseManagement/);
- assert.match(incomeScreen,/RecurringIncomeAction/);
+ assert.doesNotMatch(incomeScreen,/<RecurringIncomeAction/);
  assert.match(incomeScreen,/RecurringIncomeManagement/);
 });
 
