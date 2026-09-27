@@ -652,3 +652,16 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - pagamentos seguem a parcela aberta mais antiga;
 - detalhe do empréstimo exibe cronograma, progresso e ações de pagamento;
 - multa segue fluxo separado e só pode existir depois do atraso real.
+
+
+## Valores com pessoas por perspectiva — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- **Nossa Casa** continua exibindo a posição integral entre membros e terceiros;
+- na perspectiva individual, a relação entre os membros aparece somente quando envolve o membro selecionado;
+- obrigações com terceiros usam a atribuição canônica de responsabilidade remanescente por membro, derivada de `financial_member_commitment_responsibility_positions`;
+- a parcela individual de um pagável/recebível não é calculada pelo percentual bruto da despesa quando a obrigação já representa somente a parcela da Casa;
+- a perspectiva individual mostra somente a parte comprovadamente atribuída ao membro; valores sem atribuição individual comprovável permanecem apenas na visão da Casa;
+- na visão individual, a linguagem muda para **deve a você / você deve** e o valor exibido é somente a parte daquele membro;
+- **Casa não significa 50/50** e ausência de atribuição nunca é convertida silenciosamente em metade para cada membro.
