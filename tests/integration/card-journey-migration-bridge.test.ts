@@ -7,10 +7,11 @@ const refund=await readFile(new URL('../../supabase/migrations/202609060057_card
 
 test('bridge keeps historical migrations immutable and prepares the card journey column order',()=>{
  assert.match(bridge,/drop view if exists public\.financial_card_journey_positions/);
- const creditAmount=bridge.indexOf('as credit_amount');
- const creditEvents=bridge.indexOf('as credit_events');
- const funding=bridge.indexOf('as funding_events');
- const settlements=bridge.indexOf('as settlement_events');
+ const selectBlock=bridge.slice(bridge.indexOf('select i.household_id'));
+ const creditAmount=selectBlock.indexOf('as credit_amount');
+ const creditEvents=selectBlock.indexOf('as credit_events');
+ const funding=selectBlock.indexOf('as funding_events');
+ const settlements=selectBlock.indexOf('as settlement_events');
  assert.ok(creditAmount>=0&&creditEvents>creditAmount&&funding>creditEvents&&settlements>funding);
 });
 
