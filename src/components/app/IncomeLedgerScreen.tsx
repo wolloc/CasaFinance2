@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Repeat2, Search } from 'lucide-react';
+import { Repeat2, Search, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdIncomeTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
