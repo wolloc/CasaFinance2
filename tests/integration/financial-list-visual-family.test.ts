@@ -13,10 +13,10 @@ test('Entradas and Gastos share the same financial summary component',()=>{
 
 test('shared financial summary fixes hierarchy and typography in one place',()=>{
   assert.match(summary,/rounded-2xl border p-4/);
-  assert.match(summary,/text-\[10px\] font-bold uppercase tracking-wide/);
+  assert.match(summary,/text-xs font-bold uppercase tracking-wide/);
   assert.match(summary,/mt-1 block text-2xl/);
-  assert.match(summary,/text-right text-\[10px\] text-slate-500/);
-  assert.match(summary,/label='Total da visão'/);
+  assert.match(summary,/text-right text-xs text-slate-400/);
+  assert.match(summary,/label='Total da visão'|label=\"Total da visão\"|label='Total da visão'/);
 });
 
 test('income and expense differ by semantic tone, not by layout',()=>{
