@@ -26,7 +26,10 @@ test('borrowing from a resource reuses LoanAdjustment with taken direction and s
   assert.match(adjustment,/initialAccountId=\{resourceIntent\?\.kind==='loan'\?resourceIntent\.accountId/);
   assert.match(loan,/initialAccountId/);
   assert.match(loan,/setAccountId\(initialAccountId\)/);
-  assert.match(loan,/createLoanPrincipal/);\n  assert.match(loan,/contextualBank/);\n  assert.match(loan,/selectedAccount\.institution/);\n  assert.match(loan,/credor e esta conta como destino/);
+  assert.match(loan,/createLoanPrincipal/);
+  assert.match(loan,/contextualBank/);
+  assert.match(loan,/selectedAccount\.institution/);
+  assert.match(loan,/credor e esta conta como destino/);
 });
 
 test('Values with people exposes the same loan engine for lending or borrowing',()=>{
@@ -41,4 +44,12 @@ test('old granted-loan route is gone instead of preserving a parallel journey',(
   assert.doesNotMatch(app,/loan-granted/);
   assert.doesNotMatch(app,/openGrantedLoan/);
 });
-\n\ntest('loan form derives description, removes free-text noise and does not fake installments',()=>{\n  assert.match(loan,/const description = direction === 'taken'/);\n  assert.doesNotMatch(loan,/>Descrição</);\n  assert.doesNotMatch(loan,/Observação \(opcional\)/);\n  assert.match(loan,/principal parcelado ainda depende do cronograma canônico/);\n  assert.match(loan,/Multa só nasce se houver atraso real/);\n});\n
+
+
+test('loan form derives description, removes free-text noise and does not fake installments',()=>{
+  assert.match(loan,/const description = direction === 'taken'/);
+  assert.doesNotMatch(loan,/>Descrição</);
+  assert.doesNotMatch(loan,/Observação \(opcional\)/);
+  assert.match(loan,/principal parcelado ainda depende do cronograma canônico/);
+  assert.match(loan,/Multa só nasce se houver atraso real/);
+});
