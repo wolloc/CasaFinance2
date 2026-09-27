@@ -36,3 +36,7 @@ Objetivo: reduzir rolagem e a sensação de formulário longo sem remover inform
 A tela Entradas usava a consulta genérica de transações, que carregava dependências específicas de despesas (obrigações, pagamentos externos e parcelamentos) mesmo quando a tela precisava somente de renda. A leitura de Entradas passa a utilizar um caminho focado em transações de renda e suas dependências relevantes.
 
 A correção é apenas de leitura/apresentação. Não altera fatos econômicos, movimentos de caixa, recorrências ou regras de titularidade.
+
+## DEFINIDO — densidade dos seletores de recursos
+
+Nos formulários **Nova Entrada** e **Nova Despesa**, o seletor de recurso usa **três colunas no mobile** como padrão de Release 1. Os cards permanecem compactos, com ícones pequenos e somente identificação essencial. Quatro colunas ficam fora do padrão porque reduzem demais a legibilidade no iPhone; duas colunas permanecem como fallback aceitável caso um futuro teste visual mostre perda real de leitura.
