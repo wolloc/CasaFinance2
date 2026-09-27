@@ -23,7 +23,6 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
  const[categoryId,setCategoryId]=useState('');
  const[beneficiaryMemberId,setBeneficiaryMemberId]=useState('');
  const[plannedDestinationAccountId,setPlannedDestinationAccountId]=useState('');
- const[incomeNature]=useState<IncomeNature>('other_true_income');
  const[economicState,setEconomicState]=useState<IncomeConfidence>('confirmed');
  const[notes]=useState('');
  const[recurring,setRecurring]=useState(false);
@@ -66,6 +65,16 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   setBeneficiaryMemberId(memberId);
   if(!resources.some(resource=>resource.account_id===plannedDestinationAccountId&&resource.ownerMemberIds.includes(memberId)))setPlannedDestinationAccountId('');
  };
+ const inferredIncomeNature:IncomeNature=(()=>{
+  const label=(categories.find(category=>category.id===categoryId)?.name??description).trim().toLocaleLowerCase('pt-BR');
+  if(/sal[aá]rio|remunera[cç][aã]o/.test(label))return 'salary';
+  if(/aluguel|loca[cç][aã]o/.test(label))return 'rent';
+  if(/freela|freelance|aut[oô]nom/.test(label))return 'freelance';
+  if(/b[oô]nus|premia[cç][aã]o|plr/.test(label))return 'bonus';
+  if(/presente|doa[cç][aã]o/.test(label))return 'gift';
+  if(/juros|rendimento|rentabilidade/.test(label))return 'interest_yield';
+  return 'other_true_income';
+ })();
  const recurrenceCount=recurringDuration==='ongoing'?null:recurringDuration==='custom'?customRecurringCount:Number(recurringDuration);
  const recurrenceEndDate=(()=>{if(!recurring||!recurrenceCount||!expectedDate)return'';try{return recurringIncomeEndDate(expectedDate,recurringFrequency,recurrenceCount);}catch{return'';}})();
  const chooseRecurringFrequency=(frequency:RecurringIncomeFrequency)=>{setRecurringFrequency(frequency);setRecurringDuration(frequency==='monthly'?'12':'3');setCustomRecurringCount(frequency==='monthly'?5:2);};
@@ -84,9 +93,9 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   setSaving(true);setError(null);
   try{
    if(recurring){
-    await createRecurringIncomeRule(supabase,{householdId:household.id,description,amount:normalized,startDate:expectedDate,endDate:recurrenceEndDate,frequency:recurringFrequency,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature,economicState,notes});
+    await createRecurringIncomeRule(supabase,{householdId:household.id,description,amount:normalized,startDate:expectedDate,endDate:recurrenceEndDate,frequency:recurringFrequency,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature:inferredIncomeNature,economicState,notes});
    }else{
-    await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature,economicState,notes});
+    await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature:inferredIncomeNature,economicState,notes});
    }
    setDescription('');setAmount('');setCategoryId('');setPlannedDestinationAccountId('');setRecurring(false);setOpen(false);onCreated?.();
   }catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível criar a entrada.');}
