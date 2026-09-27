@@ -72,9 +72,9 @@ Previsão vencida não se realiza pela passagem do tempo. Ela precisa ser resolv
 
 ## Acertos
 
-Acertos entre membros formam uma conta-corrente contínua, sem reset mensal. Eles nascem da diferença entre responsabilidade econômica e funding realizado/projetado.
+A posição entre membros forma uma conta-corrente contínua, sem reset mensal. Ela nasce da diferença entre responsabilidade econômica, funding realizado/projetado e transferências explicitamente consideradas nessa posição.
 
-O pagamento da fatura não cria um novo acerto. Uma liquidação de acerto deve ser explícita. Valor transferido acima da dívida não cria dívida inversa silenciosamente.
+O pagamento da fatura não cria uma segunda posição. Transferência entre contas de membros diferentes pode alterar a posição quando o usuário a considera parte da relação entre eles; essa escolha pode vir marcada por padrão na UX e deve permitir exceção. Quando considerada, a transferência pode atravessar zero e inverter a posição líquida, preservando um único movimento de caixa e histórico auditável.
 
 ## Terceiros
 
