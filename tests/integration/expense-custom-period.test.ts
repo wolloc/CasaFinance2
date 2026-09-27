@@ -24,7 +24,7 @@ test('Gastos period picker routes each lens to its matching period read',()=>{
  assert.match(browser,/Personalizado/);
  assert.match(browser,/Compromissos do período/);
  assert.doesNotMatch(browser,/Impactos financeiros do \{periodNoun\}/);
- assert.match(browser,/data econômica do fato/);
+ assert.doesNotMatch(browser,/Compras realizadas no \{periodNoun\}, usando a data econômica do fato/);
 });
 
 test('period reads remain read-only and member responsibility stays canonical',()=>{
