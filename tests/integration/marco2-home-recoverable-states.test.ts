@@ -9,7 +9,8 @@ test('attention empty state explains that only actionable urgency is empty', () 
   assert.match(priority, /Nada urgente agora/);
   assert.match(priority, /O que pedir ação aparece aqui/);
   assert.match(priority, /CircleCheck/);
-  assert.match(priority, /px-3 py-2/);
+  assert.match(priority, /<details className="group rounded-2xl/);
+  assert.match(priority, /<summary className="flex min-h-12/);
 });
 
 test('projection review failure offers an in-place retry without financial mutation', () => {
