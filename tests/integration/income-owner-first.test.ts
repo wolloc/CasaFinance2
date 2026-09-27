@@ -21,6 +21,10 @@ test('income destination cards use canonical account ownership',()=>{
  assert.match(screen,/Conjunta/);
  assert.match(screen,/Titular/);
  assert.match(screen,/DestinationIcon/);
+ assert.match(screen,/institution:account\.institution/);
+ assert.match(screen,/resource\.institution/);
+ assert.match(screen,/grid grid-cols-3 gap-2/);
+ assert.match(screen,/min-h-\[58px\]/);
  assert.match(screen,/aria-pressed=\{active\}/);
  assert.doesNotMatch(screen,/Onde deve entrar\?<select/);
 });

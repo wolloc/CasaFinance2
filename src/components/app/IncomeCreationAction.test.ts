@@ -24,9 +24,12 @@ test('Nova Entrada is quick capture opened by the global action, not a permanent
  assert.match(creationSource,/text-2xl font-black/);
 });
 
-test('new income captures nature beneficiary planned destination and confidence with optional category',()=>{
- for(const value of ['Tipo','De quem é?','Onde deve entrar?','Confiança','Categoria'])assert.match(creationSource,new RegExp(value.replace('?','\\?')));
+test('new income keeps technical nature internal while category remains optional and user-facing',()=>{
+ for(const value of ['De quem é esta entrada?','Onde entrou?','De onde vem?','Categoria','Essa entrada já está confirmada?'])assert.match(creationSource,new RegExp(value.replace('?','\\?')));
+ assert.doesNotMatch(creationSource,/>Tipo<select/);
+ assert.doesNotMatch(creationSource,/>Confiança<select/);
  assert.match(creationSource,/Categoria <span[^>]*>\(opcional\)/);
+ assert.match(creationSource,/const inferredIncomeNature:IncomeNature/);
  assert.match(creationSource,/categoryId:categoryId\|\|null/);
  assert.match(serviceSource,/categoryId:string\|null/);
  assert.match(serviceSource,/p_beneficiary_member_id/);
@@ -37,6 +40,6 @@ test('new income captures nature beneficiary planned destination and confidence 
 test('income UX preserves forecast versus realized cash and neutral-flow boundary',()=>{
  assert.match(creationSource,/O saldo só muda quando o recebimento acontecer de verdade/);
  assert.match(productSpec,/Não são renda: transferência, refund, recebimento de recebível, empréstimo tomado, resgate de principal e acerto/);
- assert.match(creationSource,/Prevista/);
- assert.match(creationSource,/Confirmada/);
+ assert.match(creationSource,/Sim, já sei que vou receber/);
+ assert.match(creationSource,/Ainda é uma expectativa/);
 });
