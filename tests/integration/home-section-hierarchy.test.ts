@@ -14,7 +14,7 @@ test('Home usa uma única hierarquia para títulos de seção',()=>{
   }
   assert.match(priority,/FinancialSectionHeading[^\n]*title="Precisa de atenção"/);
   assert.match(upcoming,/FinancialSectionHeading[^\n]*title="Próximos 7 dias"/);
-  assert.match(settlements,/FinancialSectionHeading[^\n]*title="Acertos"/);
+  assert.match(settlements,/FinancialSectionHeading[^\n]*title="Valores com pessoas"/);
 });
 
 test('escala de seção é definida em um único lugar',()=>{
