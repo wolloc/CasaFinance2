@@ -57,3 +57,17 @@ Permanece com a fotografia financeira rica: fatura, futuro, limite livre e créd
 ## Perspectiva
 
 Nossa Casa e cada membro devem usar a mesma arquitetura de perguntas. Quando não houver read model individual canônico, a Home não deve copiar dado consolidado como se fosse individual.
+
+
+## Refinamento visual de homologação — 2026-09-27
+
+**DEFINIDO**
+
+- **Onde está nosso dinheiro** deve ser mais visual: o título do grupo e seu total ficam fora de um container pesado; cada recurso é um card próprio.
+- Dentro de cada grupo, os recursos aparecem do **maior saldo para o menor saldo**.
+- Cada card prioriza nome do recurso, instituição, titularidade e valor; detalhes e ações continuam contextuais ao toque.
+- **Valores com pessoas** aparece antes de **Próximos 7 dias**, por estar conceitualmente mais próximo da leitura de recursos e posições financeiras.
+- A relação entre os dois membros da Casa recebe maior destaque visual que relações com terceiros.
+- Terceiros exibem a responsabilidade econômica quando ela puder ser comprovada a partir do fato de origem: membro único, 50/50 ou divisão customizada. Na ausência de vínculo suficiente, mostrar **Casa** sem inferir 50/50.
+- Ao tocar em um cartão da Home, abrir diretamente **Faturas** daquele cartão, preservando seletor temporal e a ação contextual **Pagar tudo ou parte** quando houver saldo em aberto.
+- No seletor de recurso da Nova Despesa, **Outra pessoa pagou** permanece como opção em três colunas, com copy reduzida para preservar legibilidade.
