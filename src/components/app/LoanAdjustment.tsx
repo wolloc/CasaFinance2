@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Banknote, LoaderCircle, UserPlus } from 'lucide-react';
+import { Banknote, Landmark, LoaderCircle, UserPlus } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
@@ -21,8 +21,6 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   const [amount, setAmount] = useState('');
   const [occurredAt, setOccurredAt] = useState(localDate());
   const [dueDate, setDueDate] = useState('');
-  const [description, setDescription] = useState('Empréstimo');
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -41,20 +39,26 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   useEffect(() => { if (initialDirection) setDirection(initialDirection); }, [initialDirection]);
   useEffect(() => { if (initialAccountId) setAccountId(initialAccountId); }, [initialAccountId]);
   const selectedParty = useMemo(() => parties.find((party) => party.id === counterpartyId), [parties, counterpartyId]);
+  const selectedAccount = useMemo(() => accounts.find((account) => account.id === accountId), [accounts, accountId]);
+  const contextualBank = direction === 'taken' && initialAccountId && selectedAccount?.institution?.trim() ? selectedAccount.institution.trim() : null;
+  const lockedDirection = Boolean(initialDirection);
+  const lockedAccount = Boolean(initialAccountId && selectedAccount);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!supabase || !household) return;
     if (loadError || loading) { setError('Confira novamente as pessoas e contas antes de registrar o empréstimo.'); return; }
     const normalizedAmount = normalizeAmount(amount); const numericAmount = Number(normalizedAmount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setError('Informe um valor maior que zero.'); return; }
     if (!accountId) { setError(direction === 'granted' ? 'Informe de qual recurso o dinheiro saiu.' : 'Informe em qual recurso o dinheiro entrou.'); return; }
-    if (!counterpartyId && !newPartyName.trim()) { setError('Escolha uma pessoa ou informe um novo nome.'); return; }
+    const partyName = contextualBank ?? selectedParty?.name ?? newPartyName.trim();
+    if (!counterpartyId && !partyName) { setError('Escolha com quem foi o empréstimo.'); return; }
     if (dueDate && dueDate < occurredAt) { setError('A data prevista de devolução não pode ser anterior à data do empréstimo.'); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
-      let partyId = counterpartyId; if (!partyId) partyId = await createFinancialParty(supabase, household.id, newPartyName);
-      await createLoanPrincipal(supabase, { householdId: household.id, direction, counterpartyId: partyId, accountId, amount: normalizedAmount, occurredAt, dueDate, description, notes });
+      let partyId = counterpartyId; if (!partyId) { const existing = parties.find((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partyName.toLocaleLowerCase('pt-BR')); partyId = existing?.id ?? await createFinancialParty(supabase, household.id, partyName); }
+      const description = direction === 'taken' ? `Empréstimo de ${partyName}` : `Empréstimo para ${partyName}`;
+      await createLoanPrincipal(supabase, { householdId: household.id, direction, counterpartyId: partyId, accountId, amount: normalizedAmount, occurredAt, dueDate, description });
       setSuccess(direction === 'granted' ? 'Pronto. O dinheiro saiu da conta escolhida e o Casa guardou que essa pessoa precisa devolver esse valor. Isso não virou uma despesa.' : 'Pronto. O dinheiro entrou na conta escolhida e o Casa guardou que esse valor precisa ser devolvido. Isso não virou uma renda.');
-      setAmount(''); setNotes(''); setDueDate(''); setNewPartyName(''); await load();
+      setAmount(''); setDueDate(''); setNewPartyName(''); await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o empréstimo.'); }
     finally { setSaving(false); }
   };
