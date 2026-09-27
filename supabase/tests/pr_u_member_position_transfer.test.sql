@@ -25,11 +25,11 @@ insert into public.account_ownerships(account_id,household_id,member_id) values
 
 -- Before the transfer, Guilherme has R$ 4.000 with Wallace.
 insert into public.transactions(
- id,household_id,created_by_member_id,type,status,economic_state,description,amount,
+ id,household_id,created_by_member_id,buyer_member_id,type,status,economic_state,description,amount,
  estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date
 ) values(
  'ab000000-0000-4000-8000-000000000041','ab000000-0000-4000-8000-000000000010',
- 'ab000000-0000-4000-8000-000000000021','expense','paid','realized','Compromissos de Guilherme pagos por Wallace',4000,
+ 'ab000000-0000-4000-8000-000000000021','ab000000-0000-4000-8000-000000000022','expense','paid','realized','Compromissos de Guilherme pagos por Wallace',4000,
  4000,4000,4000,current_date,date_trunc('month',current_date)::date
 );
 
