@@ -51,7 +51,7 @@ Exemplos removidos:
 
 ## Empréstimos
 
-**PROPOSTO — ainda não implementado nesta decisão**
+**DEFINIDO e IMPLEMENTADO**
 
 Usar o mesmo motor/jornada de empréstimos em dois pontos de entrada contextuais:
 
@@ -66,3 +66,5 @@ Usar o mesmo motor/jornada de empréstimos em dois pontos de entrada contextuais
    - reutiliza os mesmos comandos canônicos de empréstimo.
 
 Não criar um segundo motor ou um segundo modelo de dados.
+
+A rota antiga de empréstimo a partir de Gastos foi deprecada; o mesmo `LoanAdjustment` é reutilizado nos dois pontos contextuais.
