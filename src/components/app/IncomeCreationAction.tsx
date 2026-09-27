@@ -12,6 +12,8 @@ import { FinancialActionDialogHeader } from './FinancialActionDialogHeader.js';
 
 const normalizeAmount=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
 type IncomeDestination=InvestmentReserveResource&{ownerMemberIds:string[]};
+const destinationLabel=(resource:IncomeDestination)=>resource.type==='cash'?'Carteira':resource.type==='checking'?'Conta corrente':resource.type==='savings'?'Poupança':'Carteira digital';
+function DestinationIcon({type}:{type:string}){const Icon=type==='cash'?Banknote:type==='savings'?PiggyBank:type==='checking'?Landmark:WalletCards;return <Icon className="h-5 w-5"/>;}
 
 export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=>void;openRequestId?:number}){
  const{household,householdMembers}=useSupabaseAuth();

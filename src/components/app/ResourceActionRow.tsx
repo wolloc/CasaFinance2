@@ -13,7 +13,7 @@ export type ResourceActionTarget={
 
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
 
-export function ResourceActionRow({resource,onAction}:{resource:ResourceActionTarget;onAction?:(action:ResourceNavigationAction)=>void}){
+export function ResourceActionRow({resource,onAction}:{key?:string;resource:ResourceActionTarget;onAction?:(action:ResourceNavigationAction)=>void}){
  const patrimonial=resource.isInvestment||resource.resourceRestriction==='reserve';
  const benefit=resource.type==='meal_benefit';
  const act=(kind:ResourceNavigationAction['kind'])=>onAction?.({kind,accountId:resource.accountId});

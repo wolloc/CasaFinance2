@@ -48,7 +48,7 @@ test('Nova entrada abre captura contextual sem transformar a aba Entradas em for
  assert.match(app,/TransactionsScreen mode="income" perspective=\{perspective\} onPerspectiveChange=\{setPerspective\} createRequestId=\{incomeCreateRequestId\}/);
  assert.match(screen,/mode === 'income'\) return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen/);
  assert.match(screen,/createRequestId=\{createRequestId\}/);
- assert.match(income,/<IncomeCreationAction onCreated=\{refresh\} openRequestId=\{createRequestId\}\/>/);
+ assert.match(income,/<IncomeCreationAction onCreated=\{\(\)=>\{refresh\(\);setIncomeSaved\(true\);\}\} openRequestId=\{createRequestId\}\/>/);
 });
 
 

@@ -41,7 +41,7 @@ test('Home explains the financial equation and separates liquidity from patrimon
  assert.match(home,/Quanto do dinheiro de agora já tem destino/);
  assert.match(home,/Já tem destino/);
  assert.match(home,/Livre depois deles/);
- assert.match(home,/Fluxo deste mês/);
+ assert.match(home,/Mês em resumo/);
  assert.match(home,/Onde está nosso dinheiro/);
  assert.match(home,/Patrimônio financeiro acompanhado/);
  assert.match(home,/Contas e dinheiro/);

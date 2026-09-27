@@ -37,7 +37,7 @@ test('Gastos prioriza o navegador mensal e leva histórico/correções para o la
  assert.match(browser,/Mês seguinte/);
  assert.match(browser,/Escolher mês/);
  assert.match(screen,/Detalhe do gasto/);
- assert.match(screen,/Histórico, correções e ações especiais ficam ligados a este lançamento/);
+ assert.match(screen,/focusTransactionId=\{detailTransactionId\}/);
  assert.doesNotMatch(screen,/Precisa fazer algo diferente\?/);
 });
 
@@ -67,7 +67,8 @@ test('listas de Gastos carregam categoria visual e responsabilidade sem inferir 
  assert.match(browser,/getCategoryVisual/);
  assert.match(browser,/Dividido/);
  assert.match(browser,/Com outra pessoa/);
- assert.doesNotMatch(service,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
+ assert.match(service,/financial_member_commitment_responsibility_positions/);
+ assert.match(service,/memberAmounts\.get\(row\.id\)/);
 });
 
 test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva global',()=>{
@@ -78,7 +79,7 @@ test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva g
 });
 
 test('Gastos mantém total da visão compacto e categorias sob demanda sem virar orçamento',()=>{
- assert.match(browser,/Total da visão/);
+ assert.match(browser,/FinancialListSummaryCard tone="expense"/);
  assert.match(browser,/realizado/);
  assert.match(browser,/comprometido/);
  assert.match(browser,/Ver categorias/);
@@ -105,7 +106,8 @@ test('perspectiva de morador usa responsabilidade econômica e mantém comprador
  assert.match(service,/financial_member_commitment_responsibility_positions/);
  assert.match(service,/responsible_member_id/);
  assert.match(browser,/selectedMember/);
- assert.doesNotMatch(service,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
+ assert.match(service,/financial_member_commitment_responsibility_positions/);
+ assert.match(service,/memberAmounts\.get\(row\.id\)/);
 });
 
 

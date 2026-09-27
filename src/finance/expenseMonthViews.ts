@@ -308,7 +308,7 @@ function assertExpensePeriod(startDate:string,endDate:string){
 
 export async function listFinancialPeriodExpenses(client:SupabaseClient,householdId:string,startDate:string,endDate:string,memberId?:string){
   assertExpensePeriod(startDate,endDate);
-  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'>>((from,to)=>
+  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'|'buyer_member_id'|'instrument_kind'>>((from,to)=>
     client.from('financial_commitment_positions')
       .select('commitment_key,source_type,source_transaction_id,source_installment_id,source_invoice_id,financial_date,financial_month,due_date,economic_date,effective_amount,realized_amount,remaining_amount,economic_state,commitment_state,description,category_id')
       .eq('household_id',householdId)
@@ -331,6 +331,8 @@ export async function listFinancialPeriodExpenses(client:SupabaseClient,househol
     recurring_rule_id:row.source_transaction_id?visuals.recurringRuleByTransaction.get(row.source_transaction_id)??null:null,
     category:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.category??null:null,
     responsibility:row.source_transaction_id?visuals.responsibility.get(row.source_transaction_id)??{member_ids:[],has_third_party:false}:{member_ids:[],has_third_party:false},
+    buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
+    instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;

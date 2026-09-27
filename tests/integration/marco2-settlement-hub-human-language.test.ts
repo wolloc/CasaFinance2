@@ -8,7 +8,7 @@ test('settlement hub explains realized and projected positions without funding j
   assert.match(source, /Veja quem precisa acertar dinheiro com quem/);
   assert.match(source, /Entre nós · já aconteceu/);
   assert.match(source, /Entre nós · pode acontecer depois/);
-  assert.match(source, /É uma previsão\. O valor pode mudar quando o pagamento real acontecer/);
+  assert.match(source, /É uma previsão ligada a compromissos futuros\. Ainda não existe valor para acertar agora/);
   assert.doesNotMatch(source, />.*funding.*</i);
 });
 

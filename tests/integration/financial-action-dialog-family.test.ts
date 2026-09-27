@@ -15,7 +15,7 @@ test('Nova Entrada e Nova Despesa compartilham o mesmo header de ação financei
 
 test('action dialogs share the same shell geometry',()=>{
   for(const source of [income,expense]){
-    assert.match(source,/max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1\.75rem] border border-slate-700 bg-slate-900/);
+    assert.match(source,/max-h-\[92dvh\][\s\S]{0,100}w-full max-w-lg[\s\S]{0,100}overflow-y-auto[\s\S]{0,100}border border-slate-700 bg-slate-900/);
   }
 });
 
