@@ -76,6 +76,51 @@ export async function listHouseholdTransactions(client: SupabaseClient, househol
   });
 }
 
+export async function listHouseholdIncomeTransactions(client: SupabaseClient, householdId: string) {
+  const response = await client.from('transactions').select(transactionColumns).eq('household_id', householdId).is('deleted_at', null).eq('type', 'income').order('transaction_date', { ascending: false }).order('created_at', { ascending: false });
+  if (response.error) throw response.error;
+  const rows = response.data ?? [];
+  const transactionIds = rows.map((row) => row.id as string);
+  if (transactionIds.length === 0) return [] as HouseholdTransaction[];
+
+  const [recurringResponse, fundingResponse] = await Promise.all([
+    client.from('recurring_occurrences').select('transaction_id').eq('household_id', householdId).in('transaction_id', transactionIds),
+    client.from('funding_events').select('financed_transaction_id, source_account_id, amount, invoice_id').eq('household_id', householdId).in('financed_transaction_id', transactionIds),
+  ]);
+  if (recurringResponse.error) throw recurringResponse.error;
+  if (fundingResponse.error) throw fundingResponse.error;
+
+  const recurringIds = new Set((recurringResponse.data ?? []).map((row) => row.transaction_id).filter(Boolean));
+  const fundingByTransaction = new Map<string, Array<{ source_account_id: string | null; amount: string | number; invoice_id: string | null }>>();
+  for (const funding of fundingResponse.data ?? []) {
+    const transactionId = funding.financed_transaction_id as string;
+    const existing = fundingByTransaction.get(transactionId) ?? [];
+    existing.push({ source_account_id: funding.source_account_id as string | null, amount: funding.amount as string | number, invoice_id: funding.invoice_id as string | null });
+    fundingByTransaction.set(transactionId, existing);
+  }
+
+  return rows.map((row) => {
+    const transactionId = row.id as string;
+    const fundingEvents = fundingByTransaction.get(transactionId) ?? [];
+    const directFundingEvents = fundingEvents.filter((event) => event.invoice_id === null);
+    const directFundingAccounts = new Set(directFundingEvents.map((event) => event.source_account_id).filter((id): id is string => Boolean(id)));
+    return { ...row,
+      category: Array.isArray(row.category) ? row.category[0] ?? null : row.category,
+      buyer: Array.isArray(row.buyer) ? row.buyer[0] ?? null : row.buyer,
+      payment_instrument: Array.isArray(row.payment_instrument) ? row.payment_instrument[0] ?? null : row.payment_instrument,
+      mutation_dependencies: {
+        has_recurring_occurrence: recurringIds.has(transactionId),
+        has_financial_obligation: false,
+        has_external_payment_event: false,
+        has_installment_plan: false,
+        has_funding_event: fundingEvents.length > 0,
+        direct_funding_total: directFundingEvents.reduce((sum, event) => sum + Number(event.amount), 0),
+        direct_funding_account_count: directFundingAccounts.size,
+      },
+    } as unknown as HouseholdTransaction;
+  });
+}
+
 export async function listTransactionAdjustmentEvents(client: SupabaseClient, householdId: string, transactionId: string) {
   const response = await client.from('transaction_adjustment_events')
     .select('id, kind, amount, reason, before_payload, after_payload, related_transaction_id, created_by_member_id, occurred_at, created_at')
