@@ -94,7 +94,7 @@ async function submitLogin(page: Page) {
 
 async function login(page: Page) {
   await submitLogin(page);
-  await expect(page.getByText('Casa Teste')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Casa' })).toBeVisible();
 }
 
 test('login real do frontend entra na Casa e navega pelas áreas principais', async ({ page }) => {
