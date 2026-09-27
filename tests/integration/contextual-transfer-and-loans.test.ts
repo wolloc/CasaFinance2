@@ -10,6 +10,8 @@ const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',i
 const loanDetail=await readFile(new URL('../../src/components/app/LoanDetailAdjustment.tsx',import.meta.url),'utf8');
 const loanCharges=await readFile(new URL('../../src/components/app/LoanChargesAdjustment.tsx',import.meta.url),'utf8');
 const loanPayment=await readFile(new URL('../../src/components/app/LoanPaymentAdjustment.tsx',import.meta.url),'utf8');
+const scheduledPayment=await readFile(new URL('../../src/components/app/LoanScheduledPayment.tsx',import.meta.url),'utf8');
+const schedule=await readFile(new URL('../../src/finance/loanSchedule.ts',import.meta.url),'utf8');
 
 test('selected resource opens transfer as a direct form with the source already contextualized',()=>{
   assert.match(row,/Transferir deste recurso/);
@@ -51,11 +53,16 @@ test('old granted-loan route is gone instead of preserving a parallel journey',(
 });
 
 
-test('loan form derives description, removes free-text noise and does not fake installments',()=>{
+test('loan form derives description and creates a canonical installment schedule',()=>{
   assert.match(loan,/const description = direction === 'taken'/);
   assert.doesNotMatch(loan,/>Descrição</);
   assert.doesNotMatch(loan,/Observação \(opcional\)/);
-  assert.match(loan,/principal parcelado ainda depende do cronograma canônico/);
+  assert.match(loan,/createLoanPrincipalWithSchedule/);
+  assert.match(loan,/Como pretende pagar este valor\?/);
+  assert.match(loan,/Em quantas vezes\?/);
+  assert.match(loan,/Juros totais/);
+  assert.match(loan,/Tarifas totais/);
+  assert.match(loan,/Quem assume esses custos\?/);
   assert.match(loan,/Multa só nasce se houver atraso real/);
 });
 
@@ -70,10 +77,17 @@ test('loan payment moved from creation into the existing contract detail',()=>{
   assert.match(loanPayment,/initialLoanId/);
 });
 
-test('new taken loan can continue into contract costs without exposing future installment interest as realized today',()=>{
-  assert.match(loan,/createdLoanId/);
-  assert.match(loan,/LoanChargesAdjustment initialLoanId=\{createdLoanId\} contractMode/);
-  assert.match(loanCharges,/contractMode/);
-  assert.match(loanCharges,/Juros futuros parcelados entram no cronograma do contrato/);
+test('future contractual costs stay projected in the schedule until payment or later accrual',()=>{
+  assert.match(loan,/Juros e tarifas futuros ficam projetados/);
   assert.match(loanCharges,/Multa só pode ser registrada depois do vencimento real do empréstimo/);
+});
+
+
+test('loan detail pays the earliest canonical installment with principal and charges together',()=>{
+  assert.match(loanDetail,/LoanScheduleSummary loanId=\{loanId\}/);
+  assert.match(loanDetail,/LoanScheduledPayment loanId=\{loanId\}/);
+  assert.match(scheduledPayment,/Pagar próxima parcela/);
+  assert.match(scheduledPayment,/recordScheduledLoanPayment/);
+  assert.match(scheduledPayment,/pagamento parcial/);
+  assert.match(schedule,/financial_loan_schedule/);
 });
