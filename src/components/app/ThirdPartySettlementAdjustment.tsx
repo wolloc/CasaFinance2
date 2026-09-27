@@ -4,6 +4,7 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { listOpenThirdPartyObligations, settleThirdPartyObligation, type ThirdPartyObligation } from '../../finance/thirdPartyObligations.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
@@ -83,9 +84,9 @@ export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: 
       {needsFunder && <label className="block text-sm">Quem pagou com o próprio dinheiro?<select value={funderMemberId} onChange={(event) => setFunderMemberId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>}
       {selected && <><label className="block text-sm">Quanto foi pago?<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label><label className="block text-sm">Quando aconteceu?<input type="date" value={occurredDate} onChange={(event) => setOccurredDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label><label className="block text-sm">Observação (opcional)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label></>}
       {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}
-      {success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
+      {success&&<FinancialSaveFeedback message={success}/>}
       {obligations.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400">Não há valores em aberto com outras pessoas.</p>}
-      <button type="submit" disabled={saving || !selected} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><HandCoins className="h-4 w-4"/>{saving ? 'Registrando…' : 'Registrar acerto'}</button>
+      <button type="submit" disabled={saving || !selected} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving?<LoaderCircle className="h-4 w-4 animate-spin"/>:<HandCoins className="h-4 w-4"/>}{saving?'Registrando…':'Registrar acerto'}</button>
     </form>}
   </div>;
 }

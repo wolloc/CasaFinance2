@@ -4,6 +4,7 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { createFinancialParty, createLoanPrincipalWithSchedule, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
@@ -93,8 +94,8 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
       <p className="rounded-xl bg-slate-950/70 p-3 text-xs text-slate-500">Cada parcela é uma agenda de pagamento ligada ao mesmo principal. Juros e tarifas futuros ficam projetados até virarem fatos econômicos. Multa só nasce se houver atraso real.</p>
       {selectedParty && <p className="text-xs text-slate-500">Pessoa escolhida: {selectedParty.name}</p>}
       {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}
-      {success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
-      <button type="submit" disabled={saving || accounts.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><Banknote className="h-4 w-4"/>{saving ? 'Registrando…' : direction === 'taken' ? 'Registrar empréstimo recebido' : 'Registrar dinheiro emprestado'}</button>
+      {success&&<FinancialSaveFeedback message={success}/>}
+      <button type="submit" disabled={saving || accounts.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Banknote className="h-4 w-4"/>}{saving?'Registrando…':direction==='taken'?'Registrar empréstimo recebido':'Registrar dinheiro emprestado'}</button>
       {accounts.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400"><UserPlus className="mr-1 inline h-4 w-4"/>Cadastre uma conta que movimenta dinheiro antes de registrar um empréstimo.</p>}
     </form>}
   </div>;

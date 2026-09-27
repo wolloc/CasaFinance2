@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase.js';
 import { isTransactionalResource,listInvestmentReserveResources,type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
 import { listLoanSchedule,type LoanScheduleItem } from '../../finance/loanSchedule.js';
 import { recordScheduledLoanPayment } from '../../finance/loanPayments.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const norm=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
@@ -43,8 +44,8 @@ export function LoanScheduledPayment({loanId}:{loanId:string}){
    <label className="block text-sm">Quando pagou?<input type="date" value={date} onChange={e=>setDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl bg-slate-950 px-3"/></label>
    <p className="text-xs text-slate-500">Você pode reduzir qualquer componente para registrar um pagamento parcial. O restante continua aberto nesta mesma parcela.</p>
    {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}
-   {message&&<p role="status" className="text-sm text-emerald-300">{message}</p>}
-   <button disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><Banknote className="h-4 w-4"/>{saving?'Registrando…':'Registrar pagamento da parcela'}</button>
+   {message&&<FinancialSaveFeedback message={message}/>}
+   <button disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Banknote className="h-4 w-4"/>}{saving?'Registrando…':'Registrar pagamento da parcela'}</button>
   </form>
  </section>;
 }

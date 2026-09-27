@@ -3,6 +3,7 @@ import { CalendarRange, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { closeRecurringExpenseRule, listRecurringExpenseRules, reviseRecurringExpenseRule, type RecurringExpenseFrequency, type RecurringExpenseRule } from '../../finance/recurringExpenses.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const localDate = () => {
   const now = new Date();
@@ -73,10 +74,10 @@ export function RecurringExpenseManagement({ onChanged, focusRuleId }: { onChang
       <label className="text-sm font-semibold">Vale a partir de<input type="date" min={localDate()} value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"/></label>
       {mode === 'revise' && <><label className="text-sm font-semibold">Novo valor<input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"/></label><p className="rounded-xl bg-slate-900 p-3 text-xs text-slate-400">Daqui para frente, gastos recorrentes seguem <strong className="text-slate-300">mensalmente</strong>. Se esta for uma série antiga semanal/anual, a nova versão passa para o padrão mensal da Release 1.</p><label className="text-sm font-semibold">Até quando? (opcional)<input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"/></label></>}
       <label className="text-sm font-semibold">Por que está mudando?<textarea value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-900 p-3" placeholder="Ex.: reajuste do aluguel, assinatura cancelada"/></label>
-      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}{success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
-      <div className="flex gap-2"><button disabled={saving} className="min-h-11 flex-1 rounded-xl bg-amber-500 px-4 font-bold text-slate-950 disabled:opacity-50">{saving ? 'Salvando…' : mode === 'revise' ? 'Salvar mudança' : 'Parar recorrência'}</button><button type="button" onClick={() => { setSelected(null); setMode(null); }} className="min-h-11 rounded-xl border border-slate-700 px-4">Cancelar</button></div>
+      {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}{success&&<FinancialSaveFeedback message={success}/>}
+      <div className="flex gap-2"><button disabled={saving} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 font-bold text-slate-950 disabled:opacity-50">{saving&&<LoaderCircle className="h-4 w-4 animate-spin"/>}{saving?'Salvando…':mode==='revise'?'Salvar mudança':'Parar recorrência'}</button><button type="button" onClick={() => { setSelected(null); setMode(null); }} className="min-h-11 rounded-xl border border-slate-700 px-4">Cancelar</button></div>
     </form>}
-    {!selected && success && <p role="status" className="mt-3 text-sm text-emerald-300">{success}</p>}
+    {!selected&&success&&<div className="mt-3"><FinancialSaveFeedback message={success}/></div>}
     {!selected && error && <p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}
   </section>;
 }
