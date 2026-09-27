@@ -6,7 +6,7 @@ const screen=await readFile(new URL('../../src/components/app/IncomeCreationActi
 
 test('Nova Entrada starts from the beneficiary before destination and value',()=>{
  const beneficiary=screen.indexOf('De quem é esta entrada?');
- const destination=screen.indexOf('Onde deve entrar?');
+ const destination=screen.indexOf('Onde entrou?');
  const amount=screen.indexOf('>Valor<input');
  assert.ok(beneficiary>=0);
  assert.ok(destination>beneficiary);
@@ -47,4 +47,16 @@ test('recurring income is created inside the owner-first flow without bypassing 
  assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
  assert.match(screen,/plannedDestinationAccountId/);
  assert.match(screen,/A primeira ocorrência é esta entrada/);
+});
+
+test('Nova Entrada follows the simplified product order and hides technical income type',()=>{
+ const destination=screen.indexOf('Onde entrou?');
+ const origin=screen.indexOf('De onde vem?');
+ const amount=screen.indexOf('>Valor<input');
+ const when=screen.indexOf('Quando?');
+ const category=screen.indexOf('Categoria');
+ const confirmation=screen.indexOf('Essa entrada já está confirmada?');
+ assert.ok(destination>=0&&origin>destination&&amount>origin&&when>amount&&category>when&&confirmation>category);
+ assert.doesNotMatch(screen,/>Tipo<select/);
+ assert.match(screen,/useState<IncomeNature>\('other_true_income'\)/);
 });
