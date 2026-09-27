@@ -9,8 +9,8 @@ const settlements=await readFile(new URL('../../src/components/app/SettlementHub
 test('member perspective keeps the same Home vocabulary instead of becoming a second Home',()=>{
   for(const value of ['Como estamos?','Mês em resumo','Onde está nosso dinheiro','Cartões','O que mais pesou','Valores com pessoas','Olhando pra frente']) assert.match(home,new RegExp(value));
   for(const old of ['Meus recursos','Meus cartões','O que mais pesou pra mim','Posição entre nós']) assert.doesNotMatch(home,new RegExp(old));
-  assert.match(home,/Perspectiva: <strong/);
-  assert.match(home,/perspectiveLabel=perspective==='household'\?'Nossa Casa'/);
+  assert.doesNotMatch(home,/Perspectiva: <strong/);
+  assert.doesNotMatch(home,/perspectiveLabel=/);
 });
 
 test('resource hierarchy uses short labels and keeps reserve as an intent not an account type',()=>{
