@@ -57,5 +57,6 @@ test('allocation rows are paginated within each transaction batch',()=>{
  assert.match(economic,/collectPages<AllocationRow&\{amount:string\|number\}>/);
  assert.match(economic,/from\('economic_allocations'\)/);
  assert.match(economic,/\.order\('transaction_id',\{ascending:true\}\)/);
- assert.match(economic,/\.range\(from,to\)/);\n assert.match(service,/allocationRows\.push\(\.\.\.page\)/);
+ assert.match(economic,/\.range\(from,to\)/);
+ assert.match(service,/allocationRows\.push\(\.\.\.page\)/);
 });
