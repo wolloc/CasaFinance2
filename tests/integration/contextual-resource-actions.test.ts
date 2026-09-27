@@ -18,7 +18,9 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/Transferir deste recurso/);
  assert.match(row,/Aportar ou resgatar/);
  assert.match(row,/Pegar dinheiro emprestado/);
- assert.match(row,/Editar recurso/);\n assert.match(row,/typeLabel\(resource\)/);\n assert.match(row,/detailLabel/);
+ assert.match(row,/Editar recurso/);
+ assert.match(row,/typeLabel\(resource\)/);
+ assert.match(row,/detailLabel/);
  assert.doesNotMatch(row,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
