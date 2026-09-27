@@ -21,8 +21,10 @@ test('criação recorrente pertence à Nova Entrada e gestão continua na ocorr�
   assert.match(source, /focusRuleId=\{activeRecurringRuleId\}/);
 });
 
-test('contextual receipt stays visible when Home opens a delayed income', () => {
+test('receipt is contextual to Home intent or the selected income detail', () => {
   assert.match(source, /initialMoneyMovementId&&<IncomeReceiptAction initialMoneyMovementId=\{initialMoneyMovementId\}/);
+  assert.match(source, /<IncomeReceiptAction initialTransactionId=\{detailTransaction\.id\}/);
+  assert.doesNotMatch(source, />Outras ações</);
 });
 
 test('empty state keeps the selected period explicit', () => {

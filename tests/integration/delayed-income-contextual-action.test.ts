@@ -18,7 +18,8 @@ test('delayed expected income carries the exact projected money movement',()=>{
 test('context resolves movement to its canonical income transaction before selecting',()=>{
   assert.match(receipt,/from\('money_movements'\)/);
   assert.match(receipt,/select\('related_transaction_id'\)/);
-  assert.match(receipt,/pending\.find\(\(income\) => income\.id === movement\.data\?\.related_transaction_id\)/);
+  assert.match(receipt,/targetId = movement\.data\?\.related_transaction_id \?\? null/);
+  assert.match(receipt,/pending\.find\(\(income\) => income\.id === targetId\)/);
   assert.match(receipt,/Essa entrada mudou ou já foi resolvida/);
   assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete/i);
 });

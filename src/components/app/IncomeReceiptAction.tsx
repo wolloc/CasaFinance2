@@ -3,7 +3,7 @@ import { CheckCircle2, LoaderCircle, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
-import { listHouseholdTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
+import { listHouseholdIncomeTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
 import { settleHouseholdIncome } from '../../finance/incomeReceipts.js';
 
 const localDate = () => {
@@ -13,7 +13,7 @@ const localDate = () => {
 
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { onCompleted?: () => void; initialMoneyMovementId?: string }) {
+export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId, initialTransactionId }: { onCompleted?: () => void; initialMoneyMovementId?: string; initialTransactionId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [incomes, setIncomes] = useState<HouseholdTransaction[]>([]);
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
@@ -42,17 +42,21 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId }: { o
     setLoading(true); setLoadError(null); setError(null);
     try {
       const [transactions, resources] = await Promise.all([
-        listHouseholdTransactions(supabase, household.id),
+        listHouseholdIncomeTransactions(supabase, household.id),
         listHouseholdFinancialAccounts(supabase, household.id),
       ]);
       const pending = transactions.filter((row) => row.type === 'income' && !['cancelled', 'reversed'].includes(row.economic_state) && Number(row.realized_amount) < Number(row.amount));
       setIncomes(pending);
       setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet'].includes(account.type)));
-      if (initialMoneyMovementId && !handledIntent.current) {
+      if ((initialMoneyMovementId || initialTransactionId) && !handledIntent.current) {
         handledIntent.current = true;
-        const movement = await supabase.from('money_movements').select('related_transaction_id').eq('household_id', household.id).eq('id', initialMoneyMovementId).maybeSingle();
-        if (movement.error) throw movement.error;
-        const target = pending.find((income) => income.id === movement.data?.related_transaction_id);
+        let targetId = initialTransactionId ?? null;
+        if (initialMoneyMovementId) {
+          const movement = await supabase.from('money_movements').select('related_transaction_id').eq('household_id', household.id).eq('id', initialMoneyMovementId).maybeSingle();
+          if (movement.error) throw movement.error;
+          targetId = movement.data?.related_transaction_id ?? null;
+        }
+        const target = pending.find((income) => income.id === targetId);
         if (target) {
           setTransactionId(target.id);
           setAmount(String(Math.max(0, Number(target.amount) - Number(target.realized_amount))));

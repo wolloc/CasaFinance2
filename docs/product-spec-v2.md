@@ -24,10 +24,9 @@ A navegação inferior oficial é:
 As ações globais permanecem três fluxos independentes:
 
 - Nova despesa;
-- Nova entrada;
-- Novo acerto.
+- Nova entrada.
 
-A apresentação visual das ações globais é **IMPLEMENTADA** como três botões compactos e independentes, visualmente soltos/flutuantes acima da navegação inferior. Os rótulos visuais são **Despesa**, **Entrada** e **Acerto**, enquanto os nomes acessíveis completos permanecem **Nova despesa**, **Nova entrada** e **Novo acerto**. A compactação não reduz a área mínima de toque nem transforma as três ações em um único fluxo.
+**DEFINIDO e IMPLEMENTADO:** as ações globais ficam restritas à criação de fatos cotidianos: **Despesa** e **Entrada**. **Novo acerto** deixa de existir como ação global. Transferências, pagamentos, recebimentos, faturas, investimentos, posições com pessoas e demais operações financeiras são expostos no contexto do recurso ou fato que resolvem.
 
 ## Perspectiva
 
@@ -70,7 +69,7 @@ A ordem conceitual é:
 5. **Cartões** — fotografia compacta por cartão, com fatura atual, vencimento, limite livre e compromissos futuros; detalhes e pagamento ficam em Faturas/Cartão;
 6. **Próximos acontecimentos** — eventos dos próximos dias, como entradas, compromissos, faturas, recorrências e acertos, sem duplicar o centro de atenção;
 7. **Principais categorias** — apenas um panorama das categorias que mais pesam; a exploração completa pertence a Gastos;
-8. **Acertos** — posição entre membros/terceiros, privilegiando linguagem humana;
+8. **Valores com pessoas** — posição entre membros e valores a receber/pagar com terceiros, privilegiando linguagem humana;
 9. **Olhando pra frente** — trajetória mensal agregada, distinta de eventos dos próximos dias.
 
 **Patrimônio não é uma seção paralela obrigatória.** Ele é apresentado dentro de **Contas e recursos**, com separação explícita entre dinheiro de uso, reservas e investimentos.
@@ -226,19 +225,19 @@ Cada cartão apresenta uma fotografia financeira, incluindo conceitualmente:
 
 Na Casa, o cartão deve permanecer **compacto**. **DEFINIDO e IMPLEMENTADO — navegação contextual por cartão:** o próprio card do cartão é a entrada principal para seu detalhe contextual, sem CTA redundante “Todas as faturas” na Home. A jornada abre diretamente aquele cartão, navega entre fatura anterior/atual/próxima, lista os compromissos canônicos vinculados à fatura e oferece **Pagar fatura** dentro do contexto. O pagamento reutiliza o comando canônico existente, movimenta somente caixa/liquidação e não cria nova despesa. A visão consolidada de cartões/faturas continua disponível quando o acesso nasce de alertas e revisões globais.
 
-### Acertos entre membros
+### Valores entre membros
 
 
-**DEFINIDO e IMPLEMENTADO — ação contextual:** quando existir posição realizada entre membros, a Home apresenta a frase humana de quem tem a receber de quem e oferece **Acertar agora** no próprio contexto. A ação pré-preenche devedor, credor e o valor máximo ainda devido, mas o fluxo canônico relê a posição e exige confirmação das contas de origem/destino antes de movimentar caixa. Posição apenas projetada continua informativa e não oferece liquidação antecipada.
+**DEFINIDO — posição contextual:** a Home apresenta a posição realizada e a tendência projetada entre membros como **Valores com pessoas**, sem botão genérico **Acertar agora**. A ação real nasce da movimentação entre recursos dos membros. Quando uma transferência entre contas de titulares diferentes for considerada parte da posição entre eles, o mesmo movimento de caixa altera a posição sem criar renda ou gasto.
 
 **DEFINIDO — contas compatíveis no acerto:** ao liquidar uma posição entre membros, a conta de origem é filtrada pelos recursos transacionais vinculados a quem paga e a conta de destino pelos recursos transacionais vinculados a quem recebe. Contas conjuntas permanecem elegíveis para ambos quando a titularidade canônica assim indicar. Trocar pagador/recebedor limpa uma conta previamente selecionada se ela deixar de ser compatível. A filtragem é prevenção de erro de UX e não muda a natureza neutra do acerto.
 
 
-O acerto é uma conta-corrente contínua, sem reset mensal. Nasce da diferença entre responsabilidade econômica e funding realizado ou projetado.
+A posição entre membros é uma conta-corrente contínua, sem reset mensal. Nasce da diferença entre responsabilidade econômica, funding e transferências explicitamente consideradas na posição. O objetivo de leitura é o equilíbrio próximo de zero, sem exigir fechamento mensal.
 
 Exemplo: jantar de R$ 300 pago por Wallace com responsabilidade de R$ 150 para cada membro. Guilherme deve R$ 150 a Wallace.
 
-Em compras financiadas por cartão, o acerto projetado nasce na origem econômica e é distribuído pelos mesmos compromissos financeiros da compra. O pagamento posterior da fatura realiza funding. **Não cria nova despesa e não cria novo acerto.** A liquidação do acerto deve ser explícita.
+Em compras financiadas por cartão, a posição projetada nasce na origem econômica e é distribuída pelos mesmos compromissos financeiros da compra. O pagamento posterior da fatura realiza funding. **Não cria nova despesa nem uma segunda posição.** A relação de uma transferência entre membros com a posição deve ser explícita na UX, podendo vir marcada por padrão quando origem e destino pertencem a membros diferentes e permitindo exceção pelo usuário.
 
 **DEFINIDO e IMPLEMENTADO — histórico neutro:** acertos efetivamente realizados podem aparecer em uma timeline própria dentro do contexto de Acertos, com linguagem neutra e sem cores de renda/despesa. O item informa quem pagou, quem recebeu, data e valor. Ele reduz a posição entre membros, mas não altera resultado econômico.
 
