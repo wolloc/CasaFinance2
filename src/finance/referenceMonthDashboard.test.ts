@@ -31,14 +31,14 @@ test('past current and future cannot reuse the same visual semantics',()=>{
   assert.match(homeSource,/Não é saldo realizado nem fato futuro garantido/);
   assert.match(homeSource,/scheduled_settlement_inflow/);
   assert.match(homeSource,/não reutilizou dados do mês atual/i);
-  assert.match(homeSource,/referenceMonth===currentReferenceMonth\?'mês atual'/);
+  assert.match(homeSource,/referenceMonth!==currentReferenceMonth/);
 });
 
 test('month navigation respects the financial cutover and keeps a return-to-current action',()=>{
   assert.match(homeSource,/previousMonth<trackingMonth/);
   assert.match(homeSource,/setReferenceMonth\(currentReferenceMonth\)/);
   assert.match(homeSource,/Mês anterior/);
-  assert.match(homeSource,/Próximo mês/);
+  assert.match(homeSource,/aria-label="Mês seguinte"/);
 });
 
 test('historical individual perspective refuses to fabricate old liquidity ownership',()=>{
