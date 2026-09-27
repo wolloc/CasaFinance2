@@ -708,3 +708,16 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - Casa preserva **mês financeiro canônico** e não oferece intervalo arbitrário enquanto os read models da Home forem mensais;
 - diferenças de semântica permanecem explícitas sem duplicar a estrutura visual;
 - o item **Período — inconsistente na implementação** da #319 deixa de ser pendência técnica e passa a depender apenas de homologação visual do PM.
+
+
+## Seletor visual de recursos — Nova Entrada × Nova Despesa — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- Nova Entrada e Nova Despesa compartilham o mesmo componente compacto de seleção de recurso;
+- cards permanecem em **3 colunas no mobile**, com ícone pequeno e alta densidade;
+- hierarquia definida pelo PM aplicada em ambos os fluxos: **instituição → nome do recurso → titular**;
+- rótulos genéricos redundantes como **Recurso da Casa** deixam de ocupar espaço quando não adicionam informação;
+- estados selecionados preservam semântica visual de cada jornada: entrada em verde; despesa em azul;
+- cartão continua podendo exibir titular + final do cartão de forma discreta;
+- nenhuma regra financeira ou filtro de compatibilidade foi alterado.

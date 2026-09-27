@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const screen=await readFile(new URL('../../src/components/app/IncomeCreationAction.tsx',import.meta.url),'utf8');
+const resourceChoice=await readFile(new URL('../../src/components/app/FinancialResourceChoice.tsx',import.meta.url),'utf8');
 
 test('Nova Entrada starts from the beneficiary before destination and value',()=>{
  const beneficiary=screen.indexOf('De quem é esta entrada?');
@@ -22,10 +23,10 @@ test('income destination cards use canonical account ownership',()=>{
  assert.match(screen,/Titular/);
  assert.match(screen,/DestinationIcon/);
  assert.match(screen,/institution:account\.institution/);
- assert.match(screen,/resource\.institution/);
+ assert.match(screen,/institution=\{resource\.institution\}/);
  assert.match(screen,/grid grid-cols-3 gap-2/);
- assert.match(screen,/min-h-\[58px\]/);
- assert.match(screen,/aria-pressed=\{active\}/);
+ assert.match(resourceChoice,/min-h-\[58px\]/);
+ assert.match(resourceChoice,/aria-pressed=\{active\}/);
  assert.doesNotMatch(screen,/Onde deve entrar\?<select/);
 });
 
