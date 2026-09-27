@@ -46,7 +46,7 @@ test('perspectiva de cartões mostra responsabilidade sem ratear limite do instr
 test('recursos individuais usam alocação canônica de titularidade',()=>{
  assert.match(resources,/financial_account_member_allocations/);
  assert.match(resources,/allocation_ratio/);
- assert.match(home,/Meus recursos/);
+ assert.match(home,/Onde está nosso dinheiro/);
  assert.match(home,/Sua parte/);
  assert.match(home,/attributed_amount/);
  assert.doesNotMatch(resources,/\/\s*2/);

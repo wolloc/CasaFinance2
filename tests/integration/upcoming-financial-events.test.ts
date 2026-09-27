@@ -31,5 +31,5 @@ test('Home mostra próximos sete dias como linha visual compacta e contextual',(
  assert.match(component,/Hoje/);
  assert.match(component,/Amanhã/);
  assert.match(component,/Ver fatura/);
- assert.match(component,/sem contar o mesmo compromisso duas vezes/);
+ assert.doesNotMatch(component,/sem contar o mesmo compromisso duas vezes/);
 });
