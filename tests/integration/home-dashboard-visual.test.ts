@@ -31,8 +31,10 @@ test('Home resume top categorias pelo gasto econômico realizado sem chamar de o
   assert.doesNotMatch(home,/Isso não é uma meta de orçamento/);
 });
 
-test('acerto realizado usa frase direcional de recebimento',()=>{
-  assert.match(settlements,/tem a receber de/);
+test('posição realizada usa relação compacta entre membros',()=>{
+  assert.match(settlements,/memberPairs/);
+  assert.match(settlements,/Posição de hoje/);
+  assert.match(settlements,/currentText/);
 });
 
 
@@ -60,18 +62,16 @@ test('Home não transforma planejamento futuro normal em alerta de atenção',()
 
 test('member position is informational on Home and no longer exposes a generic settle button',()=>{
   assert.match(settlements,/Valores com pessoas/);
-  assert.match(settlements,/posição de hoje/);
+  assert.match(settlements,/Posição de hoje/);
   assert.doesNotMatch(settlements,/Acertar agora/);
-  assert.match(settlements,/pode ter a receber de/);
-  assert.match(settlements,/Ainda não é uma diferença realizada entre vocês/);
+  assert.match(settlements,/Tendência:/);
+  assert.match(settlements,/Ver histórico e compromissos/);
 });
 
-test('Home mostra histórico entre membros como movimento neutro, não renda ou gasto',()=>{
-  assert.match(settlements,/Histórico entre vocês/);
-  assert.match(settlements,/Movimentos neutros que alteraram a posição entre vocês sem virar renda ou gasto/);
-  assert.match(settlements,/Movimento entre vocês/);
-  assert.match(settlements,/event\.kind==='explicit_settlement'/);
-  assert.match(settlements,/event\.state==='realized'/);
+test('Home mantém histórico entre membros dentro do detalhe da relação',()=>{
+  assert.match(settlements,/Ver histórico e compromissos/);
+  assert.match(settlements,/pairEvents/);
+  assert.match(settlements,/Transferência entre vocês/);
   assert.match(settlements,/text-cyan-200/);
 });
 
