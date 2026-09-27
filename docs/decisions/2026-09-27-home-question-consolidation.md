@@ -71,3 +71,10 @@ Nossa Casa e cada membro devem usar a mesma arquitetura de perguntas. Quando nã
 - Terceiros exibem a responsabilidade econômica quando ela puder ser comprovada a partir do fato de origem: membro único, 50/50 ou divisão customizada. Na ausência de vínculo suficiente, mostrar **Casa** sem inferir 50/50.
 - Ao tocar em um cartão da Home, abrir diretamente **Faturas** daquele cartão, preservando seletor temporal e a ação contextual **Pagar tudo ou parte** quando houver saldo em aberto.
 - No seletor de recurso da Nova Despesa, **Outra pessoa pagou** permanece como opção em três colunas, com copy reduzida para preservar legibilidade.
+
+
+## Densidade visual adicional — 2026-09-27
+
+**DEFINIDO:** após homologação em iPhone, os cards de **Onde está nosso dinheiro** passam de duas para **três colunas**. O conteúdo continua compacto e truncável, porque a leitura essencial permanece nome, contexto de instituição/titularidade e valor. Ícones passam a diferenciar semanticamente conta, poupança/reserva, benefício, carteira/dinheiro e investimento, com cor discreta por natureza.
+
+**DEFINIDO:** **Como estamos?** abandona o grande fundo azul como identidade dominante. O bloco fica neutro e deixa cor para os indicadores internos, reduzindo peso visual e melhorando coerência com o restante da Home.
