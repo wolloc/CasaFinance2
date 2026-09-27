@@ -5,7 +5,6 @@ import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { createFinancialParty, createLoanPrincipal, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
 import { LoanChargesAdjustment } from './LoanChargesAdjustment.js';
-import { LoanPaymentAdjustment } from './LoanPaymentAdjustment.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
@@ -26,6 +25,7 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [createdLoanId, setCreatedLoanId] = useState<string | null>(null);
 
   const clearLoadedContext = () => { setParties([]); setAccounts([]); setCounterpartyId(''); setAccountId(''); };
   const load = async () => {
@@ -56,7 +56,8 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
     try {
       let partyId = counterpartyId; if (!partyId) { const existing = parties.find((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partyName.toLocaleLowerCase('pt-BR')); partyId = existing?.id ?? await createFinancialParty(supabase, household.id, partyName); }
       const description = direction === 'taken' ? `Empréstimo de ${partyName}` : `Empréstimo para ${partyName}`;
-      await createLoanPrincipal(supabase, { householdId: household.id, direction, counterpartyId: partyId, accountId, amount: normalizedAmount, occurredAt, dueDate, description });
+      const created = await createLoanPrincipal(supabase, { householdId: household.id, direction, counterpartyId: partyId, accountId, amount: normalizedAmount, occurredAt, dueDate, description });
+      setCreatedLoanId(direction==='taken'?String(created):null);
       setSuccess(direction === 'granted' ? 'Pronto. O dinheiro saiu da conta escolhida e o Casa guardou que essa pessoa precisa devolver esse valor. Isso não virou uma despesa.' : 'Pronto. O dinheiro entrou na conta escolhida e o Casa guardou que esse valor precisa ser devolvido. Isso não virou uma renda.');
       setAmount(''); setDueDate(''); setNewPartyName(''); await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o empréstimo.'); }
@@ -83,7 +84,6 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
       <button type="submit" disabled={saving || accounts.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><Banknote className="h-4 w-4"/>{saving ? 'Registrando…' : direction === 'taken' ? 'Registrar empréstimo recebido' : 'Registrar dinheiro emprestado'}</button>
       {accounts.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-400"><UserPlus className="mr-1 inline h-4 w-4"/>Cadastre uma conta que movimenta dinheiro antes de registrar um empréstimo.</p>}
     </form>}
-    <LoanChargesAdjustment/>
-    <LoanPaymentAdjustment/>
+    {direction==='taken'&&createdLoanId&&<LoanChargesAdjustment initialLoanId={createdLoanId} contractMode/>}
   </div>;
 }
