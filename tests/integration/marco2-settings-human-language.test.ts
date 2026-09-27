@@ -17,7 +17,8 @@ test('settings stays concise while preserving core destinations',()=>{
 test('settings preserves household invite and account contextual review',()=>{
  assert.match(source,/HouseholdInvitationSettings/);
  assert.match(source,/consumeAccountReviewIntent/);
- assert.match(source,/initialAccountId=\{accountReview\?\.accountId\?\?null\}/);\n assert.match(source,/initialAccountContext=\{accountReview\?\.source\?\?null\}/);
+ assert.match(source,/initialAccountId=\{accountReview\?\.accountId\?\?null\}/);
+ assert.match(source,/initialAccountContext=\{accountReview\?\.source\?\?null\}/);
 });
 
 test('recurring management remains contextual instead of a primary Settings destination',()=>{
