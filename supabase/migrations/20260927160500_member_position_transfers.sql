@@ -40,14 +40,14 @@ begin
     raise exception 'active household accounts required' using errcode='23514';
   end if;
 
-  select count(*),min(ao.member_id)
+  select count(*),(array_agg(ao.member_id order by ao.member_id))[1]
     into source_owner_count,source_owner
   from public.account_ownerships ao
   join public.household_members hm on hm.id=ao.member_id
    and hm.household_id=p_household_id and hm.deactivated_at is null
   where ao.household_id=p_household_id and ao.account_id=p_source_account_id;
 
-  select count(*),min(ao.member_id)
+  select count(*),(array_agg(ao.member_id order by ao.member_id))[1]
     into destination_owner_count,destination_owner
   from public.account_ownerships ao
   join public.household_members hm on hm.id=ao.member_id
