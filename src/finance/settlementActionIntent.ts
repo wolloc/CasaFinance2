@@ -4,7 +4,8 @@ export type SettlementActionIntent =
   | { kind: 'third-party-create' }
   | { kind: 'third-party-manage'; obligationId?: string }
   | { kind: 'third-party-loss'; obligationId: string }
-  | { kind: 'third-party-forgiveness'; obligationId: string };
+  | { kind: 'third-party-forgiveness'; obligationId: string }
+  | { kind: 'loan'; direction?: 'granted' | 'taken' };
 
 let pendingIntent: SettlementActionIntent | null = null;
 
