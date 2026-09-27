@@ -71,7 +71,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
 
   return <section>
     <FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>
-    {!error&&<div className="mb-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>onResolve?.({kind:'third-party-create'})} className="min-h-10 rounded-xl border border-slate-700 px-3 text-sm font-semibold text-slate-300">Adicionar valor</button><button type="button" onClick={()=>onResolve?.({kind:'loan'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-900 px-3 text-sm font-semibold text-cyan-200"><Banknote className="h-4 w-4"/>Empréstimos</button></div>}
+    {!error&&<div className="mb-3 flex justify-end"><button type="button" onClick={()=>onResolve?.({kind:'loan'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-900 px-3 text-sm font-semibold text-cyan-200"><Banknote className="h-4 w-4"/>Empréstimos</button></div>}
     {error&&<div className="rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">Não foi possível conferir os valores com pessoas agora.</p><button type="button" onClick={retry} className="mt-3 min-h-10 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
 
     {!error&&memberPairs.length===0&&thirdPartyGroups.length===0&&<div className="rounded-2xl border border-dashed border-slate-800 p-4"><p className="text-sm font-semibold text-slate-300">Tudo equilibrado por enquanto.</p></div>}
@@ -97,7 +97,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
       })}
 
       {thirdPartyGroups.map(group=>{
-        const status=group.net>0?'A receber':group.net<0?'A pagar':'Valores equilibrados';
+        const status=group.net>0?`${group.name} deve à Casa`:group.net<0?`A Casa deve a ${group.name}`:'Valores equilibrados';
         return <details key={group.counterpartyId} className="group rounded-2xl border border-slate-800 bg-slate-900/45">
           <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0"><strong className="block truncate text-sm">{group.name}</strong><p className="mt-1 text-xs text-slate-500">{status}{group.nearestDue?` · ${dateLabel(group.nearestDue)}`:''}</p></div>

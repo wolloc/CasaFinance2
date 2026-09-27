@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Banknote, ChevronRight, Pencil, PiggyBank, Receipt } from 'lucide-react';
+import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, Receipt, TrendingUp, WalletCards } from 'lucide-react';
 
 export type ResourceNavigationAction={kind:'expense'|'transfer'|'reserve'|'loan'|'settings';accountId:string};
 export type ResourceActionTarget={
@@ -9,11 +9,13 @@ export type ResourceActionTarget={
  isInvestment:boolean;
  amount:number;
  amountLabel:string;
+ institution?:string|null;
+ ownerLabel?:string|null;
  detailLabel?:string|null;
 };
 
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
-const typeLabel=(resource:ResourceActionTarget)=>resource.isInvestment?'Investimento':resource.resourceRestriction==='reserve'?'Dinheiro reservado':resource.type==='checking'?'Conta corrente':resource.type==='savings'?'Poupança':resource.type==='cash'?'Dinheiro':resource.type==='digital_wallet'?'Carteira digital':resource.type==='meal_benefit'?'Benefício':'Recurso';
+function ResourceIcon({resource}:{resource:ResourceActionTarget}){const Icon=resource.isInvestment?TrendingUp:resource.resourceRestriction==='reserve'?PiggyBank:resource.type==='cash'?Banknote:resource.type==='meal_benefit'||resource.type==='digital_wallet'?WalletCards:Landmark;return <Icon className="h-4 w-4"/>;}
 
 export function ResourceActionRow({resource,onAction}:{key?:string;resource:ResourceActionTarget;onAction?:(action:ResourceNavigationAction)=>void}){
  const patrimonial=resource.isInvestment||resource.resourceRestriction==='reserve';
@@ -22,8 +24,9 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
  const act=(kind:ResourceNavigationAction['kind'])=>onAction?.({kind,accountId:resource.accountId});
  return <details className="group/resource rounded-xl">
   <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-2 py-2.5 hover:bg-slate-800/55">
-   <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-sm font-semibold text-slate-200">{resource.name}</p><span className="shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">{typeLabel(resource)}</span></div><p className="mt-1 text-[11px] text-slate-500">{resource.amountLabel}{resource.detailLabel?<> · {resource.detailLabel}</>:null}</p></div>
-   <strong className="text-base">{money(resource.amount)}</strong><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/>
+   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-slate-400"><ResourceIcon resource={resource}/></span>
+   <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}</div>
+   <strong className="text-sm">{money(resource.amount)}</strong><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/>
   </summary>
   <div className="grid gap-2 border-t border-slate-800/70 px-2 py-3 sm:grid-cols-2">
    {!patrimonial&&<button type="button" onClick={()=>act('expense')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-950/70 px-3 text-left text-xs font-bold text-rose-200"><Receipt className="h-4 w-4"/>{benefit?'Registrar gasto com benefício':'Registrar despesa'}</button>}

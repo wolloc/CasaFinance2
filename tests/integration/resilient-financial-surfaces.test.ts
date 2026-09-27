@@ -32,19 +32,19 @@ test('Home never turns an unavailable dashboard section into an apparent financi
  assert.match(home,/Saldo atual em contas e dinheiro físico/);
  assert.match(home,/Não confirmado/);
  assert.match(home,/Não foi possível confirmar os saldos dos recursos da Casa/);
- assert.match(home,/Não foi possível confirmar a projeção deste mês/);
+ assert.match(home,/Ainda não há resumo financeiro confirmado para este mês/);
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);
 });
 
 
-test('Home explains the financial equation and separates liquidity from patrimony',()=>{
- assert.match(home,/Quanto do dinheiro de agora já tem destino/);
- assert.match(home,/Já tem destino/);
- assert.match(home,/Livre depois deles/);
- assert.match(home,/Mês em resumo/);
+test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
+ assert.match(home,/Entrou/);
+ assert.match(home,/Ainda entra/);
+ assert.match(home,/Já comprometido/);
+ assert.match(home,/Ainda compromete/);
+ assert.match(home,/Deve sobrar no fim do mês/);
  assert.match(home,/Onde está nosso dinheiro/);
  assert.match(home,/Valor acompanhado/);
- assert.match(home,/Contas e dinheiro/);
- assert.match(home,/Dinheiro reservado/);
- assert.match(home,/Investimentos/);
+ for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos'"]) assert.match(home,new RegExp(value));
+ assert.doesNotMatch(home,/label:'Dinheiro reservado'/);
 });

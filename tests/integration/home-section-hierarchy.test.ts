@@ -9,10 +9,11 @@ const settlements=await readFile(new URL('../../src/components/app/SettlementHub
 const heading=await readFile(new URL('../../src/components/app/FinancialSectionHeading.tsx',import.meta.url),'utf8');
 
 test('Home usa uma única hierarquia para títulos de seção',()=>{
-  for(const title of ['Como estamos?','Mês em resumo','Onde está nosso dinheiro','Cartões','O que mais pesou','Olhando pra frente']){
+  for(const title of ['Como estamos?','Onde está nosso dinheiro','Cartões','Olhando pra frente']){
     assert.match(home,new RegExp(`FinancialSectionHeading[^\\n]*title="${title.replace(/[?]/g,'\\?')}"`));
   }
-  assert.match(priority,/FinancialSectionHeading[^\n]*title="Precisa de atenção"/);
+  assert.match(priority,/<summary[^\n]*>/);
+  assert.match(priority,/Precisa de atenção/);
   assert.match(upcoming,/FinancialSectionHeading[^\n]*title="Próximos 7 dias"/);
   assert.match(settlements,/FinancialSectionHeading[^\n]*title="Valores com pessoas"/);
 });

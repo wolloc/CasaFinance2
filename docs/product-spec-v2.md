@@ -62,17 +62,15 @@ A linguagem visual deve evitar aparência de dashboard corporativo/BI: tipografi
 
 A ordem conceitual é:
 
-1. **Resumo principal** — quanto temos agora, quanto já tem destino, quanto ainda entra, quanto ainda sai e quanto o mês pode terminar tendo;
-2. **Precisa de atenção** — somente exceções acionáveis; quando não houver urgência, o estado deve ser compacto;
-3. **Mês em resumo** — síntese compacta de quanto entrou, quanto ainda entra, quanto já foi comprometido e quanto ainda compromete; a exploração detalhada pertence a Entradas/Gastos;
-4. **Contas e recursos** — contas/dinheiro, benefícios, reservas e investimentos, mantendo disponibilidade separada de patrimônio;
-5. **Cartões** — fotografia compacta por cartão, com fatura atual, vencimento, limite livre e compromissos futuros; detalhes e pagamento ficam em Faturas/Cartão;
-6. **Próximos acontecimentos** — eventos dos próximos dias, como entradas, compromissos, faturas, recorrências e acertos, sem duplicar o centro de atenção;
-7. **Principais categorias** — apenas um panorama das categorias que mais pesam; a exploração completa pertence a Gastos;
-8. **Valores com pessoas** — posição entre membros e valores a receber/pagar com terceiros, privilegiando linguagem humana;
-9. **Olhando pra frente** — trajetória mensal agregada, distinta de eventos dos próximos dias.
+1. **Como estamos?** — síntese única do mês: saldo atual, entrou, ainda entra, já comprometido, ainda compromete e projeção de fechamento;
+2. **Precisa de atenção** — link/área expansível com somente exceções acionáveis; fechado por padrão para preservar limpeza visual;
+3. **Onde está nosso dinheiro** — recursos visíveis e compactos, agrupados em Contas, Dinheiro, Benefícios e Investimentos;
+4. **Cartões** — fotografia por cartão, com fatura, vencimento, limite livre, crédito comprometido e compromissos futuros; detalhes e pagamento ficam no contexto do cartão;
+5. **Próximos acontecimentos** — eventos dos próximos dias; permanece em avaliação de utilidade, sem duplicar o centro de atenção;
+6. **Valores com pessoas** — posição entre membros e terceiros, deixando visualmente claro quem deve a quem;
+7. **Olhando pra frente** — trajetória mensal agregada; permanece como visão futura enquanto sua utilidade é homologada.
 
-**Patrimônio não é uma seção paralela obrigatória.** Ele é apresentado dentro de **Contas e recursos**, com separação explícita entre dinheiro de uso, reservas e investimentos.
+**Patrimônio não é uma seção paralela obrigatória.** A Home mostra os recursos diretamente; reserva é atributo dentro de Investimentos, não uma categoria visual paralela.
 
 **Próximos acontecimentos** e **Olhando pra frente** não são redundantes: o primeiro responde “o que vai acontecer em breve?” com eventos discretos; o segundo responde “como a posição pode evoluir nos próximos meses?” de forma agregada.
 
@@ -135,7 +133,7 @@ A confiança é qualitativa, sem percentual artificial:
 
 ### Precisa de atenção
 
-Mostra somente situações acionáveis. Uma previsão futura normal não é alerta. Uma situação pode entrar quando:
+**DEFINIDO:** aparece como área expansível, fechada por padrão, mostrando apenas o título e um indicador de quantidade/estado. Ao expandir, mostra somente situações acionáveis. Uma previsão futura normal não é alerta. Uma situação pode entrar quando:
 
 - venceu sem confirmação;
 - uma fatura tem risco de cobertura;
@@ -148,14 +146,16 @@ Mostra somente situações acionáveis. Uma previsão futura normal não é aler
 
 Alertas com a mesma causa são consolidados.
 
-### Mês em resumo
+### Como estamos? — síntese mensal
 
-A Home não replica as listas de Entradas e Gastos. Ela mostra apenas a síntese mensal necessária para orientar leitura rápida. Os indicadores seguem o **mês financeiro**, e não necessariamente a data da compra:
+**DEFINIDO:** o antigo bloco separado **Mês em resumo** foi fundido em **Como estamos?**. A Home não deve apresentar duas seções respondendo à mesma pergunta. O visual mantém o destaque próprio de Como estamos? e incorpora os quatro indicadores compactos:
 
 - **Entrou**;
 - **Ainda entra**;
 - **Já comprometido/pago**;
 - **Ainda compromete**.
+
+O bloco também mantém saldo atual e projeção de fechamento do mês.
 
 **Entrou** contém somente renda verdadeira recebida. Não inclui transferência, acerto, recebimento de recebível, empréstimo tomado, refund nem resgate de principal.
 
@@ -183,12 +183,14 @@ Infinity
 
 ### Nosso dinheiro
 
-Exibir separadamente:
+**DEFINIDO:** a Home agrupa os recursos em:
 
-- contas + dinheiro físico;
-- benefícios;
-- reservas;
-- investimentos.
+- **Contas** — recursos com instituição financeira vinculada, como conta corrente, conta salário e poupança;
+- **Dinheiro** — recursos sem instituição, como carteira/dinheiro físico e equivalentes;
+- **Benefícios** — recursos restritos de benefício;
+- **Investimentos** — investimentos e recursos explicitamente marcados como reserva.
+
+"Dinheiro reservado" deixa de ser uma seção própria. Reserva continua sendo uma característica canônica do recurso e pode ser indicada discretamente dentro de Investimentos.
 
 Essas classes nunca são apresentadas juntas como se todo o patrimônio fosse saldo disponível.
 
@@ -571,3 +573,8 @@ O Casa deve sempre conseguir responder:
 **PROPOSTO:**
 
 - reduzir a importância visual da ação global “Acerto”, deslocando sua liquidação para transferências e contextos onde a posição entre pessoas realmente existe;
+
+
+### Refinamento da Casa — 2026-09-27
+
+**DEFINIDO:** **O que mais pesou** deixa de fazer parte da Home. A leitura por categoria pertence a **Gastos** e **Entradas**, onde existe contexto e exploração detalhada. **Próximos acontecimentos** e **Olhando pra frente** permanecem em homologação de utilidade; não devem ganhar novas responsabilidades até nova decisão.
