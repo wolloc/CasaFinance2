@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarRange, ChevronLeft, ChevronRight, Repeat2, Search, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
-import { listHouseholdTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
+import { listHouseholdIncomeTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
 import { ensureRecurringIncomeHorizon } from '../../finance/recurringIncome.js';
 import { IncomeCreationAction } from './IncomeCreationAction.js';
 import { IncomeReceiptAction } from './IncomeReceiptAction.js';
@@ -53,11 +53,11 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
  useEffect(()=>{if(!supabase||!household)return;let active=true;setLoading(true);setError(null);setReviewTransactionId(null);const load=async()=>{try{
    try{await ensureRecurringIncomeHorizon(supabase!,household.id,horizonDate(dateInTimeZone(household.timezone)));}catch(loadError){console.warn('Casa Finance: não foi possível atualizar o horizonte de rendas recorrentes antes de listar Entradas.',loadError);}
    const[transactions,movement]=await Promise.all([
-     listHouseholdTransactions(supabase!,household.id),
+     listHouseholdIncomeTransactions(supabase!,household.id),
      initialReviewMoneyMovementId?supabase!.from('money_movements').select('related_transaction_id').eq('household_id',household.id).eq('id',initialReviewMoneyMovementId).maybeSingle():Promise.resolve({data:null,error:null}),
    ]);
    if(movement.error)throw movement.error;
-   const incomeRows=transactions.filter(row=>row.type==='income');
+   const incomeRows=transactions;
    const ids=incomeRows.map(row=>row.id);
    const[movementRows,recurringRows]=ids.length>0?await Promise.all([
      supabase!.from('money_movements').select('related_transaction_id,beneficiary_member_id').eq('household_id',household.id).eq('kind','income').in('related_transaction_id',ids),

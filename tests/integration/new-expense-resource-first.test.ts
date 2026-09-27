@@ -9,8 +9,8 @@ test('Nova Despesa starts payment selection from concrete registered resources',
   assert.match(wizard,/spendableAccounts\.map\(account=>/);
   assert.match(wizard,/cards\.map\(card=>/);
   assert.match(wizard,/ResourceChoice/);
-  assert.match(wizard,/accountResourceSubtitle/);
-  assert.match(wizard,/cardResourceSubtitle/);
+  assert.match(wizard,/accountResourceMeta/);
+  assert.match(wizard,/cardResourceMeta/);
   assert.doesNotMatch(wizard,/label="Conta \/ Pix"/);
   assert.doesNotMatch(wizard,/Qual recurso foi usado\?/);
 });
@@ -38,4 +38,17 @@ test('resource-first routing does not merge payment with economic responsibility
   assert.match(wizard,/responsibilityAllocations/);
   assert.match(wizard,/buyerMemberId/);
   assert.match(wizard,/funderMemberId/);
+});
+
+
+test('resource cards stay compact and avoid redundant payment-mode labels',()=>{
+  assert.match(wizard,/grid grid-cols-2 gap-2/);
+  assert.match(wizard,/min-h-\[58px\]/);
+  assert.match(wizard,/h-7 w-7/);
+  assert.match(wizard,/account\.institution/);
+  assert.match(wizard,/detail=\{meta\.detail\}/);
+  assert.match(wizard,/card\.last_four/);
+  assert.doesNotMatch(wizard,/Conta corrente · Pix \/ débito/);
+  assert.doesNotMatch(wizard,/Poupança · Pix \/ débito/);
+  assert.doesNotMatch(wizard,/const kind=account\.type==='cash'\?'Dinheiro'/);
 });
