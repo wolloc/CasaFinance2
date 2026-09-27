@@ -11,6 +11,7 @@ create table if not exists public.loan_schedule_items (
   principal_amount numeric(19,2) not null check (principal_amount >= 0),
   projected_interest_amount numeric(19,2) not null default 0 check (projected_interest_amount >= 0),
   projected_fee_amount numeric(19,2) not null default 0 check (projected_fee_amount >= 0),
+  cost_responsible_member_id uuid references public.household_members(id) on delete restrict,
   paid_principal_amount numeric(19,2) not null default 0 check (paid_principal_amount >= 0),
   paid_interest_amount numeric(19,2) not null default 0 check (paid_interest_amount >= 0),
   paid_fee_amount numeric(19,2) not null default 0 check (paid_fee_amount >= 0),
@@ -49,6 +50,7 @@ select s.household_id,
        s.principal_amount,
        s.projected_interest_amount,
        s.projected_fee_amount,
+       s.cost_responsible_member_id,
        s.paid_principal_amount,
        s.paid_interest_amount,
        s.paid_fee_amount,
@@ -82,6 +84,7 @@ create or replace function public.create_loan_principal_with_schedule_idempotent
   p_installment_count integer,
   p_total_interest numeric,
   p_total_fee numeric,
+  p_cost_responsible_member_id uuid,
   p_description text,
   p_notes text,
   p_request_key text
@@ -129,6 +132,12 @@ begin
   if p_direction='granted' and (coalesce(p_total_interest,0)>0 or coalesce(p_total_fee,0)>0) then
     raise exception 'income-side contractual charges are not supported in this release' using errcode='22023';
   end if;
+  if p_direction='taken' and (coalesce(p_total_interest,0)>0 or coalesce(p_total_fee,0)>0) then
+    if p_cost_responsible_member_id is null or not exists(
+      select 1 from public.household_members
+      where id=p_cost_responsible_member_id and household_id=p_household_id and deactivated_at is null
+    ) then raise exception 'active member responsible for loan costs required' using errcode='23514'; end if;
+  end if;
 
   last_due_date:=(p_first_due_date + make_interval(months=>p_installment_count-1))::date;
 
@@ -155,10 +164,10 @@ begin
 
     insert into public.loan_schedule_items(
       household_id,principal_obligation_id,installment_number,due_date,
-      principal_amount,projected_interest_amount,projected_fee_amount,created_by_member_id
+      principal_amount,projected_interest_amount,projected_fee_amount,cost_responsible_member_id,created_by_member_id
     ) values(
       p_household_id,result,i,(p_first_due_date+make_interval(months=>i-1))::date,
-      current_principal,current_interest,current_fee,caller.id
+      current_principal,current_interest,current_fee,p_cost_responsible_member_id,caller.id
     );
   end loop;
 
@@ -167,7 +176,7 @@ begin
 end $$;
 
 revoke all on function public.create_loan_principal_with_schedule_idempotent(
-  uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,text,text,text
+  uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,uuid,text,text,text
 ) from public,anon;
 grant execute on function public.create_loan_principal_with_schedule_idempotent(
   uuid,text,uuid,uuid,numeric,date,date,integer,numeric,numeric,text,text,text
