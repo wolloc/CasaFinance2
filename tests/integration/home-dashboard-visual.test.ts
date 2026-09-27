@@ -27,8 +27,8 @@ test('Home resume top categorias pelo gasto econômico realizado sem chamar de o
   assert.match(home,/listEconomicMonthExpenses/);
   assert.match(home,/O que mais pesou/);
   assert.match(home,/top 3 categorias/);
-  assert.match(home,/Compra parcelada entra uma vez pelo valor da compra/);
-  assert.match(home,/Isso não é uma meta de orçamento/);
+  assert.doesNotMatch(home,/Compra parcelada entra uma vez pelo valor da compra/);
+  assert.doesNotMatch(home,/Isso não é uma meta de orçamento/);
 });
 
 test('acerto realizado usa frase direcional de recebimento',()=>{
