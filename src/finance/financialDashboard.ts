@@ -56,7 +56,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     members:availability.members?(members.data??[])as MemberFinancialPosition[]:[],
     health:availability.health?((health.data??[])[0]??null)as HouseholdHealthPosition|null:null,
     confidence:availability.confidence?confidence.data as ProjectionConfidence|null:null,
-    attention:availability.attention?(attention.data??[])as AttentionItem[]:[],
+    attention:availability.attention?((attention.data??[])as AttentionItem[]).filter(item=>item.attention_type!=='recurring_expense_due'):[],
     projection:availability.projection?(projection.data??[])as MonthlyProjection[]:[],
     cards:availability.cards?(cards.data??[])as CardHealthPosition[]:[],
     settlements:availability.settlements?(settlements.data??[])as MemberSettlementPosition[]:[],
