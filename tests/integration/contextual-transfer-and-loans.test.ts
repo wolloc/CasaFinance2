@@ -16,7 +16,7 @@ test('selected resource opens transfer as a direct form with the source already 
   assert.match(adjustment,/Entrou em/);
   assert.match(adjustment,/>Valor</);
   assert.match(adjustment,/>Quando</);
-  assert.match(adjustment,/!contextualEntry&&<button[^>]*>← Outras opções/);
+  assert.match(adjustment,/\{!contextualEntry&&<button[\s\S]*?← Outras opções<\/button>\}/);
 });
 
 test('borrowing from a resource reuses LoanAdjustment with taken direction and selected destination account',()=>{
