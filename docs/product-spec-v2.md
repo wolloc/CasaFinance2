@@ -696,3 +696,15 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - mensagens de sucesso usam `aria-live="polite"` para acessibilidade;
 - erros continuam próximos ao contexto que precisa ser corrigido, sem transformar falha em toast global distante do formulário;
 - nenhum feedback visual altera regra financeira, persistência ou idempotência.
+
+
+## Navegação de período compartilhada — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- Casa, Entradas e Gastos usam o mesmo componente visual e interacional de navegação de período;
+- setas anterior/próximo, rótulo central, abertura do seletor, fechamento e ação Aplicar seguem o mesmo padrão;
+- Entradas e Gastos preservam **Mês inteiro / Personalizado** com intervalo de datas;
+- Casa preserva **mês financeiro canônico** e não oferece intervalo arbitrário enquanto os read models da Home forem mensais;
+- diferenças de semântica permanecem explícitas sem duplicar a estrutura visual;
+- o item **Período — inconsistente na implementação** da #319 deixa de ser pendência técnica e passa a depender apenas de homologação visual do PM.
