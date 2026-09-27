@@ -18,18 +18,19 @@ const loanService = await readFile(new URL('../../finance/loanPrincipals.ts', im
 const productSpec = await readFile(new URL('../../../docs/product-spec-v2.md', import.meta.url), 'utf8');
 const constitution = await readFile(new URL('../../../docs/casa-finance-constitution.md', import.meta.url), 'utf8');
 
-test('all three Product Spec global actions are present independently', () => {
-  for (const label of ['Nova despesa', 'Nova entrada', 'Novo acerto']) {
+test('global actions expose only new economic facts', () => {
+  for (const label of ['Nova despesa', 'Nova entrada']) {
     assert.match(actionsSource, new RegExp(label));
     assert.match(productSpec, new RegExp(label));
   }
+  assert.doesNotMatch(actionsSource, /Novo acerto|>Acerto</);
   assert.match(appSource, /<GlobalActions/);
   assert.match(appSource, /onExpense=\{openExpenseCreation\}/);
   assert.match(appSource, /onIncome=\{openIncomeCreation\}/);
-  assert.match(appSource, /onAdjustment=\{openAdjustment\}/);
+  assert.doesNotMatch(appSource, /onAdjustment=\{openAdjustment\}/);
 });
 
-test('Novo acerto keeps the operational flows reachable with human labels', () => {
+test('financial operations remain reachable through contextual routes', () => {
   for (const label of ['Mover dinheiro entre contas', 'Acerto entre nós', 'Acerto com outra pessoa', 'Pagamento de fatura', 'Investimento / reserva', 'Empréstimos']) {
     assert.match(adjustmentSource, new RegExp(label.replace('/', '\\/')));
   }
@@ -116,7 +117,8 @@ test('global actions float independently above navigation without losing accessi
   assert.match(actionsSource,/fixed bottom-\[calc\(5\.25rem\+env\(safe-area-inset-bottom\)\)\] left-1\/2/);
   assert.match(actionsSource,/flex w-max max-w-\[calc\(100vw-1rem\)\]/);
   assert.match(actionsSource,/rounded-full border border-slate-700\/80 bg-slate-900\/94/);
-  for(const label of ['Nova despesa','Nova entrada','Novo acerto']) assert.match(actionsSource,new RegExp(`aria-label="${label}"`));
-  for(const compactLabel of ['Despesa','Entrada','Acerto']) assert.match(actionsSource,new RegExp(`/>${compactLabel}<`));
+  for(const label of ['Nova despesa','Nova entrada']) assert.match(actionsSource,new RegExp(`aria-label="${label}"`));
+  for(const compactLabel of ['Despesa','Entrada']) assert.match(actionsSource,new RegExp(`/>${compactLabel}<`));
+  assert.doesNotMatch(actionsSource,/Novo acerto|>Acerto</);
   assert.match(actionsSource,/min-h-11/);
 });
