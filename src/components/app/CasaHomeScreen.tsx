@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards } from 'lucide-react';
+import { ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
