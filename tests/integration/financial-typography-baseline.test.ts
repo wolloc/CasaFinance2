@@ -8,6 +8,7 @@ const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',i
 const home=await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
 const income=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
 const expense=await readFile(new URL('../../src/components/app/ExpenseMonthBrowser.tsx',import.meta.url),'utf8');
+const period=await readFile(new URL('../../src/components/app/FinancialPeriodNavigator.tsx',import.meta.url),'utf8');
 
 test('financial summary uses readable label and metadata sizes',()=>{
   assert.match(summary,/text-xs font-bold uppercase tracking-wide/);
@@ -20,8 +21,9 @@ test('perspective selector is readable and consistent across screens',()=>{
 });
 
 test('period helper text and bottom navigation share a readable baseline',()=>{
-  assert.match(home,/text-xs text-slate-400">Toque para escolher o mês/);
-  assert.match(income,/text-xs text-slate-400">Toque para escolher o período/);
-  assert.match(expense,/text-xs text-slate-400">Toque para escolher o período/);
+  assert.match(period,/text-xs text-slate-400/);
+  assert.match(home,/FinancialPeriodNavigator/);
+  assert.match(income,/FinancialPeriodNavigator/);
+  assert.match(expense,/FinancialPeriodNavigator/);
   assert.match(app,/gap-1 text-xs font-semibold/);
 });
