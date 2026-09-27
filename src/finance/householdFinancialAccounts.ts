@@ -13,6 +13,7 @@ export type HouseholdAccount = {
   institution: string | null;
   opening_balance: string;
   opened_at: string | null;
+  resource_restriction?: string | null;
   owner_member_ids?: string[];
 };
 
@@ -54,7 +55,7 @@ export type HouseholdCard = {
   default_payment_account_id: string | null;
 };
 
-const accountColumns = 'id, household_id, owner_member_id, name, type, institution, opening_balance, opened_at';
+const accountColumns = 'id, household_id, owner_member_id, name, type, institution, opening_balance, opened_at, resource_restriction';
 const cardColumns = 'id, household_id, owner_member_id, name, institution, last_four, credit_limit, closing_day, due_day, default_payment_account_id';
 const requestKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 

@@ -27,11 +27,16 @@ test('borrowing from a resource reuses LoanAdjustment with taken direction and s
   assert.match(loan,/initialAccountId/);
   assert.match(loan,/setAccountId\(initialAccountId\)/);
   assert.match(loan,/createLoanPrincipal/);
+  assert.match(loan,/contextualBank/);
+  assert.match(loan,/selectedAccount\.institution/);
+  assert.match(loan,/credor e esta conta como destino/);
 });
 
-test('Values with people exposes the same loan engine for lending or borrowing',()=>{
-  assert.match(hub,/Empréstimos/);
-  assert.match(hub,/onResolve\?\.\(\{kind:'loan'\}\)/);
+test('Values with people exposes explicit lending and borrowing intents',()=>{
+  assert.match(hub,/Peguei emprestado/);
+  assert.match(hub,/Emprestei dinheiro/);
+  assert.match(hub,/kind:'loan',direction:'taken'/);
+  assert.match(hub,/kind:'loan',direction:'granted'/);
   assert.match(adjustment,/settlementIntent\?\.kind==='loan'\?'loan'/);
   assert.match(loan,/Emprestei dinheiro/);
   assert.match(loan,/Peguei emprestado/);
@@ -40,4 +45,13 @@ test('Values with people exposes the same loan engine for lending or borrowing',
 test('old granted-loan route is gone instead of preserving a parallel journey',()=>{
   assert.doesNotMatch(app,/loan-granted/);
   assert.doesNotMatch(app,/openGrantedLoan/);
+});
+
+
+test('loan form derives description, removes free-text noise and does not fake installments',()=>{
+  assert.match(loan,/const description = direction === 'taken'/);
+  assert.doesNotMatch(loan,/>Descrição</);
+  assert.doesNotMatch(loan,/Observação \(opcional\)/);
+  assert.match(loan,/principal parcelado ainda depende do cronograma canônico/);
+  assert.match(loan,/Multa só nasce se houver atraso real/);
 });

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, Receipt, TrendingUp, WalletCards } from 'lucide-react';
+import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, Receipt, TrendingUp, Utensils, Wallet } from 'lucide-react';
 
 export type ResourceNavigationAction={kind:'expense'|'transfer'|'reserve'|'loan'|'settings';accountId:string};
 export type ResourceActionTarget={
@@ -15,7 +15,14 @@ export type ResourceActionTarget={
 };
 
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
-function ResourceIcon({resource}:{resource:ResourceActionTarget}){const Icon=resource.isInvestment?TrendingUp:resource.resourceRestriction==='reserve'?PiggyBank:resource.type==='cash'?Banknote:resource.type==='meal_benefit'||resource.type==='digital_wallet'?WalletCards:Landmark;return <Icon className="h-4 w-4"/>;}
+function resourceVisual(resource:ResourceActionTarget){
+ if(resource.isInvestment)return{Icon:TrendingUp,tone:'bg-emerald-500/10 text-emerald-300'};
+ if(resource.resourceRestriction==='reserve'||resource.type==='savings')return{Icon:PiggyBank,tone:'bg-amber-500/10 text-amber-300'};
+ if(resource.type==='meal_benefit')return{Icon:Utensils,tone:'bg-orange-500/10 text-orange-300'};
+ if(resource.type==='cash'||resource.type==='digital_wallet')return{Icon:Wallet,tone:'bg-cyan-500/10 text-cyan-300'};
+ return{Icon:Landmark,tone:'bg-blue-500/10 text-blue-300'};
+}
+function ResourceIcon({resource}:{resource:ResourceActionTarget}){const{Icon,tone}=resourceVisual(resource);return <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${tone}`}><Icon className="h-4 w-4"/></span>;}
 
 export function ResourceActionRow({resource,onAction}:{key?:string;resource:ResourceActionTarget;onAction?:(action:ResourceNavigationAction)=>void}){
  const patrimonial=resource.isInvestment||resource.resourceRestriction==='reserve';
@@ -24,7 +31,7 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
  const act=(kind:ResourceNavigationAction['kind'])=>onAction?.({kind,accountId:resource.accountId});
  return <details className="group/resource overflow-hidden rounded-2xl border border-slate-800 bg-white/[0.035]">
   <summary className="flex min-h-[92px] cursor-pointer list-none flex-col items-start gap-2 p-3 hover:bg-white/[0.025]">
-   <div className="flex w-full items-start justify-between gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950/80 text-slate-400"><ResourceIcon resource={resource}/></span><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/></div>
+   <div className="flex w-full items-start justify-between gap-2"><ResourceIcon resource={resource}/><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/></div>
    <div className="min-w-0 w-full"><p className="truncate text-xs font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}<strong className="mt-2 block text-sm">{money(resource.amount)}</strong></div>
   </summary>
   <div className="grid gap-2 border-t border-slate-800/70 p-2">

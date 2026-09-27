@@ -591,3 +591,24 @@ O Casa deve sempre conseguir responder:
 - terceiro mostra a responsabilidade econômica comprovável do fato de origem; não inferir 50/50 quando não houver evidência;
 - tocar em cartão na Home abre diretamente as **Faturas** daquele cartão, com navegação entre faturas e pagamento contextual;
 - em Nova Despesa, **Outra pessoa pagou** usa texto compacto para caber no seletor de três colunas.
+
+
+## Refinamento visual e empréstimos — 2026-09-27
+
+**DEFINIDO:**
+
+- em **Onde está nosso dinheiro**, os cards de recursos usam **três colunas no mobile** como padrão, preservando nome, instituição/titularidade e valor;
+- os ícones dos recursos devem ser semânticos: conta/banco, poupança/reserva, benefício, carteira/dinheiro e investimento não compartilham o mesmo pictograma genérico;
+- os ícones podem usar acentos de cor discretos para melhorar varredura visual, sem transformar saldo ou natureza do recurso em estado de alerta;
+- **Como estamos?** usa um container mais neutro/discreto; a cor fica concentrada nos indicadores financeiros (entrada, saída, expectativa/compromisso), e não em um grande fundo azul;
+- em **Valores com pessoas**, empréstimos começam pelas intenções humanas **Peguei emprestado** e **Emprestei dinheiro**;
+- quando **Pegar dinheiro emprestado** nasce de uma conta específica com instituição cadastrada, a instituição é o credor contextual e a conta selecionada é o destino do principal; o formulário não pergunta novamente o que já é conhecido;
+- empréstimo com terceiro continua usando a pessoa como contraparte e pergunta somente o recurso de entrada/saída necessário;
+- descrição e observação genéricas não fazem parte da captura principal de empréstimo; a descrição técnica é derivada pelo Casa;
+- principal de empréstimo continua neutro economicamente: entrada de caixa não é renda e saída de caixa não é despesa;
+- juros e tarifas contratuais são fatos econômicos separados;
+- multa somente nasce quando houver atraso real.
+
+**PENDENTE — cronograma canônico do principal:**
+
+O modelo canônico atual de novos empréstimos usa `financial_obligations` e ainda não possui cronograma parcelado de principal. As estruturas legadas `loan_installments` / `loan_payment_schedule` não devem ser reativadas como solução paralela. Antes de oferecer **parcelado** na UX, criar um cronograma canônico compatível com obrigações, pagamentos parciais, juros/tarifas e histórico. Até lá, o formulário não deve simular parcelas apenas no frontend.
