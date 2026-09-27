@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const home=await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
+const upcoming=await readFile(new URL('../../src/components/app/UpcomingFinancialEvents.tsx',import.meta.url),'utf8');
+const settlements=await readFile(new URL('../../src/components/app/SettlementHub.tsx',import.meta.url),'utf8');
+
+test('member perspective keeps the same Home vocabulary instead of becoming a second Home',()=>{
+  for(const value of ['Como estamos?','Mês em resumo','Onde está nosso dinheiro','Cartões','O que mais pesou','Valores com pessoas','Olhando pra frente']) assert.match(home,new RegExp(value));
+  for(const old of ['Meus recursos','Meus cartões','O que mais pesou pra mim','Posição entre nós']) assert.doesNotMatch(home,new RegExp(old));
+  assert.match(home,/Perspectiva: <strong/);
+  assert.match(home,/perspectiveLabel=perspective==='household'\?'Nossa Casa'/);
+});
+
+test('resource hierarchy uses short labels and keeps reserve as an intent not an account type',()=>{
+  assert.match(home,/label:'Dinheiro reservado'/);
+  assert.match(home,/resource_restriction==='reserve'/);
+  assert.match(home,/Valor acompanhado/);
+  assert.doesNotMatch(home,/Patrimônio financeiro acompanhado/);
+  assert.doesNotMatch(home,/Este total não significa dinheiro livre/);
+  assert.doesNotMatch(home,/Saldo de uso, benefícios, reservas e investimentos continuam separados/);
+});
+
+test('Home sections avoid permanent explanatory copy when the card itself communicates the meaning',()=>{
+  assert.doesNotMatch(upcoming,/sem contar o mesmo compromisso duas vezes/);
+  assert.doesNotMatch(settlements,/Veja a posição entre vocês e os valores a receber ou pagar/);
+  assert.doesNotMatch(home,/Compra parcelada entra uma vez pelo valor da compra/);
+  assert.doesNotMatch(home,/não aumentam o saldo atual nem são somadas como riqueza futura acumulada/);
+});
