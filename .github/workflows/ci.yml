@@ -199,6 +199,7 @@ jobs:
             supabase/tests/pr_r_member_settlement_performance.test.sql
             supabase/tests/pr_s_recurrence_refund_guardrails.test.sql
             supabase/tests/pr_t_default_household_categories.test.sql
+            supabase/tests/pr_u_member_position_transfers.test.sql
           )
 
           for test_file in "${tests[@]}"; do
