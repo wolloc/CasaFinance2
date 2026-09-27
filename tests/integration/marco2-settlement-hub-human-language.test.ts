@@ -42,3 +42,13 @@ test('relationship details remain traceable without creating a new financial com
   assert.match(source, /Registrar pagamento/);
   assert.doesNotMatch(source, /settleMemberPosition\(/);
 });
+
+
+test('individual perspective keeps only positions economically attributable to that member',()=>{
+  assert.match(source,/perspective='household'/);
+  assert.match(source,/pair\.leftId===perspective\|\|pair\.rightId===perspective/);
+  assert.match(source,/responsibility_members\.find\(item=>item\.member_id===perspective\)/);
+  assert.match(source,/Sua parte desta posição/);
+  assert.match(source,/deve a você/);
+  assert.match(source,/Você deve a/);
+});

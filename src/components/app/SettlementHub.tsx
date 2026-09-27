@@ -27,7 +27,7 @@ type ThirdPartyGroup={
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIntent)=>void}){
+export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string}){
   const{household,householdMembers}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
@@ -40,7 +40,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
 
   const retry=()=>setRefreshKey(value=>value+1);
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
-  const responsibilityLabel=(row:ThirdPartyObligation)=>{const members=row.responsibility_members.filter(item=>item.percentage>0);if(members.length===0)return 'Casa';if(members.length===1)return memberName(members[0].member_id);const equalHalf=members.length===2&&members.every(item=>Math.abs(item.percentage-50)<0.01);if(equalHalf)return `50/50 · ${members.map(item=>memberName(item.member_id)).join(' + ')}`;return members.map(item=>`${memberName(item.member_id)} ${Math.round(item.percentage)}%`).join(' · ');};
+  const responsibilityLabel=(row:ThirdPartyObligation)=>{const members=row.responsibility_members.filter(item=>item.amount>0);if(members.length===0)return 'Casa';if(members.length===1)return memberName(members[0].member_id);const total=members.reduce((sum,item)=>sum+item.amount,0);const equalHalf=members.length===2&&members.every(item=>total>0&&Math.abs(item.amount/total*100-50)<0.01);if(equalHalf)return `50/50 · ${members.map(item=>memberName(item.member_id)).join(' + ')}`;return members.map(item=>`${memberName(item.member_id)} ${total>0?Math.round(item.amount/total*100):0}%`).join(' · ');};
   const eventLabel=(event:MemberSettlementEvent)=>event.source_money_movement_id&&event.kind==='adjustment'?'Transferência entre vocês':event.notes?.trim()||event.source_description||(event.kind==='explicit_settlement'?'Transferência já considerada':'Despesa ou compromisso');
   const pairEvents=(leftId:string,rightId:string,state:'realized'|'projected')=>memberEvents.filter(event=>event.state===state&&((event.debtor_member_id===leftId&&event.creditor_member_id===rightId)||(event.debtor_member_id===rightId&&event.creditor_member_id===leftId)));
 
@@ -55,18 +55,19 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
       const forwardProjected=Number(forward?.projected_outstanding??0)-Number(reverse?.projected_outstanding??0);
       const projected=forwardProjected>0?forward:forwardProjected<0?reverse:null;
       return{key,leftId,rightId,realized,projected,projectedAmount:Math.abs(forwardProjected)};
-    }).filter(pair=>pair.realized||pair.projectedAmount>0);
-  },[memberRows]);
+    }).filter(pair=>(pair.realized||pair.projectedAmount>0)&&(perspective==='household'||pair.leftId===perspective||pair.rightId===perspective));
+  },[memberRows,perspective]);
 
   const thirdPartyGroups=useMemo<ThirdPartyGroup[]>(()=>{
+    const visibleRows=perspective==='household'?thirdPartyRows:thirdPartyRows.flatMap(row=>{const member=row.responsibility_members.find(item=>item.member_id===perspective);if(!member||!(member.amount>0))return[];return[{...row,outstanding_amount:Math.min(row.outstanding_amount,member.amount),responsibility_members:[member]}];});
     const groups=new Map<string,ThirdPartyObligation[]>();
-    for(const row of thirdPartyRows)groups.set(row.counterparty_id,[...(groups.get(row.counterparty_id)??[]),row]);
+    for(const row of visibleRows)groups.set(row.counterparty_id,[...(groups.get(row.counterparty_id)??[]),row]);
     return [...groups.entries()].map(([counterpartyId,rows])=>{
       const net=rows.reduce((sum,row)=>sum+(row.kind==='receivable'?Number(row.outstanding_amount):-Number(row.outstanding_amount)),0);
       const dueDates=rows.map(row=>row.due_date).filter((value):value is string=>Boolean(value)).sort();
       return{counterpartyId,name:rows[0]?.counterparty_name??'Outra pessoa',rows,net,nearestDue:dueDates[0]??null};
     }).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.name.localeCompare(b.name));
-  },[thirdPartyRows]);
+  },[thirdPartyRows,perspective]);
 
   if(loading)return <section><FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/><LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
 
@@ -98,7 +99,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
       })}
 
       {thirdPartyGroups.map(group=>{
-        const status=group.net>0?`${group.name} deve à Casa`:group.net<0?`A Casa deve a ${group.name}`:'Valores equilibrados';
+        const status=perspective==='household'?(group.net>0?`${group.name} deve à Casa`:group.net<0?`A Casa deve a ${group.name}`:'Valores equilibrados'):(group.net>0?`${group.name} deve a você`:group.net<0?`Você deve a ${group.name}`:'Valores equilibrados');
         const responsibilityLabels=[...new Set(group.rows.map(responsibilityLabel))];
         const responsibility=responsibilityLabels.length===1?responsibilityLabels[0]:'Responsabilidade mista';
         return <details key={group.counterpartyId} className="group rounded-2xl border border-slate-800 bg-slate-900/35">
@@ -107,7 +108,7 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
             <strong className={`whitespace-nowrap ${group.net>0?'text-emerald-300':group.net<0?'text-rose-300':'text-slate-300'}`}>{money(Math.abs(group.net))}</strong>
           </summary>
           <div className="space-y-3 border-t border-slate-800 px-4 py-3">{group.rows.map(row=><article key={row.id} className="rounded-xl bg-slate-950/55 p-3">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold text-slate-300">{row.kind==='receivable'?'A receber':'A pagar'} · {dateLabel(row.due_date)}</p><p className="mt-1 truncate text-xs text-slate-500">{row.description}</p><p className="mt-1 text-[10px] font-semibold text-cyan-300/80">Responsabilidade: {responsibilityLabel(row)}</p></div><strong className="whitespace-nowrap text-sm">{money(row.outstanding_amount)}</strong></div>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold text-slate-300">{row.kind==='receivable'?'A receber':'A pagar'} · {dateLabel(row.due_date)}</p><p className="mt-1 truncate text-xs text-slate-500">{row.description}</p><p className="mt-1 text-[10px] font-semibold text-cyan-300/80">{perspective==='household'?`Responsabilidade: ${responsibilityLabel(row)}`:'Sua parte desta posição'}</p></div><strong className="whitespace-nowrap text-sm">{money(row.outstanding_amount)}</strong></div>
             {row.origin_kind==='loan'&&row.kind==='payable'&&!row.source_transaction_id?<button type="button" onClick={()=>onResolve?.({kind:'loan-detail',obligationId:row.id})} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-800 bg-cyan-950/30 px-3 text-sm font-bold text-cyan-200"><Banknote className="h-4 w-4"/>Ver empréstimo</button>:<button type="button" onClick={()=>onResolve?.({kind:'third-party',obligationId:row.id,amount:Number(row.outstanding_amount)})} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-800 bg-cyan-950/30 px-3 text-sm font-bold text-cyan-200"><HandCoins className="h-4 w-4"/>{row.kind==='receivable'?'Registrar recebimento':'Registrar pagamento'}</button>}
             <details className="mt-2 rounded-xl border border-slate-800 px-3 py-2"><summary className="cursor-pointer text-xs font-semibold text-slate-400">Outras opções</summary><div className="mt-2 grid gap-2">{row.origin_kind==='manual'&&row.state==='open'&&row.settled_amount===0&&<button type="button" onClick={()=>onResolve?.({kind:'third-party-manage',obligationId:row.id})} className="min-h-10 rounded-lg border border-slate-700 px-3 text-left text-xs font-semibold text-slate-300">Corrigir cadastro ou vencimento</button>}{row.kind==='receivable'?<button type="button" onClick={()=>onResolve?.({kind:'third-party-loss',obligationId:row.id})} className="min-h-10 rounded-lg border border-rose-900 px-3 text-left text-xs font-semibold text-rose-300">Não será recebido</button>:<button type="button" onClick={()=>onResolve?.({kind:'third-party-forgiveness',obligationId:row.id})} className="min-h-10 rounded-lg border border-emerald-900 px-3 text-left text-xs font-semibold text-emerald-300">Dívida foi perdoada</button>}</div></details>
           </article>)}</div>
