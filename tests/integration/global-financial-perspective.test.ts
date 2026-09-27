@@ -23,7 +23,8 @@ test('perspectiva de gastos usa responsabilidade econômica e nunca comprador co
  assert.match(expenseService,/economic_allocations/);
  assert.match(expenseService,/responsible_member_id/);
  assert.match(expenses,/Sua parte · valor original/);
- assert.doesNotMatch(expenseService,/buyer_member_id.*memberId|memberId.*buyer_member_id/s);
+ assert.match(expenseService,/financial_member_commitment_responsibility_positions/);
+ assert.match(expenseService,/memberAmounts\.get\(row\.id\)/);
 });
 
 test('perspectiva de entradas usa beneficiário canônico',()=>{
