@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 const wizard=await readFile(new URL('../../src/components/app/NewExpenseWizard.tsx',import.meta.url),'utf8');
+const resourceChoice=await readFile(new URL('../../src/components/app/FinancialResourceChoice.tsx',import.meta.url),'utf8');
 
 test('Nova Despesa starts payment selection from concrete registered resources',()=>{
   assert.match(wizard,/De onde saiu ou será cobrado\?/);
   assert.match(wizard,/spendableAccounts\.map\(account=>/);
   assert.match(wizard,/cards\.map\(card=>/);
-  assert.match(wizard,/ResourceChoice/);
+  assert.match(wizard,/FinancialResourceChoice/);
   assert.match(wizard,/accountResourceMeta/);
   assert.match(wizard,/cardResourceMeta/);
   assert.doesNotMatch(wizard,/label="Conta \/ Pix"/);
@@ -43,10 +44,10 @@ test('resource-first routing does not merge payment with economic responsibility
 
 test('resource cards stay compact and avoid redundant payment-mode labels',()=>{
   assert.match(wizard,/grid grid-cols-3 gap-2/);
-  assert.match(wizard,/min-h-\[58px\]/);
-  assert.match(wizard,/h-6 w-6/);
+  assert.match(resourceChoice,/min-h-\[58px\]/);
+  assert.match(resourceChoice,/h-6 w-6/);
   assert.match(wizard,/account\.institution/);
-  assert.match(wizard,/detail=\{meta\.detail\}/);
+  assert.match(wizard,/ownerLabel=\{meta\.ownerLabel\}/);
   assert.match(wizard,/card\.last_four/);
   assert.doesNotMatch(wizard,/Conta corrente · Pix \/ débito/);
   assert.doesNotMatch(wizard,/Poupança · Pix \/ débito/);
