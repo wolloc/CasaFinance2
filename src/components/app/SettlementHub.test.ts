@@ -15,10 +15,14 @@ test('Home people positions separate realized from projected without generic mem
 });
 
 test('third-party obligations use human language and contextual actions',()=>{
+  assert.match(hub,/Adicionar valor com outra pessoa/);
   assert.match(hub,/deve para a Casa/);
   assert.match(hub,/A Casa deve para/);
   assert.match(hub,/Registrar recebimento/);
   assert.match(hub,/Registrar pagamento/);
+  assert.match(hub,/Corrigir cadastro ou vencimento/);
+  assert.match(hub,/Não será recebido/);
+  assert.match(hub,/Dívida foi perdoada/);
   assert.match(hub,/Vence hoje/);
 });
 
