@@ -48,8 +48,8 @@ test('resource transfer uses canonical create_transfer and stays neutral', () =>
   assert.match(transferService, /rpc\('create_transfer'/);
   assert.doesNotMatch(transferService, /createHouseholdTransaction|type:\s*['"](?:income|expense)['"]/);
   assert.match(adjustmentSource, /selected==='transfer'/);
-  assert.match(adjustmentSource, /De qual conta o dinheiro saiu/);
-  assert.match(adjustmentSource, /Para qual conta o dinheiro entrou/);
+  assert.match(adjustmentSource, /Saiu de|De qual conta saiu/);
+  assert.match(adjustmentSource, /Entrou em/);
   assert.match(adjustmentSource, /O dinheiro só mudou de conta dentro da Casa; isso não virou renda nem gasto/);
   assert.match(adjustmentSource, /sourceAccount===destinationAccount/);
   assert.match(productSpec, /transferência patrimonial: receita zero e despesa zero/);

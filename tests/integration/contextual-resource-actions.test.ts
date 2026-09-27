@@ -17,6 +17,7 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/Registrar despesa/);
  assert.match(row,/Transferir deste recurso/);
  assert.match(row,/Aportar ou resgatar/);
+ assert.match(row,/Pegar dinheiro emprestado/);
  assert.match(row,/Editar recurso/);
  assert.doesNotMatch(row,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
@@ -36,6 +37,8 @@ test('resource actions route to existing canonical journeys',()=>{
  assert.match(adjustment,/consumeResourceAdjustmentIntent/);
  assert.match(adjustment,/financial\.accounts\.some\(account=>account\.id===resourceIntent\.accountId\)/);
  assert.match(adjustment,/initialResourceId=\{resourceIntent\?\.kind==='reserve'/);
+ assert.match(adjustment,/initialAccountId=\{resourceIntent\?\.kind==='loan'/);
+ assert.match(adjustment,/initialDirection=\{resourceIntent\?\.kind==='loan'\?'taken'/);
  assert.match(investment,/initialResourceId/);
  assert.match(investment,/setInvestmentAccountId\(''\)/);
  assert.match(investment,/resourceRows\.some\(item=>item\.account_id===initialResourceId\)/);

@@ -23,7 +23,7 @@ import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 import type { FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { FinancialDetailDialogHeader } from './FinancialDetailDialogHeader.js';
 
-export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0 }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number; onGrantLoan?:()=>void }) {
+export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0 }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   const projectionExpenseIntent = useMemo(() => mode === 'expense' ? consumeProjectionExpenseReviewIntent() : null, [mode]);
   const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
