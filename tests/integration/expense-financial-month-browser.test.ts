@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const service=await readFile(new URL('../../src/finance/expenseMonthViews.ts',import.meta.url),'utf8');
 const browser=await readFile(new URL('../../src/components/app/ExpenseMonthBrowser.tsx',import.meta.url),'utf8');
 const screen=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
+const period=await readFile(new URL('../../src/components/app/FinancialPeriodNavigator.tsx',import.meta.url),'utf8');
 
 test('mês financeiro usa o read model canônico de compromissos e não a data da compra',()=>{
  assert.match(service,/from\('financial_commitment_positions'\)/);
@@ -33,9 +34,10 @@ test('Gastos prioriza o navegador mensal e leva histórico/correções para o la
  assert.match(browser,/Compromissos do mês/);
  assert.match(browser,/Item da fatura; o pagamento não vira outro gasto/);
  assert.match(browser,/border-orange-500/);
- assert.match(browser,/Mês anterior/);
- assert.match(browser,/Mês seguinte/);
- assert.match(browser,/Escolher mês/);
+ assert.match(browser,/FinancialPeriodNavigator/);
+ assert.match(period,/Mês anterior/);
+ assert.match(period,/Mês seguinte/);
+ assert.match(browser,/pickerTitle="Escolher período"/);
  assert.match(screen,/Detalhe do gasto/);
  assert.match(screen,/focusTransactionId=\{detailTransactionId\}/);
  assert.doesNotMatch(screen,/Precisa fazer algo diferente\?/);
