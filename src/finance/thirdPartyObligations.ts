@@ -16,7 +16,7 @@ export type ThirdPartyObligation = {
   counterparty_name: string;
   settled_amount: number;
   outstanding_amount: number;
-  responsibility_members: Array<{ member_id: string; percentage: number }>;
+  responsibility_members: Array<{ member_id: string; percentage: number; amount: number }>;
 };
 
 export type FinancialPartyOption = { id: string; name: string };
@@ -209,17 +209,23 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
   if (parties.error) throw parties.error;
   if (events.error) throw events.error;
 
-  const sourceTransactionIds=(obligations.data??[]).map(row=>row.source_transaction_id).filter((value):value is string=>Boolean(value));
-  const allocations=sourceTransactionIds.length>0
-    ?await client.from('economic_allocations').select('transaction_id,responsible_member_id,percentage').eq('household_id',householdId).in('transaction_id',sourceTransactionIds)
+  const obligationIds=(obligations.data??[]).map(row=>String(row.id));
+  const memberPositions=obligationIds.length>0
+    ?await client.from('financial_member_commitment_responsibility_positions')
+      .select('source_obligation_id,member_id,remaining_responsibility_amount,is_unattributed_to_member')
+      .eq('household_id',householdId)
+      .in('source_obligation_id',obligationIds)
     :{data:[],error:null};
-  if(allocations.error)throw allocations.error;
-  const responsibilityByTransaction=new Map<string,Array<{member_id:string;percentage:number}>>();
-  for(const row of allocations.data??[]){
-    if(!row.responsible_member_id)continue;
-    const current=responsibilityByTransaction.get(String(row.transaction_id))??[];
-    current.push({member_id:String(row.responsible_member_id),percentage:Number(row.percentage??0)});
-    responsibilityByTransaction.set(String(row.transaction_id),current);
+  if(memberPositions.error)throw memberPositions.error;
+
+  const memberAmountsByObligation=new Map<string,Array<{member_id:string;amount:number}>>();
+  for(const row of memberPositions.data??[]){
+    if(!row.source_obligation_id||!row.member_id||row.is_unattributed_to_member)continue;
+    const amount=Math.max(0,Number(row.remaining_responsibility_amount??0));
+    if(!(amount>0))continue;
+    const current=memberAmountsByObligation.get(String(row.source_obligation_id))??[];
+    current.push({member_id:String(row.member_id),amount});
+    memberAmountsByObligation.set(String(row.source_obligation_id),current);
   }
 
   const partyNames = new Map((parties.data ?? []).map((row) => [row.id, row.name]));
@@ -231,17 +237,23 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
 
   return (obligations.data ?? []).map((row) => {
     const settled = settledByObligation.get(row.id) ?? 0;
+    const outstanding=Math.max(0, Number(row.original_amount) - settled);
+    const memberAmounts=memberAmountsByObligation.get(String(row.id))??[];
+    const memberTotal=memberAmounts.reduce((sum,item)=>sum+item.amount,0);
     return {
       ...row,
       original_amount: Number(row.original_amount),
       counterparty_name: partyNames.get(row.counterparty_id) ?? 'Outra pessoa',
       settled_amount: settled,
-      outstanding_amount: Math.max(0, Number(row.original_amount) - settled),
-      responsibility_members: row.source_transaction_id ? responsibilityByTransaction.get(String(row.source_transaction_id))??[] : [],
+      outstanding_amount: outstanding,
+      responsibility_members: memberAmounts.map(item=>({
+        member_id:item.member_id,
+        amount:item.amount,
+        percentage:memberTotal>0?item.amount/memberTotal*100:0,
+      })),
     } as ThirdPartyObligation;
   }).filter((row) => row.outstanding_amount > 0);
 }
-
 export async function listEditableManualThirdPartyObligations(client: SupabaseClient, householdId: string) {
   const rows = await listOpenThirdPartyObligations(client, householdId);
   return rows.filter((row) => row.origin_kind === 'manual' && row.state === 'open' && row.settled_amount === 0);
