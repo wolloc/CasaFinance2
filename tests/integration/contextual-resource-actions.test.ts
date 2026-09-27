@@ -23,6 +23,8 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/resource\.institution/);
  assert.match(row,/resource\.ownerLabel/);
  assert.match(row,/detailLabel/);
+ assert.match(home,/ordered=\[\.\.\.group\.rows\]\.sort/);
+ assert.match(home,/grid grid-cols-2 gap-2/);
  assert.doesNotMatch(row,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 
