@@ -300,3 +300,112 @@ comment on table public.loan_schedule_items is
   'Canonical repayment agenda linked to one financial_obligations loan principal. Schedule rows are projections, not extra debts or expenses.';
 comment on view public.financial_loan_schedule is
   'Canonical loan schedule read model with projected principal/interest/fees and realized payment progress.';
+
+
+create or replace function public.record_scheduled_loan_payment(
+  p_household_id uuid,
+  p_schedule_item_id uuid,
+  p_source_account_id uuid,
+  p_funder_member_id uuid,
+  p_principal_amount numeric,
+  p_interest_amount numeric,
+  p_fee_amount numeric,
+  p_paid_at timestamptz,
+  p_notes text,
+  p_request_key text
+) returns uuid
+language plpgsql
+security definer
+set search_path=public,pg_temp
+as $$
+declare
+  caller public.household_members;
+  item public.loan_schedule_items;
+  earliest_number integer;
+  interest_event_id uuid;
+  fee_event_id uuid;
+  interest_obligation_id uuid;
+  fee_obligation_id uuid;
+  allocations jsonb:='[]'::jsonb;
+  result uuid;
+  existing uuid;
+  op constant text:='record_scheduled_loan_payment';
+  charge_date date;
+begin
+  caller:=public.require_active_member(p_household_id);
+  existing:=public.financial_command_existing_or_lock(p_household_id,op,p_request_key);
+  if existing is not null then return existing; end if;
+
+  select * into item from public.loan_schedule_items
+  where id=p_schedule_item_id and household_id=p_household_id and state in ('projected','partially_paid')
+  for update;
+  if item.id is null then raise exception 'active loan schedule item required' using errcode='23514'; end if;
+
+  select min(installment_number) into earliest_number
+  from public.loan_schedule_items
+  where household_id=p_household_id
+    and principal_obligation_id=item.principal_obligation_id
+    and state in ('projected','partially_paid');
+  if item.installment_number<>earliest_number then
+    raise exception 'payments must follow the earliest open installment' using errcode='23514';
+  end if;
+
+  if coalesce(p_principal_amount,0)<0 or coalesce(p_interest_amount,0)<0 or coalesce(p_fee_amount,0)<0
+     or coalesce(p_principal_amount,0)+coalesce(p_interest_amount,0)+coalesce(p_fee_amount,0)<=0 then
+    raise exception 'scheduled payment must include a positive component' using errcode='22023';
+  end if;
+  if coalesce(p_principal_amount,0)>item.principal_amount-item.paid_principal_amount
+     or coalesce(p_interest_amount,0)>item.projected_interest_amount-item.paid_interest_amount
+     or coalesce(p_fee_amount,0)>item.projected_fee_amount-item.paid_fee_amount then
+    raise exception 'scheduled payment exceeds installment remaining amount' using errcode='23514';
+  end if;
+
+  charge_date:=least(item.due_date,p_paid_at::date);
+
+  if coalesce(p_interest_amount,0)>0 then
+    if item.cost_responsible_member_id is null then
+      raise exception 'loan cost responsibility is required for interest' using errcode='23514';
+    end if;
+    interest_event_id:=public.record_loan_charge(
+      p_household_id,item.principal_obligation_id,'interest',item.projected_interest_amount,
+      charge_date,item.due_date,item.cost_responsible_member_id,'Juros da parcela '||item.installment_number,
+      'schedule:'||item.id::text||':interest'
+    );
+    select charge_obligation_id into interest_obligation_id
+    from public.loan_charge_events where id=interest_event_id;
+    allocations:=allocations||jsonb_build_array(jsonb_build_object('obligation_id',interest_obligation_id,'amount',p_interest_amount));
+  end if;
+
+  if coalesce(p_fee_amount,0)>0 then
+    if item.cost_responsible_member_id is null then
+      raise exception 'loan cost responsibility is required for fee' using errcode='23514';
+    end if;
+    fee_event_id:=public.record_loan_charge(
+      p_household_id,item.principal_obligation_id,'fee',item.projected_fee_amount,
+      charge_date,item.due_date,item.cost_responsible_member_id,'Tarifa da parcela '||item.installment_number,
+      'schedule:'||item.id::text||':fee'
+    );
+    select charge_obligation_id into fee_obligation_id
+    from public.loan_charge_events where id=fee_event_id;
+    allocations:=allocations||jsonb_build_array(jsonb_build_object('obligation_id',fee_obligation_id,'amount',p_fee_amount));
+  end if;
+
+  result:=public.record_loan_payment(
+    p_household_id,item.principal_obligation_id,p_source_account_id,p_funder_member_id,
+    coalesce(p_principal_amount,0),allocations,p_paid_at,p_notes,p_request_key||':payment'
+  );
+
+  perform public.financial_command_store(p_household_id,op,p_request_key,result);
+  return result;
+end $$;
+
+revoke all on function public.record_scheduled_loan_payment(
+  uuid,uuid,uuid,uuid,numeric,numeric,numeric,timestamptz,text,text
+) from public,anon;
+grant execute on function public.record_scheduled_loan_payment(
+  uuid,uuid,uuid,uuid,numeric,numeric,numeric,timestamptz,text,text
+) to authenticated;
+
+comment on function public.record_scheduled_loan_payment(
+  uuid,uuid,uuid,uuid,numeric,numeric,numeric,timestamptz,text,text
+) is 'Pays the earliest open canonical loan installment with one cash outflow. Scheduled interest/fees become economic charge obligations only when actually paid; principal remains economically neutral.';
