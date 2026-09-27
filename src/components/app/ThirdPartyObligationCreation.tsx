@@ -3,6 +3,7 @@ import { HandCoins, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { createManualThirdPartyObligation, listFinancialPartyOptions, type FinancialPartyOption } from '../../finance/thirdPartyObligations.js';
+import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const date = new Date(); const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10); };
@@ -66,8 +67,8 @@ export function ThirdPartyObligationCreation({ onBack }: { onBack: () => void })
       <label className="block text-sm">Quando deve ser pago? (opcional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <label className="block text-sm">Observação (opcional)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <p className="rounded-xl border border-blue-900 bg-blue-950/30 p-3 text-xs text-blue-200">Este cadastro só guarda que existe um valor a receber ou a pagar. O dinheiro só muda quando um pagamento ou recebimento for registrado.</p>
-      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}{success && <p role="status" className="text-sm text-emerald-300">{success}</p>}
-      <button type="submit" disabled={saving || parties.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50"><HandCoins className="h-4 w-4"/>{saving ? 'Criando…' : 'Criar valor sem movimentar dinheiro'}</button>
+      {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}{success&&<FinancialSaveFeedback message={success}/>}
+      <button type="submit" disabled={saving || parties.length === 0} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold disabled:opacity-50">{saving?<LoaderCircle className="h-4 w-4 animate-spin"/>:<HandCoins className="h-4 w-4"/>}{saving?'Criando…':'Criar valor sem movimentar dinheiro'}</button>
     </form>}
   </div>;
 }
