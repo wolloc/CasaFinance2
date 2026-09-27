@@ -86,13 +86,12 @@ export function SettlementHub({onResolve}:{onResolve?:(intent:SettlementActionIn
         const projectedEvents=pairEvents(pair.leftId,pair.rightId,'projected');
         return <details key={pair.key} className="group rounded-2xl border border-slate-800 bg-slate-900/45">
           <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0"><strong className="block text-sm">{memberName(pair.leftId)} ↔ {memberName(pair.rightId)}</strong><p className="mt-1 truncate text-xs text-slate-500">{projectedText}</p></div>
-            <div className="text-right"><strong className="block whitespace-nowrap text-cyan-200">{current?money(currentAmount):money(0)}</strong><span className="text-[10px] text-slate-500">{currentText}</span></div>
+            <div className="min-w-0"><strong className="block text-sm">{memberName(pair.leftId)} ↔ {memberName(pair.rightId)}</strong><p className="mt-1 truncate text-xs text-slate-500">{current?currentText:'Tudo equilibrado hoje'}</p></div>
+            <strong className="whitespace-nowrap text-base text-cyan-200">{current?money(currentAmount):money(0)}</strong>
           </summary>
-          <div className="border-t border-slate-800 px-4 py-3">
-            <p className="text-xs font-semibold text-slate-300">Posição de hoje</p><p className="mt-1 text-sm text-slate-400">{currentText}</p>
-            {pair.projectedAmount>0&&<><p className="mt-4 text-xs font-semibold text-slate-300">Tendência</p><p className="mt-1 text-sm text-slate-400">{projectedText}</p></>}
-            {(realizedEvents.length>0||projectedEvents.length>0)&&<details className="mt-4 rounded-xl bg-slate-950/60 p-3"><summary className="cursor-pointer text-xs font-semibold text-slate-400">Ver histórico e compromissos</summary><div className="mt-2 space-y-2">{[...realizedEvents,...projectedEvents].map(event=><div key={event.id} className="flex justify-between gap-3 text-xs"><span className="text-slate-500">{eventLabel(event)} · {new Date(`${event.financial_date}T12:00:00`).toLocaleDateString('pt-BR')}</span><strong className="whitespace-nowrap text-slate-300">{money(event.amount)}</strong></div>)}</div></details>}
+          <div className="space-y-2 border-t border-slate-800 px-4 py-3">
+            {pair.projectedAmount>0&&<details className="rounded-xl bg-slate-950/55 p-3"><summary className="cursor-pointer text-xs font-semibold text-slate-400">Ver tendência</summary><p className="mt-2 text-sm text-slate-400">{projectedText}</p></details>}
+            {(realizedEvents.length>0||projectedEvents.length>0)&&<details className="rounded-xl bg-slate-950/55 p-3"><summary className="cursor-pointer text-xs font-semibold text-slate-400">Ver histórico e compromissos</summary><div className="mt-2 space-y-2">{[...realizedEvents,...projectedEvents].map(event=><div key={event.id} className="flex justify-between gap-3 text-xs"><span className="text-slate-500">{eventLabel(event)} · {new Date(`${event.financial_date}T12:00:00`).toLocaleDateString('pt-BR')}</span><strong className="whitespace-nowrap text-slate-300">{money(event.amount)}</strong></div>)}</div></details>}
           </div>
         </details>;
       })}
