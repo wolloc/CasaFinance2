@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Banknote, LoaderCircle, UserPlus } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
-import { isTransactionalResource, listInvestmentReserveResources, type InvestmentReserveResource } from '../../finance/investmentReserveAdjustments.js';
+import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { createFinancialParty, createLoanPrincipal, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
 import { LoanChargesAdjustment } from './LoanChargesAdjustment.js';
 import { LoanPaymentAdjustment } from './LoanPaymentAdjustment.js';
@@ -14,7 +14,7 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   const { household } = useSupabaseAuth();
   const [direction, setDirection] = useState<'granted' | 'taken'>(initialDirection ?? 'granted');
   const [parties, setParties] = useState<FinancialParty[]>([]);
-  const [accounts, setAccounts] = useState<InvestmentReserveResource[]>([]);
+  const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
   const [counterpartyId, setCounterpartyId] = useState('');
   const [newPartyName, setNewPartyName] = useState('');
   const [accountId, setAccountId] = useState(initialAccountId ?? '');
@@ -33,7 +33,7 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   const load = async () => {
     if (!supabase || !household) return;
     setLoading(true); setLoadError(null); setError(null);
-    try { const [people, resources] = await Promise.all([listFinancialParties(supabase, household.id), listInvestmentReserveResources(supabase, household.id)]); const transactional=resources.filter(isTransactionalResource); setParties(people); setAccounts(transactional); setAccountId(current=>current&&transactional.some(account=>account.account_id===current)?current:initialAccountId&&transactional.some(account=>account.account_id===initialAccountId)?initialAccountId:''); }
+    try { const [people, financial] = await Promise.all([listFinancialParties(supabase, household.id), listHouseholdFinancialAccounts(supabase, household.id)]); const transactional=financial.accounts.filter(account=>!account.resource_restriction&&['cash','checking','savings','digital_wallet'].includes(account.type)); setParties(people); setAccounts(transactional); setAccountId(current=>current&&transactional.some(account=>account.id===current)?current:initialAccountId&&transactional.some(account=>account.id===initialAccountId)?initialAccountId:''); }
     catch { clearLoadedContext(); setLoadError('Não foi possível conferir pessoas e contas da Casa. O empréstimo não pode ser registrado até uma nova leitura válida.'); }
     finally { setLoading(false); }
   };
@@ -67,7 +67,7 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
       <div className="rounded-xl bg-slate-950 p-3 text-xs text-slate-400">{direction === 'granted' ? 'O dinheiro sai agora, mas não é uma despesa: o Casa guarda quanto essa pessoa precisa devolver.' : 'O dinheiro entra agora, mas não é uma renda: o Casa guarda quanto vocês precisam devolver.'} Juros, tarifas ou multas são registrados separadamente.</div>
       <label className="block text-sm">Com quem foi o empréstimo?<select value={counterpartyId} onChange={(event) => { setCounterpartyId(event.target.value); if (event.target.value) setNewPartyName(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Adicionar uma nova pessoa</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
       {!counterpartyId && <label className="block text-sm">Nome da pessoa<input value={newPartyName} onChange={(event) => setNewPartyName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: Letícia" /></label>}
-      <label className="block text-sm">{direction === 'granted' ? 'De qual conta saiu o dinheiro?' : 'Em qual conta entrou o dinheiro?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.account_id} value={account.account_id}>{account.name}</option>)}</select></label>
+      <label className="block text-sm">{direction === 'granted' ? 'De qual conta saiu o dinheiro?' : 'Em qual conta entrou o dinheiro?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.institution?`${account.name} · ${account.institution}`:account.name}</option>)}</select></label>
       <label className="block text-sm">Quanto foi emprestado?<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
       <label className="block text-sm">Quando aconteceu?<input type="date" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <label className="block text-sm">Quando deve ser devolvido? (opcional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
