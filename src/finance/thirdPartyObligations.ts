@@ -16,6 +16,7 @@ export type ThirdPartyObligation = {
   counterparty_name: string;
   settled_amount: number;
   outstanding_amount: number;
+  responsibility_members: Array<{ member_id: string; percentage: number }>;
 };
 
 export type FinancialPartyOption = { id: string; name: string };
@@ -208,6 +209,19 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
   if (parties.error) throw parties.error;
   if (events.error) throw events.error;
 
+  const sourceTransactionIds=(obligations.data??[]).map(row=>row.source_transaction_id).filter((value):value is string=>Boolean(value));
+  const allocations=sourceTransactionIds.length>0
+    ?await client.from('economic_allocations').select('transaction_id,responsible_member_id,percentage').eq('household_id',householdId).in('transaction_id',sourceTransactionIds)
+    :{data:[],error:null};
+  if(allocations.error)throw allocations.error;
+  const responsibilityByTransaction=new Map<string,Array<{member_id:string;percentage:number}>>();
+  for(const row of allocations.data??[]){
+    if(!row.responsible_member_id)continue;
+    const current=responsibilityByTransaction.get(String(row.transaction_id))??[];
+    current.push({member_id:String(row.responsible_member_id),percentage:Number(row.percentage??0)});
+    responsibilityByTransaction.set(String(row.transaction_id),current);
+  }
+
   const partyNames = new Map((parties.data ?? []).map((row) => [row.id, row.name]));
   const settledByObligation = new Map<string, number>();
   for (const event of events.data ?? []) {
@@ -223,6 +237,7 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
       counterparty_name: partyNames.get(row.counterparty_id) ?? 'Outra pessoa',
       settled_amount: settled,
       outstanding_amount: Math.max(0, Number(row.original_amount) - settled),
+      responsibility_members: row.source_transaction_id ? responsibilityByTransaction.get(String(row.source_transaction_id))??[] : [],
     } as ThirdPartyObligation;
   }).filter((row) => row.outstanding_amount > 0);
 }

@@ -22,13 +22,12 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
  const benefit=resource.type==='meal_benefit';
  const transactional=['cash','checking','savings','digital_wallet'].includes(resource.type);
  const act=(kind:ResourceNavigationAction['kind'])=>onAction?.({kind,accountId:resource.accountId});
- return <details className="group/resource rounded-xl">
-  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-2 py-2.5 hover:bg-slate-800/55">
-   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-slate-400"><ResourceIcon resource={resource}/></span>
-   <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}</div>
-   <strong className="text-sm">{money(resource.amount)}</strong><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/>
+ return <details className="group/resource overflow-hidden rounded-2xl border border-slate-800 bg-white/[0.035]">
+  <summary className="flex min-h-[92px] cursor-pointer list-none flex-col items-start gap-2 p-3 hover:bg-white/[0.025]">
+   <div className="flex w-full items-start justify-between gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950/80 text-slate-400"><ResourceIcon resource={resource}/></span><ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition-transform group-open/resource:rotate-90"/></div>
+   <div className="min-w-0 w-full"><p className="truncate text-xs font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}<strong className="mt-2 block text-sm">{money(resource.amount)}</strong></div>
   </summary>
-  <div className="grid gap-2 border-t border-slate-800/70 px-2 py-3 sm:grid-cols-2">
+  <div className="grid gap-2 border-t border-slate-800/70 p-2">
    {!patrimonial&&<button type="button" onClick={()=>act('expense')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-950/70 px-3 text-left text-xs font-bold text-rose-200"><Receipt className="h-4 w-4"/>{benefit?'Registrar gasto com benefício':'Registrar despesa'}</button>}
    {!patrimonial&&!benefit&&<button type="button" onClick={()=>act('transfer')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-950/70 px-3 text-left text-xs font-bold text-blue-200"><ArrowLeftRight className="h-4 w-4"/>Transferir deste recurso</button>}{transactional&&!benefit&&!patrimonial&&<button type="button" onClick={()=>act('loan')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-950/70 px-3 text-left text-xs font-bold text-cyan-200"><Banknote className="h-4 w-4"/>Pegar dinheiro emprestado</button>}
    {patrimonial&&<button type="button" onClick={()=>act('reserve')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-950/70 px-3 text-left text-xs font-bold text-amber-200"><PiggyBank className="h-4 w-4"/>Aportar ou resgatar</button>}

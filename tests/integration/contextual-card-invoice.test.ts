@@ -6,6 +6,7 @@ const app=await readFile(new URL('../../src/components/app/InvoicesScreen.tsx',i
 const contextual=await readFile(new URL('../../src/components/app/ContextualCardInvoices.tsx',import.meta.url),'utf8');
 const items=await readFile(new URL('../../src/finance/cardInvoiceItems.ts',import.meta.url),'utf8');
 const home=await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
+const shell=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
 
 test('card click routes to a card-scoped invoice journey',()=>{
  assert.match(app,/cardReviewIntent.*ContextualCardInvoices/s);
@@ -51,4 +52,10 @@ test('invoice payment remains delegated and can be partial without creating a ne
  assert.match(contextual,/você confirma quanto realmente pagou/);
  assert.match(contextual,/onPay\?\.\(paymentInvoice\)/);
  assert.doesNotMatch(contextual,/payHouseholdInvoice|\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
+});
+
+
+test('Home card modal opens the selected card directly and keeps contextual payment visible',()=>{
+ assert.match(shell,/selectedCardId\?<ContextualCardInvoices cardId=\{selectedCardId\} onPay=\{openInvoicePayment\}/);
+ assert.match(shell,/selectedCardId\?'Faturas':'Cartões e faturas'/);
 });
