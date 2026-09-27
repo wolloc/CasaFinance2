@@ -19,7 +19,10 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/Aportar ou resgatar/);
  assert.match(row,/Pegar dinheiro emprestado/);
  assert.match(row,/Editar recurso/);
- assert.match(row,/ResourceIcon resource=\{resource\}/);\n assert.match(row,/Utensils/);\n assert.match(row,/PiggyBank/);\n assert.match(row,/Wallet/);
+ assert.match(row,/ResourceIcon resource=\{resource\}/);
+ assert.match(row,/Utensils/);
+ assert.match(row,/PiggyBank/);
+ assert.match(row,/Wallet/);
  assert.match(row,/resource\.institution/);
  assert.match(row,/resource\.ownerLabel/);
  assert.match(row,/detailLabel/);
