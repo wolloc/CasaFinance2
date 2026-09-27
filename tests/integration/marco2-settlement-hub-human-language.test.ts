@@ -23,6 +23,9 @@ test('third parties show the person first and keep obligations inside the relati
   assert.match(source, /A pagar/);
   assert.match(source, /dateLabel\(group\.nearestDue\)/);
   assert.match(source, /group\.rows\.map/);
+  assert.match(source, /responsibilityLabel/);
+  assert.match(source, /50\/50/);
+  assert.match(source, /Responsabilidade:/);
   assert.doesNotMatch(source, /deve para a Casa/);
   assert.doesNotMatch(source, /A Casa deve para/);
 });
