@@ -99,11 +99,11 @@ account_id="$(printf '%s' "$account_json" | jq -er '.[0].id')"
 card_json="$(post_rel "$wallace_token" cards "{\"household_id\":\"${house_id}\",\"owner_member_id\":\"${member_id}\",\"name\":\"Cartao Teste\",\"credit_limit\":5000,\"closing_day\":10,\"due_day\":17,\"default_payment_account_id\":\"${account_id}\"}")"
 [[ "$(printf '%s' "$card_json" | jq 'length')" -eq 1 ]]
 
-category_json="$(post_rel "$wallace_token" categories "{\"household_id\":\"${house_id}\",\"name\":\"Mercado\",\"type\":\"expense\"}")"
+category_json="$(post_rel "$wallace_token" categories "{\"household_id\":\"${house_id}\",\"name\":\"Categoria personalizada HTTP\",\"type\":\"expense\"}")"
 [[ "$(printf '%s' "$category_json" | jq 'length')" -eq 1 ]]
 category_id="$(printf '%s' "$category_json" | jq -er '.[0].id')"
-updated_category="$(patch_rel "$wallace_token" categories "id=eq.${category_id}&household_id=eq.${house_id}" '{"name":"Mercado e feira"}')"
-[[ "$(printf '%s' "$updated_category" | jq -r '.[0].name')" == 'Mercado e feira' ]]
+updated_category="$(patch_rel "$wallace_token" categories "id=eq.${category_id}&household_id=eq.${house_id}" '{"name":"Categoria personalizada editada"}')"
+[[ "$(printf '%s' "$updated_category" | jq -r '.[0].name')" == 'Categoria personalizada editada' ]]
 
 # Security-invoker Home read models must still work once setup data exists.
 home_after_setup="$(get_rel "$wallace_token" financial_household_position "select=household_id,available_money&household_id=eq.${house_id}")"
