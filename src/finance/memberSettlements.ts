@@ -13,7 +13,7 @@ export type MemberSettlementPosition = {
 
 export async function listMemberSettlementPositions(client: SupabaseClient, householdId: string) {
   const response = await client
-    .from('financial_member_settlement_positions')
+    .from('financial_member_net_positions')
     .select('household_id, debtor_member_id, creditor_member_id, realized_outstanding, projected_outstanding, scheduled_settlement_amount, net_position')
     .eq('household_id', householdId);
   if (response.error) throw response.error;
