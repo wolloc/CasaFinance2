@@ -24,18 +24,21 @@ insert into public.account_ownerships(account_id,household_id,member_id) values
  ('ab000000-0000-4000-8000-000000000032','ab000000-0000-4000-8000-000000000010','ab000000-0000-4000-8000-000000000022');
 
 -- Before the transfer, Guilherme has R$ 4.000 with Wallace.
-insert into public.transactions(
- id,household_id,created_by_member_id,buyer_member_id,type,status,economic_state,description,amount,
- estimated_amount,confirmed_amount,realized_amount,transaction_date,competence_date
+-- Build only the member-position origin needed by this contract; no synthetic
+-- income or expense is necessary to prove the transfer semantics.
+insert into public.money_movements(
+ id,household_id,created_by_member_id,kind,state,amount,description,
+ source_account_id,destination_account_id,movement_date,competence_date,realized_at
 ) values(
  'ab000000-0000-4000-8000-000000000041','ab000000-0000-4000-8000-000000000010',
- 'ab000000-0000-4000-8000-000000000021','ab000000-0000-4000-8000-000000000022','expense','paid','realized','Compromissos de Guilherme pagos por Wallace',4000,
- 4000,4000,4000,current_date,date_trunc('month',current_date)::date
+ 'ab000000-0000-4000-8000-000000000021','member_settlement','realized',4000,
+ 'Posição inicial do contrato de teste','ab000000-0000-4000-8000-000000000031',
+ 'ab000000-0000-4000-8000-000000000032',current_date,date_trunc('month',current_date)::date,now()
 );
 
 insert into public.member_settlement_events(
  household_id,created_by_member_id,debtor_member_id,creditor_member_id,amount,
- state,kind,financial_date,occurred_at,source_transaction_id
+ state,kind,financial_date,occurred_at,source_money_movement_id
 ) values(
  'ab000000-0000-4000-8000-000000000010','ab000000-0000-4000-8000-000000000021',
  'ab000000-0000-4000-8000-000000000022','ab000000-0000-4000-8000-000000000021',4000,
@@ -72,8 +75,8 @@ select is(
 select is(
  (select count(*)::integer from public.transactions
   where household_id='ab000000-0000-4000-8000-000000000010' and type in ('income','expense')),
- 1,
- 'U04 member transfer creates no second income or expense fact'
+ 0,
+ 'U04 member transfer creates no income or expense fact'
 );
 
 select is(
