@@ -609,9 +609,9 @@ O Casa deve sempre conseguir responder:
 - juros e tarifas contratuais são fatos econômicos separados;
 - multa somente nasce quando houver atraso real.
 
-**PENDENTE — cronograma canônico do principal:**
+**IMPLEMENTADO — cronograma canônico do principal:**
 
-O modelo canônico atual de novos empréstimos usa `financial_obligations` e ainda não possui cronograma parcelado de principal. As estruturas legadas `loan_installments` / `loan_payment_schedule` não devem ser reativadas como solução paralela. Antes de oferecer **parcelado** na UX, criar um cronograma canônico compatível com obrigações, pagamentos parciais, juros/tarifas e histórico. Até lá, o formulário não deve simular parcelas apenas no frontend.
+Novos empréstimos podem ser registrados em uma vez ou parcelados. O cronograma usa `loan_schedule_items` ligado ao mesmo principal em `financial_obligations`; as parcelas são agenda financeira e não novas dívidas ou despesas. Principal, juros e tarifas previstos ficam separados por parcela. Pagamentos parciais atualizam o cronograma em ordem de vencimento. As estruturas legadas `loan_installments` / `loan_payment_schedule` permanecem deprecadas e não são usadas por novos contratos.
 
 
 ## Refinamento de recursos e contrato de empréstimo — 2026-09-27
@@ -631,6 +631,24 @@ O modelo canônico atual de novos empréstimos usa `financial_obligations` e ain
 - nessa etapa inicial só podem ser registrados juros/tarifas **já efetivamente cobrados**. Juros futuros parcelados não podem ser reconhecidos antecipadamente como despesa realizada;
 - multa só pode ser registrada depois do vencimento real aplicável.
 
-**PENDENTE — #345:**
+**IMPLEMENTADO — #345:**
 
-O cronograma canônico do empréstimo deve permitir quantidade de parcelas, datas, decomposição entre principal e encargos e projeção futura. Enquanto esse contrato não existir, a UX não deve transformar juros futuros do parcelamento em despesa confirmada no momento da contratação.
+O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro vencimento, principal, juros e tarifas projetados por parcela. Juros/tarifas futuros permanecem projeções e só se tornam fatos econômicos quando materializados pelo pagamento ou por registro posterior de custo; principal permanece neutro. O detalhe do contrato prioriza a próxima parcela aberta e aceita pagamento parcial. Multas continuam fora do cronograma e só podem nascer após atraso real.
+
+
+## Cronograma canônico de empréstimos — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- uma única obrigação canônica de principal em `financial_obligations`;
+- parcelas em `loan_schedule_items`, sem reativar `loan_installments` ou `loan_payment_schedule`;
+- uma vez ou parcelado, de 1 a 120 parcelas;
+- primeiro vencimento e vencimentos mensais subsequentes;
+- distribuição exata do principal, juros e tarifas, inclusive centavos de arredondamento;
+- juros/tarifas contratuais futuros são projeções, não despesas realizadas na contratação;
+- responsabilidade econômica dos custos é explícita por membro quando houver juros/tarifas;
+- pagamento da próxima parcela reúne principal + juros + tarifa em uma única saída de caixa;
+- pagamento parcial é permitido e mantém o restante na mesma parcela;
+- pagamentos seguem a parcela aberta mais antiga;
+- detalhe do empréstimo exibe cronograma, progresso e ações de pagamento;
+- multa segue fluxo separado e só pode existir depois do atraso real.
