@@ -33,7 +33,7 @@ test('Home resume top categorias pelo gasto econômico realizado sem chamar de o
 
 test('posição realizada usa relação compacta entre membros',()=>{
   assert.match(settlements,/memberPairs/);
-  assert.match(settlements,/Posição de hoje/);
+  assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
   assert.match(settlements,/currentText/);
 });
 
@@ -62,9 +62,9 @@ test('Home não transforma planejamento futuro normal em alerta de atenção',()
 
 test('member position is informational on Home and no longer exposes a generic settle button',()=>{
   assert.match(settlements,/Valores com pessoas/);
-  assert.match(settlements,/Posição de hoje/);
+  assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
   assert.doesNotMatch(settlements,/Acertar agora/);
-  assert.match(settlements,/Tendência:/);
+  assert.match(settlements,/Ver tendência/);
   assert.match(settlements,/Ver histórico e compromissos/);
 });
 

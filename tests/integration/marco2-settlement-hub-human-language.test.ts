@@ -9,7 +9,7 @@ test('Valores com pessoas resume relações antes de expor detalhes', () => {
   assert.match(source, /memberPairs/);
   assert.match(source, /thirdPartyGroups/);
   assert.match(source, /Wallace|memberName\(pair\.leftId\)/);
-  assert.match(source, /Tendência:/);
+  assert.match(source, /Ver tendência/);
   assert.match(source, /Ver histórico e compromissos/);
   assert.doesNotMatch(source, /Entre vocês · posição de hoje/);
   assert.doesNotMatch(source, /Entre vocês · tendência/);
