@@ -2,7 +2,7 @@
 
 ## Status
 
-**DEFINIDO**
+**DEPRECADO PARCIALMENTE** — a arquitetura de perspectiva única permanece válida, mas a lista de seções e os agrupamentos de recursos foram substituídos por `2026-09-27-home-question-consolidation.md`.
 
 A Home do Casa deve manter a mesma arquitetura de informação ao alternar entre **Nossa Casa** e a perspectiva individual de cada membro.
 
