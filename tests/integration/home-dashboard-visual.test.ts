@@ -58,20 +58,18 @@ test('Home não transforma planejamento futuro normal em alerta de atenção',()
   assert.doesNotMatch(projectionReview,/Atualizar previsões/);
 });
 
-test('Acertos realizados podem ser resolvidos diretamente da posição humana na Home',()=>{
-  assert.match(settlements,/Acertar agora/);
-  assert.match(settlements,/kind:'members'/);
-  assert.match(settlements,/debtorMemberId:row\.debtor_member_id/);
-  assert.match(settlements,/creditorMemberId:row\.creditor_member_id/);
-  assert.match(settlements,/amount:Number\(row\.realized_outstanding\)/);
+test('member position is informational on Home and no longer exposes a generic settle button',()=>{
+  assert.match(settlements,/Valores com pessoas/);
+  assert.match(settlements,/posição de hoje/);
+  assert.doesNotMatch(settlements,/Acertar agora/);
   assert.match(settlements,/pode ter a receber de/);
   assert.match(settlements,/Ainda não existe valor para acertar agora/);
 });
 
-test('Home mostra histórico de acertos como movimento neutro, não renda ou gasto',()=>{
-  assert.match(settlements,/Histórico de acertos/);
-  assert.match(settlements,/Movimentos neutros: reduzem o que alguém devia sem virar renda ou gasto/);
-  assert.match(settlements,/Acerto concluído/);
+test('Home mostra histórico entre membros como movimento neutro, não renda ou gasto',()=>{
+  assert.match(settlements,/Histórico entre vocês/);
+  assert.match(settlements,/Movimentos neutros que alteraram a posição entre vocês sem virar renda ou gasto/);
+  assert.match(settlements,/Movimento entre vocês/);
   assert.match(settlements,/event\.kind==='explicit_settlement'/);
   assert.match(settlements,/event\.state==='realized'/);
   assert.match(settlements,/text-cyan-200/);
