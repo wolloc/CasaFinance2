@@ -30,13 +30,14 @@ export type MemberSettlementEvent = {
   financial_date: string;
   notes: string | null;
   source_transaction_id: string | null;
+  source_money_movement_id: string | null;
   source_description: string | null;
 };
 
 export async function listMemberSettlementEvents(client: SupabaseClient, householdId: string) {
   const events = await client
     .from('member_settlement_events')
-    .select('id,debtor_member_id,creditor_member_id,amount,state,kind,financial_date,notes,source_transaction_id')
+    .select('id,debtor_member_id,creditor_member_id,amount,state,kind,financial_date,notes,source_transaction_id,source_money_movement_id')
     .eq('household_id', householdId)
     .in('state', ['projected', 'realized'])
     .order('financial_date', { ascending: false });

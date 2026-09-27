@@ -31,11 +31,12 @@ Entre membros, a UX evita tratar a posição como uma dívida tradicional. A met
 
 ## Transferência entre membros
 
-**DEFINIDO, implementação de motor em etapa seguinte:** quando uma transferência ocorre entre recursos de membros diferentes, o Casa pode considerá-la na posição entre eles.
+**DEFINIDO e IMPLEMENTADO:** quando uma transferência ocorre entre recursos de membros diferentes, o Casa pode considerá-la na posição entre eles.
 
 - a opção deve vir marcada por padrão quando a titularidade origem/destino indicar membros diferentes;
 - o usuário pode marcar a transferência como exceção, sem afetar a posição;
 - quando considerada, a posição pode atravessar zero e inverter de lado;
+- a Home apresenta a posição líquida, evitando mostrar duas dívidas opostas simultaneamente;
 - existe um único movimento de caixa;
 - nunca nasce renda ou despesa por causa dessa transferência.
 
