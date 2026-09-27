@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, CreditCard, Landmark, Search, UserRound, X } from 'lucide-react';
+import { CalendarDays, CreditCard, Landmark, Search, UserRound, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { supabase } from '../../lib/supabase.js';
@@ -8,6 +8,7 @@ import { getCategoryVisual } from '../categoryVisuals.js';
 import { FinancialListSummaryCard } from './FinancialListSummaryCard.js';
 import { FinancialPageHeader } from './FinancialPageHeader.js';
 import { FinancialListState } from './FinancialListState.js';
+import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
 
 const money=(value:number|string|null|undefined)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
 const currentMonth=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit'}).formatToParts(new Date());const year=parts.find(part=>part.type==='year')?.value??'';const month=parts.find(part=>part.type==='month')?.value??'';return `${year}-${month}`;};
@@ -65,7 +66,28 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   const periodNoun=customRange?'período':'mês';
 
   return <section className="text-slate-100">
-    <div className="space-y-3"><FinancialPageHeader title="Gastos"/><div className="relative"><div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-1.5"><button type="button" aria-label="Mês anterior" onClick={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,-1));setQuery('')}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"><ChevronLeft className="h-5 w-5"/></button><button type="button" onClick={()=>setPeriodPickerOpen(value=>!value)} aria-expanded={periodPickerOpen} className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-xl text-center hover:bg-slate-900"><span className="block text-base font-black capitalize text-slate-100">{periodLabel}</span><span className="block text-xs text-slate-400">Toque para escolher o período</span></button><button type="button" aria-label="Mês seguinte" onClick={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,1));setQuery('')}} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"><ChevronRight className="h-5 w-5"/></button></div>{periodPickerOpen&&<div className="absolute left-0 right-0 z-30 mt-2 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl"><div className="flex items-center justify-between"><div><strong className="text-sm">Escolher período</strong><p className="text-xs text-slate-500">Mês inteiro ou datas específicas.</p></div><button type="button" aria-label="Fechar escolha de período" onClick={()=>setPeriodPickerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-slate-800"><X className="h-4 w-4"/></button></div><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setCustomRange(false)} className={`min-h-10 rounded-xl border text-xs font-bold ${!customRange?'border-blue-500 bg-blue-500/15 text-blue-200':'border-slate-800 text-slate-400'}`}>Mês inteiro</button><button type="button" onClick={()=>{if(!customRange){setRangeStart(`${month}-01`);setRangeEnd(monthEnd(month));}setCustomRange(true);}} className={`min-h-10 rounded-xl border text-xs font-bold ${customRange?'border-blue-500 bg-blue-500/15 text-blue-200':'border-slate-800 text-slate-400'}`}><CalendarRange className="mr-1 inline h-4 w-4"/>Personalizado</button></div>{!customRange?<label className="mt-3 block text-xs font-semibold text-slate-400">Mês<input aria-label="Escolher mês dos gastos" type="month" value={month} onChange={event=>{setMonth(event.target.value);setQuery('')}} className="mt-1 min-h-11 w-full rounded-xl bg-slate-950 px-3 text-sm text-slate-100"/></label>:<div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs text-slate-400">De<input type="date" value={rangeStart} onChange={event=>{const next=event.target.value;setRangeStart(next);if(next>rangeEnd)setRangeEnd(next);setQuery('')}} className="mt-1 min-h-11 w-full rounded-xl bg-slate-950 px-3 text-sm text-slate-100"/></label><label className="text-xs text-slate-400">Até<input type="date" min={rangeStart} value={rangeEnd} onChange={event=>{setRangeEnd(event.target.value);setQuery('')}} className="mt-1 min-h-11 w-full rounded-xl bg-slate-950 px-3 text-sm text-slate-100"/></label></div>}<button type="button" disabled={customRange&&!customRangeReady} onClick={()=>setPeriodPickerOpen(false)} className="mt-3 min-h-11 w-full rounded-xl bg-blue-600 text-sm font-bold disabled:opacity-50">Aplicar</button></div>}</div></div>
+    <div className="space-y-3"><FinancialPageHeader title="Gastos"/><FinancialPeriodNavigator
+      label={periodLabel}
+      open={periodPickerOpen}
+      onToggle={()=>setPeriodPickerOpen(value=>!value)}
+      onClose={()=>setPeriodPickerOpen(false)}
+      onPrevious={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,-1));setQuery('');}}
+      onNext={()=>{setCustomRange(false);setMonth(value=>shiftMonth(value,1));setQuery('');}}
+      customRange={customRange}
+      allowCustomRange
+      monthValue={month}
+      monthAriaLabel="Escolher mês dos gastos"
+      onMonthChange={value=>{setMonth(value);setQuery('');}}
+      rangeStart={rangeStart}
+      rangeEnd={rangeEnd}
+      rangeReady={customRangeReady}
+      onRangeStartChange={value=>{setRangeStart(value);if(value>rangeEnd)setRangeEnd(value);setQuery('');}}
+      onRangeEndChange={value=>{setRangeEnd(value);setQuery('');}}
+      onUseMonth={()=>setCustomRange(false)}
+      onUseCustomRange={()=>{if(!customRange){setRangeStart(`${month}-01`);setRangeEnd(monthEnd(month));}setCustomRange(true);}}
+      pickerTitle="Escolher período"
+      pickerDescription="Mês inteiro ou datas específicas."
+     />
 
     <div className="mt-4"><FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/></div>
 
