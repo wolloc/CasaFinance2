@@ -28,6 +28,11 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/detailLabel/);
  assert.match(home,/ordered=\[\.\.\.group\.rows\]\.sort/);
  assert.match(home,/grid grid-cols-3 gap-2/);
+ assert.match(home,/group\/resources/);
+ assert.match(home,/Valor acompanhado/);
+ assert.match(row,/useState\(false\)/);
+ assert.match(row,/document\.addEventListener\('pointerdown'/);
+ assert.match(row,/absolute left-1\/2 top-\[calc\(100%-6px\)\]/);
  assert.doesNotMatch(row,/\.rpc\(|\.insert\(|\.update\(|\.delete\(/);
 });
 

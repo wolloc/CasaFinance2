@@ -612,3 +612,25 @@ O Casa deve sempre conseguir responder:
 **PENDENTE — cronograma canônico do principal:**
 
 O modelo canônico atual de novos empréstimos usa `financial_obligations` e ainda não possui cronograma parcelado de principal. As estruturas legadas `loan_installments` / `loan_payment_schedule` não devem ser reativadas como solução paralela. Antes de oferecer **parcelado** na UX, criar um cronograma canônico compatível com obrigações, pagamentos parciais, juros/tarifas e histórico. Até lá, o formulário não deve simular parcelas apenas no frontend.
+
+
+## Refinamento de recursos e contrato de empréstimo — 2026-09-27
+
+**DEFINIDO:**
+
+- **Onde está nosso dinheiro** mostra primeiro o valor acompanhado e um resumo compacto por grupo: Contas, Dinheiro, Benefícios e Investimentos, cada um com seu total;
+- os cards individuais de cada recurso ficam recolhidos por padrão e aparecem somente ao abrir o grupo correspondente;
+- tocar em um recurso não aumenta a altura da grade: as ações aparecem em um menu flutuante ancorado ao card;
+- tocar novamente no card fecha o menu; tocar fora também fecha;
+- as ações disponíveis continuam derivadas da natureza do recurso e apenas roteiam para jornadas canônicas existentes;
+- na jornada de criação de empréstimo tomado, **Pagar empréstimo** deixa de aparecer junto da captura inicial;
+- depois que o empréstimo existe, custos posteriores e pagamentos pertencem ao **detalhe do contrato**;
+- em Valores com pessoas, um principal de empréstimo tomado em aberto oferece **Ver empréstimo**, levando ao detalhe contextual;
+- o detalhe do empréstimo reúne custos já cobrados e pagamentos, preservando principal, juros, tarifas e multas como componentes financeiramente distintos;
+- na criação de um empréstimo tomado, após o principal ser registrado, a mesma jornada pode continuar para **Custos do contrato** daquele empréstimo;
+- nessa etapa inicial só podem ser registrados juros/tarifas **já efetivamente cobrados**. Juros futuros parcelados não podem ser reconhecidos antecipadamente como despesa realizada;
+- multa só pode ser registrada depois do vencimento real aplicável.
+
+**PENDENTE — #345:**
+
+O cronograma canônico do empréstimo deve permitir quantidade de parcelas, datas, decomposição entre principal e encargos e projeção futura. Enquanto esse contrato não existir, a UX não deve transformar juros futuros do parcelamento em despesa confirmada no momento da contratação.
