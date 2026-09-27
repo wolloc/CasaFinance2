@@ -58,5 +58,6 @@ test('Nova Entrada follows the simplified product order and hides technical inco
  const confirmation=screen.indexOf('Essa entrada já está confirmada?');
  assert.ok(destination>=0&&origin>destination&&amount>origin&&when>amount&&category>when&&confirmation>category);
  assert.doesNotMatch(screen,/>Tipo<select/);
- assert.match(screen,/useState<IncomeNature>\('other_true_income'\)/);
+ assert.match(screen,/const inferredIncomeNature:IncomeNature/);
+ assert.match(screen,/return 'other_true_income'/);
 });
