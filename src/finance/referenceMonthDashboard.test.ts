@@ -43,5 +43,5 @@ test('month navigation respects the financial cutover and keeps a return-to-curr
 
 test('historical individual perspective refuses to fabricate old liquidity ownership',()=>{
   assert.match(homeSource,/Não retrocede o saldo atual nem a titularidade atual para fabricar uma liquidez individual histórica/);
-  assert.match(homeSource,/listEconomicMonthExpenses[\s\S]*referenceMonth\.slice\(0,7\)/);
+  assert.doesNotMatch(homeSource,/listEconomicMonthExpenses/);
 });
