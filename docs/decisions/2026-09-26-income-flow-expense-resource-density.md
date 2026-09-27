@@ -5,7 +5,7 @@
 A ordem da jornada é:
 
 1. **De quem é esta entrada?**
-2. **Onde entrou?** — recurso compatível com a titularidade da pessoa selecionada.
+2. **Onde entrou?** — recurso compatível com a titularidade da pessoa selecionada. Os cards devem ser compactos e priorizar **nome do recurso**, **instituição** e **titular**; rótulos genéricos de tipo ficam fora quando forem redundantes.
 3. **De onde vem?**
 4. **Valor**
 5. **Quando?**
