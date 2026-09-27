@@ -23,7 +23,7 @@ test('Gastos period picker routes each lens to its matching period read',()=>{
  assert.match(browser,/Mês inteiro/);
  assert.match(browser,/Personalizado/);
  assert.match(browser,/Compromissos do período/);
- assert.match(browser,/data financeira canônica/);
+ assert.doesNotMatch(browser,/Impactos financeiros do \{periodNoun\}/);
  assert.match(browser,/data econômica do fato/);
 });
 
