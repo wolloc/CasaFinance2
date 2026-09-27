@@ -32,9 +32,11 @@ test('borrowing from a resource reuses LoanAdjustment with taken direction and s
   assert.match(loan,/credor e esta conta como destino/);
 });
 
-test('Values with people exposes the same loan engine for lending or borrowing',()=>{
-  assert.match(hub,/Empréstimos/);
-  assert.match(hub,/onResolve\?\.\(\{kind:'loan'\}\)/);
+test('Values with people exposes explicit lending and borrowing intents',()=>{
+  assert.match(hub,/Peguei emprestado/);
+  assert.match(hub,/Emprestei dinheiro/);
+  assert.match(hub,/kind:'loan',direction:'taken'/);
+  assert.match(hub,/kind:'loan',direction:'granted'/);
   assert.match(adjustment,/settlementIntent\?\.kind==='loan'\?'loan'/);
   assert.match(loan,/Emprestei dinheiro/);
   assert.match(loan,/Peguei emprestado/);
