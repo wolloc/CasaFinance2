@@ -578,3 +578,16 @@ O Casa deve sempre conseguir responder:
 ### Refinamento da Casa — 2026-09-27
 
 **DEFINIDO:** **O que mais pesou** deixa de fazer parte da Home. A leitura por categoria pertence a **Gastos** e **Entradas**, onde existe contexto e exploração detalhada. **Próximos acontecimentos** e **Olhando pra frente** permanecem em homologação de utilidade; não devem ganhar novas responsabilidades até nova decisão.
+
+
+## Refinamento visual da Home e cartões — 2026-09-27
+
+**DEFINIDO:**
+
+- recursos em **Onde está nosso dinheiro** são cards visuais individuais, ordenados do maior saldo para o menor dentro de cada grupo;
+- grupo e total funcionam como cabeçalho leve, sem container pesado envolvendo toda a lista;
+- **Valores com pessoas** vem antes de **Próximos acontecimentos**;
+- relação entre os membros da Casa tem maior destaque visual;
+- terceiro mostra a responsabilidade econômica comprovável do fato de origem; não inferir 50/50 quando não houver evidência;
+- tocar em cartão na Home abre diretamente as **Faturas** daquele cartão, com navegação entre faturas e pagamento contextual;
+- em Nova Despesa, **Outra pessoa pagou** usa texto compacto para caber no seletor de três colunas.
