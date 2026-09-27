@@ -29,7 +29,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     client.rpc('financial_priority_attention_items',{p_household_id:householdId}),
     client.rpc('financial_monthly_projection',{p_household_id:householdId,p_reference_month:currentMonth(timeZone),p_horizon_months:4}),
     client.from('financial_card_health_positions').select('card_id,card_name,credit_limit,current_invoice_remaining,future_known_commitments,available_limit,utilization_ratio,over_limit_amount,next_due_date,card_health').eq('household_id',householdId).order('card_name'),
-    client.from('financial_member_settlement_positions').select('debtor_member_id,creditor_member_id,realized_outstanding,projected_outstanding,scheduled_settlement_amount,net_position').eq('household_id',householdId),
+    client.from('financial_member_net_positions').select('debtor_member_id,creditor_member_id,realized_outstanding,projected_outstanding,scheduled_settlement_amount,net_position').eq('household_id',householdId),
     client.from('financial_account_balances').select('type,resource_restriction,current_balance,is_restricted,is_investment').eq('household_id',householdId),
     client.rpc('financial_liquidity_guidance',{p_household_id:householdId}),
   ]);
