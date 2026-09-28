@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const sql=await readFile(new URL('../../supabase/migrations/20260927194000_canonical_loan_schedule.sql',import.meta.url),'utf8');
+const sql=await readFile(new URL('../../supabase/migrations/20260928011337_canonical_loan_schedule.sql',import.meta.url),'utf8');
 
 test('canonical loan schedule stays linked to financial_obligations and does not reactivate legacy loan tables',()=>{
  assert.match(sql,/create table if not exists public\.loan_schedule_items/);
