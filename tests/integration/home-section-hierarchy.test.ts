@@ -25,3 +25,12 @@ test('escala de seção é definida em um único lugar',()=>{
   assert.match(heading,/text-sm leading-5 text-slate-400/);
   assert.match(heading,/text-xs font-bold uppercase tracking-\[0\.14em\]/);
 });
+
+
+test('centro de atenção usa datas e severidade em linguagem humana',()=>{
+ const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
+ assert.match(priority,/shortDate/);
+ assert.match(priority,/Ação importante/);
+ assert.match(priority,/Vale conferir/);
+ assert.doesNotMatch(priority,/\{item\.due_date\}<\/span>/);
+});
