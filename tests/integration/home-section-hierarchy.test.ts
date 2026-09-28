@@ -25,3 +25,11 @@ test('escala de seção é definida em um único lugar',()=>{
   assert.match(heading,/text-sm leading-5 text-slate-400/);
   assert.match(heading,/text-xs font-bold uppercase tracking-\[0\.14em\]/);
 });
+
+
+test('centro de atenção usa datas e severidade em linguagem humana',()=>{
+ assert.match(priority,/shortDate/);
+ assert.match(priority,/Ação importante/);
+ assert.match(priority,/Vale conferir/);
+ assert.doesNotMatch(priority,/\{item\.due_date\}<\/span>/);
+});
