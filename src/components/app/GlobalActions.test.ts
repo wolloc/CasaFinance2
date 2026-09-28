@@ -123,4 +123,6 @@ test('global actions float independently above navigation without losing accessi
   assert.match(actionsSource,/onPointerMove/);
   assert.match(actionsSource,/setPointerCapture/);
   assert.match(actionsSource,/GripVertical/);
+  assert.match(actionsSource,/aria-label="Arrastar ações"/);
+  assert.match(actionsSource,/onPointerDown=\{onDragStart\}/);
 });
