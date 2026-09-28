@@ -411,7 +411,7 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   if (!open) return null;
 
   return <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-    <form onSubmit={save} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+    <form role="dialog" aria-modal="true" aria-label="Nova despesa" onSubmit={save} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
       <FinancialActionDialogHeader tone="expense" eyebrow="Gasto" title="Nova despesa" icon={<Receipt className="h-5 w-5"/>} onClose={()=>setOpen(false)} closeLabel="Fechar nova despesa"/>
       <div className="p-4">
       {loading && <div className="flex min-h-40 items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin text-blue-300" /></div>}
