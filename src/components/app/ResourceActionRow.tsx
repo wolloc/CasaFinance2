@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, TrendingUp, Utensils, Wallet } from 'lucide-react';
 
-export type ResourceNavigationAction={kind:'expense'|'transfer'|'reserve'|'loan'|'settings';accountId:string};
+export type ResourceNavigationAction={kind:'transfer'|'reserve'|'loan'|'settings';accountId:string};
 export type ResourceActionTarget={
  accountId:string;
  name:string;
