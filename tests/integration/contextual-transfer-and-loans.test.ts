@@ -19,6 +19,8 @@ test('selected resource opens transfer as a direct form with the source already 
   assert.match(adjustment,/Saiu de/);
   assert.match(adjustment,/transferSource\.name/);
   assert.match(adjustment,/Entrou em/);
+  assert.match(adjustment,/FinancialResourceChoice/);
+  assert.match(adjustment,/transferDestinations/);
   assert.match(adjustment,/>Valor</);
   assert.match(adjustment,/>Quando</);
   assert.match(adjustment,/\{!contextualEntry&&<button[\s\S]*?← Outras opções<\/button>\}/);
@@ -75,6 +77,11 @@ test('loan payment moved from creation into the existing contract detail',()=>{
   assert.match(loanDetail,/LoanPaymentAdjustment initialLoanId=\{loanId\}/);
   assert.match(loanDetail,/LoanChargesAdjustment initialLoanId=\{loanId\}/);
   assert.match(loanPayment,/initialLoanId/);
+});
+
+test('contextual loan does not render an empty amber warning card',()=>{
+  assert.match(adjustment,/\{initialIntent&&<div className="rounded-xl border border-amber-900\/60/);
+  assert.doesNotMatch(adjustment,/selected==='loan'&&<><div className="rounded-xl border border-amber-900/);
 });
 
 test('future contractual costs stay projected in the schedule until payment or later accrual',()=>{
