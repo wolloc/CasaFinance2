@@ -6,7 +6,7 @@ const screen=await readFile(new URL('../../src/components/app/IncomeCreationActi
 const resourceChoice=await readFile(new URL('../../src/components/app/FinancialResourceChoice.tsx',import.meta.url),'utf8');
 
 test('Nova Entrada starts from the beneficiary before destination and value',()=>{
- const beneficiary=screen.indexOf('De quem é esta entrada?');
+ const beneficiary=screen.indexOf('Quem recebe?');
  const destination=screen.indexOf('Onde entrou?');
  const amount=screen.indexOf('>Valor<input');
  assert.ok(beneficiary>=0);
@@ -20,7 +20,7 @@ test('income destination cards use canonical account ownership',()=>{
  assert.match(screen,/account\.owner_member_ids/);
  assert.match(screen,/resource\.ownerMemberIds\.includes\(beneficiaryMemberId\)/);
  assert.match(screen,/Conjunta/);
- assert.match(screen,/Titular/);
+ assert.doesNotMatch(screen,/Titular ·/);
  assert.match(screen,/DestinationIcon/);
  assert.match(screen,/institution:account\.institution/);
  assert.match(screen,/institution=\{resource\.institution\}/);
@@ -36,14 +36,13 @@ test('changing beneficiary drops an incompatible previously selected account',()
  assert.match(screen,/Escolha uma conta compatível com a pessoa que recebe esta entrada/);
 });
 
-test('known income defaults to confirmed with human language and without pretending it was received',()=>{
- assert.match(screen,/useState<IncomeConfidence>\('confirmed'\)/);
- assert.match(screen,/Essa entrada já está confirmada\?/);
- assert.match(screen,/Sim, já sei que vou receber/);
- assert.match(screen,/Ainda é uma expectativa/);
- assert.match(screen,/Ela só vira recebida quando o dinheiro realmente entrar/);
- assert.match(screen,/saldo só muda quando o recebimento acontecer de verdade/);
- assert.doesNotMatch(screen,/Situação<select/);
+test('income state is inferred from date and past or today is settled into the selected resource',()=>{
+ assert.match(screen,/const isFuture=Boolean\(expectedDate&&expectedDate>today\)/);
+ assert.match(screen,/economicState=isFuture\?'forecast'.*:'confirmed'/);
+ assert.match(screen,/settleHouseholdIncome/);
+ assert.match(screen,/data é futura.*prevista/s);
+ assert.match(screen,/data é hoje ou anterior.*recebida/s);
+ assert.doesNotMatch(screen,/Essa entrada já está confirmada\?/);
 });
 
 test('recurring income is created inside the owner-first flow without bypassing destination compatibility',()=>{
@@ -60,8 +59,8 @@ test('Nova Entrada follows the simplified product order and hides technical inco
  const amount=screen.indexOf('>Valor<input');
  const when=screen.indexOf('Quando?');
  const category=screen.indexOf('Categoria');
- const confirmation=screen.indexOf('Essa entrada já está confirmada?');
- assert.ok(destination>=0&&origin>destination&&amount>origin&&when>amount&&category>when&&confirmation>category);
+ assert.ok(destination>=0&&origin>destination&&amount>origin&&when>amount&&category>when);
+ assert.doesNotMatch(screen,/Essa entrada já está confirmada\?/);
  assert.doesNotMatch(screen,/>Tipo<select/);
  assert.match(screen,/const inferredIncomeNature:IncomeNature/);
  assert.match(screen,/return 'other_true_income'/);
