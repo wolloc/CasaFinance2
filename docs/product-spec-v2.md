@@ -742,3 +742,22 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 
 - confirmar se os itens de lista de Entrada e Gasto já parecem suficientemente da mesma família visual;
 - confirmar se o detalhe contextual dos lançamentos precisa de mais uma rodada de alinhamento antes do Golden Journey.
+
+
+## Detalhes contextuais de Entrada e Gasto — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- detalhes de Entrada e Gasto compartilham a mesma hierarquia de ações;
+- ações cotidianas permanecem visíveis: **Corrigir** e **Histórico**;
+- ações destrutivas ou excepcionais ficam em **Outras opções** / **Ações especiais**;
+- cancelamento e estorno deixam de competir visualmente com ações comuns;
+- recorrência continua acessível no detalhe do lançamento;
+- pagamentos por terceiro, devoluções e correção de comprador/responsabilidade permanecem disponíveis no detalhe do gasto, porém em bloco secundário;
+- nenhuma regra financeira, histórico auditável ou ação canônica foi removida.
+
+**PENDENTE DE HOMOLOGAÇÃO PM:**
+
+- confirmar se a densidade do detalhe da Entrada ficou adequada;
+- confirmar se o detalhe do Gasto está suficientemente simples sem esconder ações especiais;
+- validar se Entrada e Gasto agora parecem pertencer à mesma família de detalhe antes do Golden Journey.
