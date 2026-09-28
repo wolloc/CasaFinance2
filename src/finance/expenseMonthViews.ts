@@ -299,7 +299,7 @@ async function collectPages<T>(load:(from:number,to:number)=>PromiseLike<{data:T
 }
 
 async function loadTransactionVisualsBatched(client:SupabaseClient,householdId:string,transactionIds:string[]){
-  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null}>();
+  const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null;instrumentLabel:string|null}>();
   const responsibility=new Map<string,ResponsibilityVisual>();
   const recurringRuleByTransaction=new Map<string,string>();
   for(const ids of chunkValues(transactionIds)){
@@ -319,7 +319,7 @@ function assertExpensePeriod(startDate:string,endDate:string){
 
 export async function listFinancialPeriodExpenses(client:SupabaseClient,householdId:string,startDate:string,endDate:string,memberId?:string){
   assertExpensePeriod(startDate,endDate);
-  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'|'buyer_member_id'|'instrument_kind'>>((from,to)=>
+  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'|'buyer_member_id'|'instrument_kind'|'instrument_label'>>((from,to)=>
     client.from('financial_commitment_positions')
       .select('commitment_key,source_type,source_transaction_id,source_installment_id,source_invoice_id,financial_date,financial_month,due_date,economic_date,effective_amount,realized_amount,remaining_amount,economic_state,commitment_state,description,category_id')
       .eq('household_id',householdId)
