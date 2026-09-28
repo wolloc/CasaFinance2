@@ -10,20 +10,21 @@ test('economic expenses keep canonical date ordering and stable same-day orderin
   assert.match(view, /order\('transaction_date',\{ascending:false\}\)[\s\S]*order\('created_at',\{ascending:false\}\)/);
 });
 
-test('expense reads expose buyer and payment instrument without inferring responsibility', () => {
+test('expense reads preserve buyer data internally and expose named payment resources without inferring responsibility', () => {
   assert.match(view, /buyer_member_id/);
-  assert.match(view, /transaction_payment_instruments\(kind\)/);
+  assert.match(view, /transaction_payment_instruments\(kind,account:accounts\(name,institution\),card:cards\(name,institution,last_four\)\)/);
   assert.match(view, /buyerMemberId/);
   assert.match(view, /instrumentKind/);
+  assert.match(view, /instrumentLabel/);
   assert.doesNotMatch(view, /buyer_member_id[^\n]+responsib/i);
 });
 
-test('expense list shows compact buyer and resource context', () => {
-  assert.match(screen, /UserRound/);
+test('expense list shows responsibility and resource context without buyer noise', () => {
+  assert.doesNotMatch(screen, /UserRound|row\.buyer_member_id/);
+  assert.match(screen, /responsibilityLabel\(row\.responsibility\)/);
   assert.match(screen, /instrumentLabel/);
   assert.match(screen, /CreditCard/);
   assert.match(screen, /Landmark/);
-  assert.match(screen, /row\.buyer_member_id/);
   assert.match(screen, /row\.instrument_kind/);
 });
 
