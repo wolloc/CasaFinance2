@@ -28,7 +28,6 @@ test('escala de seção é definida em um único lugar',()=>{
 
 
 test('centro de atenção usa datas e severidade em linguagem humana',()=>{
- const priority=await readFile(new URL('../../src/components/app/FinancialPriorityCenter.tsx',import.meta.url),'utf8');
  assert.match(priority,/shortDate/);
  assert.match(priority,/Ação importante/);
  assert.match(priority,/Vale conferir/);
