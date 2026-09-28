@@ -20,10 +20,19 @@ export function GlobalActions({ onExpense, onIncome }: {
     const current=drag.current;
     const root=rootRef.current;
     if(!current||current.pointerId!==event.pointerId||!root)return;
-    const maxLeft=Math.max(8,window.innerWidth-root.offsetWidth-8);
-    const maxTop=Math.max(8,window.innerHeight-root.offsetHeight-88);
-    const left=Math.min(maxLeft,Math.max(8,event.clientX-current.offsetX));
-    const top=Math.min(maxTop,Math.max(8,event.clientY-current.offsetY));
+    const viewport=window.visualViewport;
+    const viewportLeft=viewport?.offsetLeft??0;
+    const viewportTop=viewport?.offsetTop??0;
+    const viewportWidth=viewport?.width??window.innerWidth;
+    const viewportHeight=viewport?.height??window.innerHeight;
+    const edge=8;
+    const bottomReserve=88;
+    const minLeft=viewportLeft+edge;
+    const maxLeft=Math.max(minLeft,viewportLeft+viewportWidth-root.offsetWidth-edge);
+    const minTop=viewportTop+edge;
+    const maxTop=Math.max(minTop,viewportTop+viewportHeight-root.offsetHeight-bottomReserve);
+    const left=Math.min(maxLeft,Math.max(minLeft,event.clientX-current.offsetX));
+    const top=Math.min(maxTop,Math.max(minTop,event.clientY-current.offsetY));
     setPosition({left,top});
   };
   const onDragEnd=(event:ReactPointerEvent<HTMLSpanElement>)=>{
@@ -36,7 +45,7 @@ export function GlobalActions({ onExpense, onIncome }: {
     ref={rootRef}
     aria-label="Ações globais"
     style={position?{left:position.left,top:position.top,bottom:'auto',transform:'none'}:undefined}
-    className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-30 flex -translate-x-1/2 select-none items-stretch overflow-hidden rounded-full border border-slate-700/80 bg-slate-900/94 shadow-xl shadow-black/45 ring-1 ring-white/5 backdrop-blur-xl"
+    className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-30 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 select-none items-stretch overflow-hidden rounded-full border border-slate-700/80 bg-slate-900/94 shadow-xl shadow-black/45 ring-1 ring-white/5 backdrop-blur-xl"
   >
     <button type="button" aria-label="Nova despesa" onClick={onExpense} className="flex min-h-11 items-center justify-center gap-1.5 px-3 text-[12px] font-bold text-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rose-400">
       <Minus className="h-4 w-4" />Gasto

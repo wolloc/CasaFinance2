@@ -63,16 +63,15 @@ A linguagem visual deve evitar aparência de dashboard corporativo/BI: tipografi
 A ordem conceitual é:
 
 1. **Como estamos?** — síntese única do mês: saldo atual, entrou, ainda entra, já comprometido, ainda compromete e projeção de fechamento;
-2. **Precisa de atenção** — link/área expansível com somente exceções acionáveis; fechado por padrão para preservar limpeza visual;
+2. **Precisa de atenção** — link/área expansível com exceções acionáveis e acontecimentos dos próximos 7 dias que mereçam acompanhamento; fechado por padrão para preservar limpeza visual;
 3. **Onde está nosso dinheiro** — recursos visíveis e compactos, agrupados em Contas, Dinheiro, Benefícios e Investimentos;
 4. **Cartões** — fotografia por cartão, com fatura, vencimento, limite livre, crédito comprometido e compromissos futuros; detalhes e pagamento ficam no contexto do cartão;
-5. **Próximos acontecimentos** — eventos dos próximos dias; permanece em avaliação de utilidade, sem duplicar o centro de atenção;
-6. **Valores com pessoas** — posição entre membros e terceiros, deixando visualmente claro quem deve a quem;
-7. **Olhando pra frente** — trajetória mensal agregada; permanece como visão futura enquanto sua utilidade é homologada.
+5. **Valores com pessoas** — posição entre membros e terceiros, deixando visualmente claro quem deve a quem;
+6. **Olhando pra frente** — trajetória mensal agregada; permanece como visão futura enquanto sua utilidade é homologada.
 
 **Patrimônio não é uma seção paralela obrigatória.** A Home mostra os recursos diretamente; reserva é atributo dentro de Investimentos, não uma categoria visual paralela.
 
-**Próximos acontecimentos** e **Olhando pra frente** não são redundantes: o primeiro responde “o que vai acontecer em breve?” com eventos discretos; o segundo responde “como a posição pode evoluir nos próximos meses?” de forma agregada.
+**DEFINIDO:** os acontecimentos dos próximos 7 dias passam a compor **Precisa de atenção**, evitando uma seção independente. **Olhando pra frente** continua respondendo como a posição pode evoluir nos próximos meses.
 
 
 ### Navegação mensal
@@ -577,7 +576,7 @@ O Casa deve sempre conseguir responder:
 
 ### Refinamento da Casa — 2026-09-27
 
-**DEFINIDO:** **O que mais pesou** deixa de fazer parte da Home. A leitura por categoria pertence a **Gastos** e **Entradas**, onde existe contexto e exploração detalhada. **Próximos acontecimentos** e **Olhando pra frente** permanecem em homologação de utilidade; não devem ganhar novas responsabilidades até nova decisão.
+**DEFINIDO:** **O que mais pesou** deixa de fazer parte da Home. A leitura por categoria pertence a **Gastos** e **Entradas**, onde existe contexto e exploração detalhada. Os acontecimentos dos próximos 7 dias ficam dentro de **Precisa de atenção**; **Olhando pra frente** permanece em homologação de utilidade.
 
 
 ## Refinamento visual da Home e cartões — 2026-09-27
@@ -586,7 +585,7 @@ O Casa deve sempre conseguir responder:
 
 - recursos em **Onde está nosso dinheiro** são cards visuais individuais, ordenados do maior saldo para o menor dentro de cada grupo;
 - grupo e total funcionam como cabeçalho leve, sem container pesado envolvendo toda a lista;
-- **Valores com pessoas** vem antes de **Próximos acontecimentos**;
+- **Valores com pessoas** permanece como seção própria; acontecimentos dos próximos 7 dias aparecem dentro de **Precisa de atenção**;
 - relação entre os membros da Casa tem maior destaque visual;
 - terceiro mostra a responsabilidade econômica comprovável do fato de origem; não inferir 50/50 quando não houver evidência;
 - tocar em cartão na Home abre diretamente as **Faturas** daquele cartão, com navegação entre faturas e pagamento contextual;
@@ -597,7 +596,7 @@ O Casa deve sempre conseguir responder:
 
 **DEFINIDO:**
 
-- em **Onde está nosso dinheiro**, os cards de recursos usam **três colunas no mobile** como padrão, preservando nome, instituição/titularidade e valor;
+- em **Onde está nosso dinheiro**, os cards de recursos usam **duas colunas no mobile** para preservar leitura de nome, instituição/titularidade e valor; telas maiores podem ampliar a grade;
 - os ícones dos recursos devem ser semânticos: conta/banco, poupança/reserva, benefício, carteira/dinheiro e investimento não compartilham o mesmo pictograma genérico;
 - os ícones podem usar acentos de cor discretos para melhorar varredura visual, sem transformar saldo ou natureza do recurso em estado de alerta;
 - **Como estamos?** usa um container mais neutro/discreto; a cor fica concentrada nos indicadores financeiros (entrada, saída, expectativa/compromisso), e não em um grande fundo azul;
