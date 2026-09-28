@@ -14,7 +14,9 @@ test('Home usa uma única hierarquia para títulos de seção',()=>{
   }
   assert.match(priority,/<summary[^\n]*>/);
   assert.match(priority,/Precisa de atenção/);
-  assert.match(upcoming,/FinancialSectionHeading[^\n]*title="Próximos 7 dias"/);
+  assert.match(priority,/\{children\}/);
+  assert.match(upcoming,/embedded/);
+  assert.match(upcoming,/Próximos 7 dias/);
   assert.match(settlements,/FinancialSectionHeading[^\n]*title="Valores com pessoas"/);
 });
 
