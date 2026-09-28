@@ -69,12 +69,25 @@ async function installSupabaseMock(page: Page, options: { failMemberList?: boole
           { id: 'm2', profile_id: '33333333-3333-4333-8333-333333333333', role: 'member', display_name: null, profiles: { display_name: 'Guilherme', display_name_confirmed_at: now, financial_onboarding_completed_at: now } },
         ]);
       }
-      if (table === 'households') return fulfill({ id: householdId, name: 'Casa Teste' });
+      if (table === 'households') return fulfill(select.includes('financial_tracking_started_on') ? { financial_tracking_started_on: '2026-09-01' } : { id: householdId, name: 'Casa Teste' });
       if (table === 'financial_household_position') return fulfill({ household_id: householdId, available_money: 3000, restricted_resources: 0, reserves: 1200, investments: 0, receivables: 0, payables: 0, open_invoices: 0, committed_balance: 5500, projected_balance: -500 });
       if (table === 'financial_projection_confidence_positions') return fulfill({ confidence_state: 'well_updated', confidence_label: 'Projeção atualizada' });
-      if (table === 'financial_account_balances') return fulfill([{ type: 'checking', resource_restriction: null, current_balance: 3000, is_restricted: false, is_investment: false }, { type: 'checking', resource_restriction: 'reserve', current_balance: 1200, is_restricted: true, is_investment: false }]);
+      if (table === 'financial_account_balances') return fulfill([{ account_id:'acc-1', name:'Conta Principal', type: 'checking', resource_restriction: null, current_balance: 3000, is_restricted: false, is_investment: false }, { account_id:'acc-2', name:'Reserva', type: 'checking', resource_restriction: 'reserve', current_balance: 1200, is_restricted: true, is_investment: false }]);
       if (table === 'financial_card_health_positions') return fulfill([{ card_id: 'card-1', card_name: 'Porto', credit_limit: 5000, current_invoice_remaining: 800, future_known_commitments: 300, available_limit: 3900, utilization_ratio: 0.22, over_limit_amount: 0, next_due_date: '2026-09-15', card_health: 'green' }]);
       if (table === 'financial_member_positions' || table === 'financial_member_settlement_positions') return fulfill([]);
+      if (table === 'accounts') return fulfill([
+        { id:'acc-1',household_id:householdId,owner_member_id:'m1',name:'Conta Principal',type:'checking',institution:'Itaú',opening_balance:'3000',opened_at:'2026-09-01',resource_restriction:null },
+        { id:'acc-2',household_id:householdId,owner_member_id:'m1',name:'Reserva',type:'checking',institution:'Itaú',opening_balance:'1200',opened_at:'2026-09-01',resource_restriction:'reserve' },
+      ]);
+      if (table === 'account_ownerships') return fulfill([{ account_id:'acc-1',member_id:'m1' },{ account_id:'acc-2',member_id:'m1' }]);
+      if (table === 'cards') return fulfill([{ id:'card-1',household_id:householdId,owner_member_id:'m1',name:'Porto',institution:'Porto Bank',last_four:'1234',credit_limit:'5000',closing_day:8,due_day:15,default_payment_account_id:'acc-1' }]);
+      if (table === 'account_balance_events') return fulfill([{ account_id:'acc-1' },{ account_id:'acc-2' }]);
+      if (table === 'household_categories') return fulfill([
+        { id:'cat-income',household_id:householdId,name:'Salário',type:'income',icon:'wallet',color:null,is_active:true },
+        { id:'cat-expense',household_id:householdId,name:'Mercado',type:'expense',icon:'shopping-cart',color:null,is_active:true },
+      ]);
+      if (table === 'financial_parties') return fulfill([]);
+      if (table === 'household_transactions') return fulfill([]);
       return fulfill(wantsObject ? {} : []);
     }
 
@@ -137,4 +150,68 @@ test('cobertura abre apenas a próxima etapa e não executa RPC financeira de es
   await expect(page.getByText(/É apenas uma referência/)).toBeVisible();
   const after = rpcCalls.slice(before.length);
   expect(after.some((name) => /(create|settle|pay|transfer|refund|forgive|write_off|record)/i.test(name))).toBe(false);
+});
+
+
+test('Golden Journey visual abre Nova Entrada e preserva linguagem humana e resource-first', async ({ page }) => {
+  await installSupabaseMock(page);
+  await login(page);
+
+  await page.getByRole('button', { name: 'Nova entrada' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nova entrada' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('De quem é esta entrada?')).toBeVisible();
+
+  await dialog.getByLabel('De quem é esta entrada?').selectOption('m1');
+  await expect(dialog.getByText('Onde entrou?')).toBeVisible();
+  await expect(dialog.getByText('Itaú', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Conta Principal', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/Titular · Wallace/)).toBeVisible();
+  await expect(dialog.getByText('Essa entrada já está confirmada?')).toBeVisible();
+  await expect(dialog.getByText('Sim, já sei que vou receber')).toBeVisible();
+  await expect(dialog.getByText('Ainda é uma expectativa')).toBeVisible();
+  await expect(dialog.getByText('Repetir esta entrada')).toBeVisible();
+  await expect(dialog.getByText('Tipo', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByText('Confiança', { exact: true })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Fechar nova entrada' }).click();
+});
+
+test('Golden Journey visual abre Nova Despesa em duas etapas e mostra recursos reais', async ({ page }) => {
+  await installSupabaseMock(page);
+  await login(page);
+
+  await page.getByRole('button', { name: 'Nova despesa' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nova despesa' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('Quem fez esse gasto?')).toBeVisible();
+  await expect(dialog.getByText('Com o que gastou?')).toBeVisible();
+  await dialog.getByLabel(/Com o que gastou/).fill('Mercado');
+  await dialog.getByRole('button', { name: 'Continuar' }).click();
+
+  await expect(dialog.getByText('Quanto?')).toBeVisible();
+  await expect(dialog.getByText('Quem assume esse gasto?')).toBeVisible();
+  await expect(dialog.getByText('De onde saiu ou será cobrado?')).toBeVisible();
+  await expect(dialog.getByText('Itaú', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Conta Principal', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Porto Bank', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Porto', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Outra pessoa pagou')).toBeVisible();
+  await expect(dialog.getByText('Fora da Casa')).toBeVisible();
+});
+
+test('Golden Journey visual preserva navegação de período e perspectiva em Entradas e Gastos', async ({ page }) => {
+  await installSupabaseMock(page);
+  await login(page);
+
+  await page.getByRole('button', { name: 'Gastos' }).click();
+  await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês seguinte' })).toBeVisible();
+  await expect(page.getByText('Nossa Casa', { exact: true })).toBeVisible();
+  await expect(page.getByText('Wallace', { exact: true })).toBeVisible();
+  await expect(page.getByText('Guilherme', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Entradas' }).click();
+  await expect(page.getByRole('button', { name: 'Mês anterior' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mês seguinte' })).toBeVisible();
+  await expect(page.getByText('Nossa Casa', { exact: true })).toBeVisible();
 });
