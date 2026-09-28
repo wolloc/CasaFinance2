@@ -15,14 +15,16 @@ test('income realization uses canonical settle_income and never generic income c
   assert.match(service, /p_beneficiary_member_id: input\.beneficiaryMemberId/);
 });
 
-test('Entradas separates economic income from actual cash receipt', () => {
+test('revisão de entrada prioriza confirmação rápida e mantém edição completa', () => {
   assert.match(screen, /mode === 'income' && <IncomeReceiptAction/);
-  assert.match(action, /Criar a entrada registra o fato econômico/);
-  assert.match(action, /Só esta confirmação movimenta o caixa/);
-  assert.match(action, /De quem é esta renda\?/);
-  assert.match(action, /Onde o dinheiro realmente entrou\?/);
-  assert.match(action, /saldo pendente/);
-  assert.match(action, /Confirmar recebimento/);
+  assert.match(action, /Essa entrada aconteceu\?/);
+  assert.match(action, /Sim, entrou como previsto/);
+  assert.match(action, /Ainda não entrou/);
+  assert.match(action, /Entrou diferente/);
+  assert.match(action, /setBeneficiaryMemberId\(movementData\?\.beneficiary_member_id/);
+  assert.match(action, /setDestinationAccountId\(movementData\?\.destination_account_id/);
+  assert.match(action, /Confirmar entrada/);
+  assert.match(action, /settleHouseholdIncome/);
 });
 
 test('income receipt contract remains aligned with Product Spec and Constitution', () => {
