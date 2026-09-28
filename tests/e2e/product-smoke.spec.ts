@@ -166,10 +166,9 @@ test('Golden Journey visual abre Nova Entrada e preserva linguagem humana e reso
   await expect(dialog.getByText('Onde entrou?')).toBeVisible();
   await expect(dialog.getByText('Itaú', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Conta Principal', { exact: true })).toBeVisible();
-  await expect(dialog.getByText(/Titular · Wallace/)).toBeVisible();
-  await expect(dialog.getByText('Essa entrada já está confirmada?')).toBeVisible();
-  await expect(dialog.getByText('Sim, já sei que vou receber')).toBeVisible();
-  await expect(dialog.getByText('Ainda é uma expectativa')).toBeVisible();
+  await expect(dialog.getByText(/Titular · Wallace/)).toHaveCount(0);
+  await expect(dialog.getByText('Essa entrada já está confirmada?')).toHaveCount(0);
+  await expect(dialog.getByText(/data é hoje ou anterior.*recebida/i)).toBeVisible();
   await expect(dialog.getByText('Repetir esta entrada')).toBeVisible();
   await expect(dialog.getByText('Tipo', { exact: true })).toHaveCount(0);
   await expect(dialog.getByText('Confiança', { exact: true })).toHaveCount(0);
