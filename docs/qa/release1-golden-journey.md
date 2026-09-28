@@ -10,7 +10,7 @@ Antes da homologação manual, o release candidate deve passar, quando a infraes
 
 1. TypeScript: `npm run lint`;
 2. unitários + integração: `npm test`;
-3. smoke mobile Playwright: `npm run test:e2e`;
+3. smoke mobile Playwright: `npm run test:e2e`, incluindo navegação, Nova Entrada, Nova Despesa, período e perspectiva;
 4. secret scan: `npm run check:secrets`;
 5. build Vite: `npm run build`;
 6. contratos Supabase, incluindo:
@@ -19,7 +19,7 @@ Antes da homologação manual, o release candidate deve passar, quando a infraes
    - `pr_n_release1_reconciliation.test.sql`;
    - demais gates posteriores registrados no workflow `CI`.
 
-**PENDENTE operacional em 2026-09-25:** GitHub Actions está encerrando o job `TypeScript, tests and build` antes do primeiro step, sem Checkout, steps ou log. Isso deve ser tratado como indisponibilidade do gate, não como teste vermelho. Não alterar regra financeira para contornar o runner.
+**ATUALIZADO em 2026-09-28:** o workflow voltou a executar normalmente. O smoke mobile agora cobre também contratos visuais críticos da Release 1 e deve falhar se jornadas centrais regredirem para linguagem técnica, perderem resource-first ou quebrarem período/perspectiva.
 
 ## Golden Journey manual do PM
 
@@ -94,3 +94,25 @@ Registrar para o release candidate:
 - bugs encontrados e severidade;
 - decisão final: **APROVADO PARA GO-LIVE** ou **BLOQUEADO**.
 
+
+
+## Golden Journey visual automatizado — 2026-09-28
+
+**IMPLEMENTADO:**
+
+O Playwright mobile passa a verificar automaticamente, antes da homologação manual:
+
+- abertura da **Nova Entrada** pela ação global;
+- ordem owner-first: **De quem é esta entrada?** antes do destino;
+- destino por recurso real com instituição, nome e titular;
+- ausência de campos técnicos visíveis **Tipo** e **Confiança**;
+- linguagem humana de confirmação da entrada;
+- recorrência opcional visível;
+- abertura da **Nova Despesa** pela ação global;
+- etapa inicial com comprador/data/descrição;
+- segunda etapa com valor, responsabilidade e seletor de recurso;
+- contas e cartões reais no seletor resource-first;
+- opção **Outra pessoa pagou / Fora da Casa**;
+- setas de mês e seletor de perspectiva em Gastos e Entradas.
+
+Esse gate é propositalmente visual/comportamental. Ele não substitui os testes financeiros de banco e domínio; impede regressões na experiência cotidiana consolidada antes do RC.
