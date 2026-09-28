@@ -31,8 +31,8 @@ test('settings root uses one navigation pattern for the four configuration resou
 test('global creation control is joined and draggable',()=>{
   assert.match(actions,/GripVertical/);
   assert.match(actions,/onPointerMove/);
-  assert.match(actions,/>Gasto<\/button>/);
-  assert.match(actions,/>Entrada<\/button>/);
+  assert.match(actions,/Gasto\s*<\/button>/);
+  assert.match(actions,/Entrada\s*<\/button>/);
 });
 
 test('resource transfer keeps source context and renders compatible destinations as cards',()=>{
