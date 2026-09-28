@@ -30,3 +30,12 @@ test('financial resources use icons derived from their registered type', () => {
   assert.match(financial, /const AccountIcon=accountIcons\[item\.type\]/);
   assert.match(financial, /<AccountIcon className="mb-3 h-5 w-5 text-blue-400" \/>/);
 });
+
+
+test('Ajustes abre conteúdo embutido em modal central sem casco de página',()=>{
+  assert.match(settings,/flex items-center justify-center bg-slate-950\/75/);
+  assert.match(settings,/HouseholdFinancialSetup[^>]*embedded/);
+  assert.match(settings,/HouseholdCategoriesSetup embedded/);
+  assert.match(settings,/FinancialPartiesSettings embedded/);
+  assert.match(financial,/embedded\?\'text-slate-100\'/);
+});
