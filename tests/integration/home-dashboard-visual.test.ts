@@ -52,7 +52,7 @@ test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado 
 test('Home simplifica recursos sem repetir explicações técnicas',()=>{assert.match(home,/Onde está nosso dinheiro/);assert.match(home,/Valor acompanhado/);assert.doesNotMatch(home,/label:'Dinheiro reservado'/);assert.match(home,/detailLabel:item\.resource_restriction==='reserve'\?'Reserva'/);assert.doesNotMatch(home,/Este total não significa dinheiro livre/);});
 
 test('Home não transforma planejamento futuro normal em alerta de atenção',()=>{
-  assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55\)/);
+  assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55&&!excluded\.has\(item\.entity_id\)\)/);
   assert.match(projectionReview,/Conferir próximos valores/);
   assert.match(projectionReview,/Planejamentos futuros normais continuam na projeção sem virar alerta/);
   assert.doesNotMatch(projectionReview,/Atualizar previsões/);

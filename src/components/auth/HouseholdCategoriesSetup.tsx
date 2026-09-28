@@ -7,7 +7,7 @@ import { CATEGORY_COLOR_OPTIONS, CATEGORY_ICON_OPTIONS, getCategoryVisual } from
 
 const labels:Record<HouseholdCategoryType,string>={income:'Entradas',expense:'Gastos'};
 
-export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
+export function HouseholdCategoriesSetup({onBack,embedded=false}:{onBack?:()=>void;embedded?:boolean}){
  const{household}=useSupabaseAuth();
  const[categories,setCategories]=useState<HouseholdCategory[]>([]);
  const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);
@@ -50,9 +50,9 @@ export function HouseholdCategoriesSetup({onBack}:{onBack:()=>void}){
  const preview=useMemo(()=>getCategoryVisual({name,type,icon,color}),[name,type,icon,color]);
  const PreviewIcon=preview.Icon;
 
- return <main className="min-h-[100dvh] bg-slate-950 px-4 py-6 text-slate-100 sm:flex sm:justify-center"><div className="w-full max-w-2xl space-y-5">
-  <button type="button" onClick={onBack} className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-blue-300 hover:bg-slate-900"><ArrowLeft className="h-4 w-4"/>Voltar aos ajustes</button>
-  <header className="flex items-center justify-between gap-3"><h1 className="text-3xl font-black">Categorias</h1><button type="button" disabled={loading||!!loadError} onClick={()=>openForm()} className="flex min-h-11 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-bold disabled:opacity-50"><Plus className="h-4 w-4"/>Nova</button></header>
+ return <main className={embedded?'text-slate-100':'min-h-[100dvh] bg-slate-950 px-4 py-6 text-slate-100 sm:flex sm:justify-center'}><div className={embedded?'w-full space-y-5':'w-full max-w-2xl space-y-5'}>
+  {!embedded&&onBack&&<button type="button" onClick={onBack} className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-blue-300 hover:bg-slate-900"><ArrowLeft className="h-4 w-4"/>Voltar aos ajustes</button>}
+  <header className="flex items-center justify-end gap-3">{!embedded&&<h1 className="mr-auto text-3xl font-black">Categorias</h1>}<button type="button" disabled={loading||!!loadError} onClick={()=>openForm()} className="flex min-h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-bold disabled:opacity-50"><Plus className="h-4 w-4"/>Nova categoria</button></header>
 
   {loadError&&<div className="rounded-2xl bg-rose-950/30 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void refresh()} className="mt-3 min-h-11 rounded-xl px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
   {!loadError&&error&&<p role="alert" className="rounded-xl bg-rose-950/40 p-3 text-sm text-rose-200">{error}</p>}
