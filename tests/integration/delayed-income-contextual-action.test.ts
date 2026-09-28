@@ -7,12 +7,12 @@ const priority=await readFile(new URL('../../src/components/app/FinancialPriorit
 const receipt=await readFile(new URL('../../src/components/app/IncomeReceiptAction.tsx',import.meta.url),'utf8');
 const intent=await readFile(new URL('../../src/finance/incomeReceiptIntent.ts',import.meta.url),'utf8');
 
-test('delayed expected income carries the exact projected money movement',()=>{
+test('delayed expected income is resolved inline on Casa without navigating to Entradas',()=>{
   assert.match(priority,/delayed_expected_income/);
-  assert.match(priority,/moneyMovementId:item\.entity_id/);
-  assert.match(priority,/Revisar esta entrada/);
-  assert.match(app,/setIncomeReceiptIntent/);
-  assert.match(app,/moneyMovementId:action\.moneyMovementId/);
+  assert.match(priority,/Confirmar entrada/);
+  assert.match(priority,/IncomeReceiptAction initialMoneyMovementId=\{item\.entity_id\}/);
+  assert.match(priority,/onResolved\?\.\(\)/);
+  assert.doesNotMatch(priority,/Revisar esta entrada/);
 });
 
 test('context resolves movement to its canonical income transaction before selecting',()=>{
