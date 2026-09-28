@@ -12,6 +12,8 @@ test('expense list prioritizes purchase date and hides technical states',()=>{
   assert.match(expenses,/formatDate\(row\.economic_date\)/);
   assert.doesNotMatch(expenses,/Pago\/realizado|stateLabel\(/);
   assert.match(expenses,/row\.instrument_label\?\?instrumentLabel/);
+  assert.match(expenses,/responsibilityLabel\(row\.responsibility\)/);
+  assert.doesNotMatch(expenses,/row\.buyer_member_id/);
   assert.match(expenses,/>Valor<\/span>/);
   assert.match(expenseViews,/instrument_label/);
   assert.match(expenseViews,/account:accounts\(name,institution\)/);
