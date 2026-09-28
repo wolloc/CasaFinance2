@@ -37,9 +37,11 @@ Priorizar no card:
 1. data econômica/da compra;
 2. descrição;
 3. categoria;
-4. comprador, quando existir;
+4. tag de responsabilidade/compromisso — membro, dividido ou outra pessoa;
 5. recurso usado na compra;
 6. valor em bloco inferior para melhorar leitura mobile.
+
+O comprador permanece preservado no modelo financeiro e no detalhe quando necessário, mas **não aparece no card da lista**, porque a leitura rápida deve responder de quem é o compromisso econômico.
 
 Para compromissos, a data exibida no card é a data econômica do fato/ocorrência. Datas financeiras continuam preservadas no motor para fatura, vencimento e projeções.
 
