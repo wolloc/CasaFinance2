@@ -215,3 +215,21 @@ test('Golden Journey visual preserva navegação de período e perspectiva em En
   await expect(page.getByRole('button', { name: 'Mês seguinte' })).toBeVisible();
   await expect(page.getByText('Nossa Casa', { exact: true })).toBeVisible();
 });
+
+
+test('Golden Journey visual protege a estrutura consolidada da Home', async ({ page }) => {
+  await installSupabaseMock(page);
+  await login(page);
+
+  await expect(page.getByText('Como estamos?', { exact: true })).toBeVisible();
+  await expect(page.getByText('Onde está nosso dinheiro', { exact: true })).toBeVisible();
+  await expect(page.getByText('Valor acompanhado', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cartões', { exact: true })).toBeVisible();
+  await expect(page.getByText('O que mais pesou', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Mês em resumo', { exact: true })).toHaveCount(0);
+
+  const contas = page.getByText('Contas', { exact: true });
+  await expect(contas).toBeVisible();
+  await contas.click();
+  await expect(page.getByText('Conta Principal', { exact: true })).toBeVisible();
+});
