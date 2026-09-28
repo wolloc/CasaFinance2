@@ -6,6 +6,8 @@ const service=await readFile(new URL('../../src/finance/expenseMonthViews.ts',im
 const browser=await readFile(new URL('../../src/components/app/ExpenseMonthBrowser.tsx',import.meta.url),'utf8');
 const screen=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
 const period=await readFile(new URL('../../src/components/app/FinancialPeriodNavigator.tsx',import.meta.url),'utf8');
+const search=await readFile(new URL('../../src/components/app/FinancialListSearch.tsx',import.meta.url),'utf8');
+const categories=await readFile(new URL('../../src/components/app/FinancialCategoryBreakdown.tsx',import.meta.url),'utf8');
 
 test('mês financeiro usa o read model canônico de compromissos e não a data da compra',()=>{
  assert.match(service,/from\('financial_commitment_positions'\)/);
@@ -84,9 +86,10 @@ test('Gastos mantém total da visão compacto e categorias sob demanda sem virar
  assert.match(browser,/FinancialListSummaryCard tone="expense"/);
  assert.match(browser,/realizado/);
  assert.match(browser,/comprometido/);
- assert.match(browser,/Ver categorias/);
- assert.match(browser,/<details/);
- assert.match(browser,/não é meta ou orçamento/);
+ assert.match(browser,/FinancialCategoryBreakdown/);
+ assert.match(categories,/Ver categorias/);
+ assert.match(categories,/<details/);
+ assert.match(browser,/footer="Leitura dos gastos realizados; não é meta ou orçamento\."/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
  assert.match(browser,/FinancialMonthSummary[\s\S]*categories=\{financialSummary\.categories\}/);
  assert.match(browser,/function FinancialMonthSummary\(\{total,realized,remaining,categories\}/);
@@ -99,7 +102,8 @@ test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcul
  assert.match(browser,/filteredFinancialRows/);
  assert.match(browser,/filteredEconomicRows/);
  assert.match(browser,/responsibilityLabel/);
- assert.match(browser,/Limpar busca/);
+ assert.match(browser,/FinancialListSearch/);
+ assert.match(search,/Limpar busca/);
  assert.match(browser,/setQuery\(''\)/);
 });
 
