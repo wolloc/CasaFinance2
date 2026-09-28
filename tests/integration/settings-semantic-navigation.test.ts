@@ -14,7 +14,7 @@ test('main Ajustes tab remounts the settings hub when tapped again', () => {
 });
 
 test('Casa settings uses a home semantic icon while keeping member initials', () => {
-  assert.match(settings, /House className="h-5 w-5"/);
+  assert.match(settings, /SettingsLink icon=\{House\}/);
   assert.match(settings, /member\.display_name\.trim\(\)\.charAt\(0\)\.toUpperCase\(\)/);
 });
 
