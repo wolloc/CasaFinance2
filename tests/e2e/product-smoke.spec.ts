@@ -191,10 +191,8 @@ test('Golden Journey visual abre Nova Despesa em duas etapas e mostra recursos r
   await expect(dialog.getByText('Quanto?')).toBeVisible();
   await expect(dialog.getByText('Quem assume esse gasto?')).toBeVisible();
   await expect(dialog.getByText('De onde saiu ou será cobrado?')).toBeVisible();
-  await expect(dialog.getByText('Itaú', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Conta Principal', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Porto Bank', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Porto', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button').filter({ hasText: /Itaú.*Conta Principal/s })).toBeVisible();
+  await expect(dialog.getByRole('button').filter({ hasText: /Porto Bank.*Porto/s })).toBeVisible();
   await expect(dialog.getByText('Outra pessoa pagou')).toBeVisible();
   await expect(dialog.getByText('Fora da Casa')).toBeVisible();
 });
