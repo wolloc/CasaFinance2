@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Repeat2, Search, X } from 'lucide-react';
+import { Repeat2, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdIncomeTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
@@ -17,6 +17,8 @@ import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 import { FinancialListState } from './FinancialListState.js';
 import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
 import { FinancialDetailDialogHeader } from './FinancialDetailDialogHeader.js';
+import { FinancialListSearch } from './FinancialListSearch.js';
+import { FinancialCategoryBreakdown } from './FinancialCategoryBreakdown.js';
 
 const money=(value:string|number)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const stateLabel:Record<string,string>={forecast:'Prevista',confirmed:'Confirmada',realized:'Recebida',cancelled:'Cancelada',reversed:'Estornada'};
@@ -116,7 +118,7 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
   <FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>
 
   {!loading&&!error&&<IncomeSummary total={total} count={visibleRows.length} categories={categorySummary}/>} 
-  {!loading&&!error&&visibleRows.length>0&&<div><div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3"><Search className="h-4 w-4 shrink-0 text-slate-500"/><input aria-label="Buscar entradas deste período" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar entrada, categoria ou pessoa..." className="min-w-0 flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-600"/>{query&&<button type="button" aria-label="Limpar busca" onClick={()=>setQuery('')} className="flex min-h-9 min-w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-900 hover:text-slate-200"><X className="h-4 w-4"/></button>}</div>{query&&<p className="mt-2 text-xs text-slate-400">{filteredVisibleRows.length} de {visibleRows.length} entradas encontradas.</p>}</div>}
+  {!loading&&!error&&visibleRows.length>0&&<FinancialListSearch value={query} onChange={setQuery} ariaLabel="Buscar entradas deste período" placeholder="Buscar entrada, categoria ou pessoa..." resultText={`${filteredVisibleRows.length} de ${visibleRows.length} entradas encontradas.`}/>} 
 
   {!loading&&!error&&initialReviewMoneyMovementId&&<p className={`rounded-xl border p-3 text-xs ${reviewTransactionId?'border-cyan-900 bg-cyan-950/20 text-cyan-200':'border-slate-700 bg-slate-900 text-slate-300'}`}>{reviewTransactionId?'Esta entrada futura foi sinalizada pela revisão da projeção. O Casa releu o movimento e o fato econômico atual. Revise ou corrija a previsão abaixo; nenhum recebimento foi registrado.':'A entrada sinalizada pela revisão da projeção mudou ou já foi resolvida. Nada entrou no caixa.'}</p>}
   {initialMoneyMovementId&&<IncomeReceiptAction initialMoneyMovementId={initialMoneyMovementId} onCompleted={refresh}/>}
@@ -132,6 +134,5 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
 }
 
 function IncomeSummary({total,count,categories}:{total:number;count:number;categories:Array<{name:string;amount:number}>}){
- const percentage=(value:number)=>total>0?Math.round((value/total)*100):0;
- return <FinancialListSummaryCard tone="income" total={money(total)} meta={<span>{count} {count===1?'entrada':'entradas'}</span>}>{categories.length>0&&<details className="mt-2 border-t border-slate-800 pt-2"><summary className="flex min-h-9 cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-300"><span>Ver categorias</span><span className="text-[11px] font-normal text-slate-500">{categories.length}</span></summary><div className="mt-3 space-y-2">{categories.map(category=><div key={category.name} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-slate-300">{category.name}</span><strong className="shrink-0 text-emerald-300">{money(category.amount)} · {percentage(category.amount)}%</strong></div>)}</div></details>}</FinancialListSummaryCard>;
+ return <FinancialListSummaryCard tone="income" total={money(total)} meta={<span>{count} {count===1?'entrada':'entradas'}</span>}><FinancialCategoryBreakdown categories={categories} total={total} tone="income"/></FinancialListSummaryCard>;
 }
