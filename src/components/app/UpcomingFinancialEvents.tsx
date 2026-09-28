@@ -11,13 +11,13 @@ const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',curr
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
 const addDays=(date:string,days:number)=>{const value=new Date(`${date}T12:00:00Z`);value.setUTCDate(value.getUTCDate()+days);return value.toISOString().slice(0,10);};
 
-export function UpcomingFinancialEvents({perspective,onOpenCard,embedded=false}:{perspective:FinancialPerspective;onOpenCard?:(cardId:string)=>void;embedded?:boolean}){
+export function UpcomingFinancialEvents({perspective,onOpenCard,embedded=false,refreshKey=0}:{perspective:FinancialPerspective;onOpenCard?:(cardId:string)=>void;embedded?:boolean;refreshKey?:number}){
  const{household,householdMembers}=useSupabaseAuth();
  const[items,setItems]=useState<UpcomingFinancialEvent[]>([]);
  const[loading,setLoading]=useState(true);
  const[error,setError]=useState(false);
 
- useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}setLoading(true);setError(false);setItems([]);const today=dateInTimeZone(household.timezone);listUpcomingFinancialEvents(supabase,household.id,today,7,perspective==='household'?undefined:perspective).then(rows=>{if(!cancelled)setItems(rows);}).catch(()=>{if(!cancelled){setItems([]);setError(true);}}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}setLoading(true);setError(false);setItems([]);const today=dateInTimeZone(household.timezone);listUpcomingFinancialEvents(supabase,household.id,today,7,perspective==='household'?undefined:perspective).then(rows=>{if(!cancelled)setItems(rows);}).catch(()=>{if(!cancelled){setItems([]);setError(true);}}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective,refreshKey]);
 
  const today=household?dateInTimeZone(household.timezone):'';
  const tomorrow=today?addDays(today,1):'';
