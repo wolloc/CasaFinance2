@@ -8,13 +8,14 @@ type ProjectionReviewItem={review_key:string;review_type:string;amount:number;re
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
 const actionFor=(item:ProjectionReviewItem):AttentionNavigationAction=>{if(item.entity_type==='invoice')return {kind:'projection-invoice-review',invoiceId:item.entity_id};if(item.entity_type==='recurring_occurrence')return {kind:'projection-recurring-review',occurrenceId:item.entity_id};if(item.entity_type==='money_movement')return item.review_type==='delayed_expected_income'?{kind:'income-receipt',moneyMovementId:item.entity_id}:{kind:'projection-income-review',moneyMovementId:item.entity_id};if(item.entity_type==='commitment'&&item.review_key.startsWith('commitment-review:'))return {kind:'projection-expense-review',commitmentKey:item.review_key.slice('commitment-review:'.length)};return {kind:'navigate',destination:item.recommended_action};};
 
-export function ProjectionReviewCenter({onNavigate}:{onNavigate?:(action:AttentionNavigationAction)=>void}){
+export function ProjectionReviewCenter({onNavigate,excludeEntityIds=[]}:{onNavigate?:(action:AttentionNavigationAction)=>void;excludeEntityIds?:string[]}){
   const{household}=useSupabaseAuth();const[items,setItems]=useState<ProjectionReviewItem[]>([]);const[loading,setLoading]=useState(true);const[failed,setFailed]=useState(false);const[refreshKey,setRefreshKey]=useState(0);
   useEffect(()=>{let cancelled=false;if(!supabase||!household){setLoading(false);return()=>{cancelled=true;};}const load=async()=>{setLoading(true);setFailed(false);try{const{data,error}=await supabase.rpc('financial_projection_review_items',{p_household_id:household.id});if(cancelled)return;if(error){setFailed(true);return;}setItems((data??[])as ProjectionReviewItem[]);}catch{if(!cancelled)setFailed(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,refreshKey]);
   if(loading)return <div className="mt-3 flex items-center gap-2 text-xs text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin"/>Conferindo previsões…</div>;
   if(failed)return <div role="alert" className="mt-3 rounded-xl border border-amber-900/70 bg-amber-950/20 p-3 text-sm text-amber-200"><div className="flex items-center justify-between gap-3"><span>Não foi possível conferir as previsões. Nada foi considerado resolvido.</span><button type="button" onClick={()=>setRefreshKey(value=>value+1)} className="flex min-h-9 items-center gap-1 text-xs font-bold text-amber-100"><RefreshCw className="h-4 w-4"/>Tentar novamente</button></div></div>;
   if(items.length===0)return null;
-  const actionableItems=items.filter(item=>item.urgency_score>=55);
+  const excluded=new Set(excludeEntityIds);
+  const actionableItems=items.filter(item=>item.urgency_score>=55&&!excluded.has(item.entity_id));
   if(actionableItems.length===0)return null;
   const visible=actionableItems.slice(0,5);
   return <section className="mt-3 rounded-2xl border border-slate-800 bg-slate-900/55 p-3" aria-labelledby="projection-review-title">
