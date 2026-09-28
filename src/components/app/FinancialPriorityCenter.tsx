@@ -1,4 +1,5 @@
 import { AlertTriangle, ArrowRight, CircleCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { AttentionItem } from '../../finance/financialDashboard.js';
 import { ProjectionReviewCenter } from './ProjectionReviewCenter.js';
 import { FinancialSectionHeading } from './FinancialSectionHeading.js';
@@ -37,7 +38,7 @@ const actionFor=(item:AttentionItem):AttentionNavigationAction|null=>{
   return null;
 };
 
-export function FinancialPriorityCenter({items,onNavigate}:{items:AttentionItem[];onNavigate?:(action:AttentionNavigationAction)=>void}){
+export function FinancialPriorityCenter({items,onNavigate,children}:{items:AttentionItem[];onNavigate?:(action:AttentionNavigationAction)=>void;children?:ReactNode}){
   return <section aria-labelledby="atencao">
     <details className="group rounded-2xl border border-slate-800 bg-slate-900/45">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
@@ -49,6 +50,7 @@ export function FinancialPriorityCenter({items,onNavigate}:{items:AttentionItem[
           <div className="flex items-start gap-3"><span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.severity==='red'?'bg-rose-400':'bg-amber-400'}`}/><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold text-slate-100">{item.title}</h3>{Number(item.amount)>0&&<strong className="whitespace-nowrap text-sm">{money(item.amount)}</strong>}</div><div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500">{item.due_date&&<span>{item.due_date}</span>}<span>{item.priority_reason}</span></div>{action&&label&&<button type="button" onClick={()=>onNavigate?.(action)} className="mt-2 flex min-h-9 items-center gap-1 text-xs font-bold text-blue-300">{label}<ArrowRight className="h-4 w-4"/></button>}</div></div>
         </article>})}
         <ProjectionReviewCenter onNavigate={onNavigate}/>
+        {children}
       </div>
     </details>
   </section>;
