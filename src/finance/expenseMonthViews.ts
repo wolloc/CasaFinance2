@@ -36,6 +36,7 @@ export type FinancialMonthExpense = {
   responsibility:ResponsibilityVisual;
   buyer_member_id:string|null;
   instrument_kind:string|null;
+  instrument_label:string|null;
 };
 
 export type EconomicMonthExpense = {
