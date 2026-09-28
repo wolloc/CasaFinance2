@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, Receipt, TrendingUp, Utensils, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Banknote, ChevronRight, Landmark, Pencil, PiggyBank, TrendingUp, Utensils, Wallet } from 'lucide-react';
 
-export type ResourceNavigationAction={kind:'expense'|'transfer'|'reserve'|'loan'|'settings';accountId:string};
+export type ResourceNavigationAction={kind:'transfer'|'reserve'|'loan'|'settings';accountId:string};
 export type ResourceActionTarget={
  accountId:string;
  name:string;
@@ -38,7 +38,6 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
    <div className="min-w-0 w-full"><p className="truncate text-xs font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}<strong className="mt-2 block text-sm">{money(resource.amount)}</strong></div>
   </button>
   {open&&<div className="absolute left-1/2 top-[calc(100%-6px)] z-40 grid w-[min(280px,88vw)] -translate-x-1/2 gap-2 rounded-2xl border border-slate-700 bg-slate-950 p-2 shadow-2xl shadow-black/45">
-   {!patrimonial&&<button type="button" onClick={()=>act('expense')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-3 text-left text-xs font-bold text-rose-200"><Receipt className="h-4 w-4"/>{benefit?'Registrar gasto com benefício':'Registrar despesa'}</button>}
    {!patrimonial&&!benefit&&<button type="button" onClick={()=>act('transfer')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-3 text-left text-xs font-bold text-blue-200"><ArrowLeftRight className="h-4 w-4"/>Transferir deste recurso</button>}{transactional&&!benefit&&!patrimonial&&<button type="button" onClick={()=>act('loan')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-3 text-left text-xs font-bold text-cyan-200"><Banknote className="h-4 w-4"/>Pegar dinheiro emprestado</button>}
    {patrimonial&&<button type="button" onClick={()=>act('reserve')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-3 text-left text-xs font-bold text-amber-200"><PiggyBank className="h-4 w-4"/>Aportar ou resgatar</button>}
    <button type="button" onClick={()=>act('settings')} className="flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-3 text-left text-xs font-bold text-slate-300"><Pencil className="h-4 w-4"/>Editar recurso</button>
