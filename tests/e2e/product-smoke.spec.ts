@@ -162,7 +162,7 @@ test('Golden Journey visual abre Nova Entrada e preserva linguagem humana e reso
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('De quem é esta entrada?')).toBeVisible();
 
-  await dialog.getByLabel('De quem é esta entrada?').selectOption('m1');
+  await dialog.getByRole('button', { name: 'Wallace', exact: true }).click();
   await expect(dialog.getByText('Onde entrou?')).toBeVisible();
   await expect(dialog.getByText('Itaú', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Conta Principal', { exact: true })).toBeVisible();
