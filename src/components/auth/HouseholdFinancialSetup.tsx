@@ -11,7 +11,7 @@ const accountLabels: Record<HouseholdAccountType, string> = { cash: 'Dinheiro', 
 const accountIcons: Record<HouseholdAccountType, typeof Landmark> = { cash: Banknote, checking: Landmark, savings: PiggyBank, investment: Building2, meal_benefit: Utensils, digital_wallet: WalletCards };
 const sharedAccountOwner = '__shared__';
 
-export function HouseholdFinancialSetup({initialAccountId=null,initialAccountContext=null, memberOnboarding=false}:{initialAccountId?:string|null;initialAccountContext?:'overdraft'|'resource-edit'|null; memberOnboarding?:boolean}) {
+export function HouseholdFinancialSetup({initialAccountId=null,initialAccountContext=null, memberOnboarding=false,embedded=false}:{initialAccountId?:string|null;initialAccountContext?:'overdraft'|'resource-edit'|null; memberOnboarding?:boolean;embedded?:boolean}) {
   const { user, household, householdMembers } = useSupabaseAuth();
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
   const [cards, setCards] = useState<HouseholdCard[]>([]);
@@ -109,7 +109,7 @@ export function HouseholdFinancialSetup({initialAccountId=null,initialAccountCon
   const accountTargetExists=initialAccountId?accounts.some(item=>item.id===initialAccountId):false;
 
   if (!household) return null;
-  return <main className="min-h-[100dvh] bg-slate-950 px-4 py-6 text-slate-100 sm:flex sm:justify-center"><div className="w-full max-w-2xl space-y-6"><header><h1 className="text-2xl font-black">Contas e cartões</h1></header>
+  return <main className={embedded?'text-slate-100':'min-h-[100dvh] bg-slate-950 px-4 py-6 text-slate-100 sm:flex sm:justify-center'}><div className={embedded?'w-full space-y-5':'w-full max-w-2xl space-y-6'}>{!embedded&&<header><h1 className="text-2xl font-black">Contas e cartões</h1></header>}
     {!loading&&!loadError&&initialAccountId&&<p className={`rounded-xl border p-3 text-xs ${accountTargetExists?'border-amber-900 bg-amber-950/20 text-amber-200':'border-slate-700 bg-slate-900 text-slate-300'}`}>{accountTargetExists?(initialAccountContext==='overdraft'?'Esta conta foi sinalizada pela Home porque está usando LIS/cheque especial. O Casa releu os cadastros atuais. O limite do LIS continua sendo crédito/dívida, não dinheiro disponível, e nada foi movimentado.':'Você veio de um recurso da Casa. O Casa releu o cadastro atual antes de permitir qualquer edição; nenhum saldo, gasto ou histórico foi alterado.'):'A conta indicada não está mais entre as contas ativas. Nada foi movimentado.'}</p>}
     {loadError&&<div className="rounded-xl border border-rose-900 bg-rose-950/30 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void refresh()} className="mt-3 min-h-11 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
     {!loadError&&error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}{success && <p role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm text-emerald-200">{success}</p>}
