@@ -721,3 +721,24 @@ O empréstimo possui cronograma canônico com quantidade de parcelas, primeiro v
 - estados selecionados preservam semântica visual de cada jornada: entrada em verde; despesa em azul;
 - cartão continua podendo exibir titular + final do cartão de forma discreta;
 - nenhuma regra financeira ou filtro de compatibilidade foi alterado.
+
+
+## Listas Entradas × Gastos — padrões compartilhados — 2026-09-27
+
+**IMPLEMENTADO:**
+
+- Entradas e Gastos compartilham o mesmo componente de busca, incluindo limpar busca e contagem de resultados;
+- Entradas e Gastos compartilham o mesmo componente de detalhamento por categorias;
+- a estrutura de categorias permanece sob demanda em **Ver categorias**, sem poluir a leitura principal;
+- diferenças semânticas permanecem explícitas por tom:
+  - Entrada em verde;
+  - Gasto realizado em vermelho;
+  - Compromisso em âmbar;
+- barras de proporção continuam em Gastos quando ajudam a leitura; Entradas mantém leitura mais leve;
+- estados vazio/erro/loading e resumo total já permanecem nos componentes compartilhados existentes;
+- nenhuma regra de cálculo, perspectiva ou filtro financeiro foi alterada.
+
+**PENDENTE DE HOMOLOGAÇÃO PM:**
+
+- confirmar se os itens de lista de Entrada e Gasto já parecem suficientemente da mesma família visual;
+- confirmar se o detalhe contextual dos lançamentos precisa de mais uma rodada de alinhamento antes do Golden Journey.
