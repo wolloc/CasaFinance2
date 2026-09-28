@@ -17,16 +17,19 @@ test('delayed expected income carries the exact projected money movement',()=>{
 
 test('context resolves movement to its canonical income transaction before selecting',()=>{
   assert.match(receipt,/from\('money_movements'\)/);
-  assert.match(receipt,/select\('related_transaction_id'\)/);
-  assert.match(receipt,/targetId = movement\.data\?\.related_transaction_id \?\? null/);
+  assert.match(receipt,/select\('related_transaction_id,beneficiary_member_id,destination_account_id'\)/);
+  assert.match(receipt,/targetId = movementData\?\.related_transaction_id \?\? null/);
   assert.match(receipt,/pending\.find\(\(income\) => income\.id === targetId\)/);
   assert.match(receipt,/Essa entrada mudou ou já foi resolvida/);
   assert.doesNotMatch(intent,/supabase|rpc|insert|update|delete/i);
 });
 
-test('receipt still requires explicit beneficiary, real destination and current remaining balance',()=>{
-  assert.match(receipt,/De quem é esta renda\?/);
-  assert.match(receipt,/Onde o dinheiro realmente entrou\?/);
+test('receipt reuses planned beneficiary and destination but validates them before settling',()=>{
+  assert.match(receipt,/setBeneficiaryMemberId\(movementData\?\.beneficiary_member_id/);
+  assert.match(receipt,/setDestinationAccountId\(movementData\?\.destination_account_id/);
+  assert.match(receipt,/if \(!destinationAccountId\)/);
+  assert.match(receipt,/if \(!beneficiaryMemberId\)/);
   assert.match(receipt,/numericAmount - remaining > 0\.005/);
+  assert.match(receipt,/Entrou diferente/);
   assert.match(receipt,/settleHouseholdIncome/);
 });
