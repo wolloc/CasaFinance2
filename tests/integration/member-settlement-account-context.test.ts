@@ -15,13 +15,15 @@ test('member settlement filters transactional accounts by the payer and receiver
 });
 
 test('changing payer or receiver clears an incompatible preselected account',()=>{
-  assert.match(screen,/if\(sourceAccount&&!payerAccounts\.some/);
+  assert.match(screen,/if\(selected==='members'&&sourceAccount&&!payerAccounts\.some/);
   assert.match(screen,/setSourceAccount\(''\)/);
-  assert.match(screen,/if\(destinationAccount&&!receiverAccounts\.some/);
+  assert.match(screen,/if\(selected==='members'&&destinationAccount&&!receiverAccounts\.some/);
   assert.match(screen,/setDestinationAccount\(''\)/);
 });
 
 test('settlement account filtering does not affect ordinary household transfers',()=>{
   assert.match(screen,/const options=accounts\.map/);
   assert.match(screen,/Mover dinheiro entre contas/);
+  assert.match(screen,/selected==='members'&&sourceAccount/);
+  assert.match(screen,/selected==='members'&&destinationAccount/);
 });
