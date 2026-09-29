@@ -27,7 +27,7 @@ test('selected resource opens transfer as a direct form with the source already 
 });
 
 test('borrowing from a resource reuses LoanAdjustment with taken direction and selected destination account',()=>{
-  assert.match(row,/Pegar dinheiro emprestado/);
+  assert.match(row,/Pegar emprestado/);
   assert.match(app,/action\.kind!==\'settings\'/);
   assert.match(adjustment,/resourceIntent\?\.kind==='loan-taken'\?'taken'/);
   assert.match(adjustment,/initialAccountId=\{contextualLoan&&resourceIntent\?resourceIntent\.accountId/);
