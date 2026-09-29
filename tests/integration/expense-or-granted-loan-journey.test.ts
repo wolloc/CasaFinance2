@@ -15,8 +15,8 @@ test('Nova despesa abre diretamente a jornada de gasto sem oferecer empréstimo'
 });
 
 test('empréstimo continua existindo como fluxo financeiro separado e contextual',()=>{
-  assert.doesNotMatch(app,/loan-granted/);
-  assert.match(app,/action\.kind==='loan'/);
+  assert.match(app,/setResourceAdjustmentIntent/);
+  assert.match(app,/action\.kind!==\'settings\'/);
   assert.match(loan,/createLoanPrincipal/);
   assert.match(loan,/Isso não virou uma despesa/);
   assert.match(principal,/create_loan_principal/);
