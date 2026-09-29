@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Banknote, ChevronRight, HandCoins, Landmark, Pencil, PiggyBank, TrendingDown, TrendingUp, Utensils, Wallet } from 'lucide-react';
 
-export type ResourceNavigationAction={kind:'transfer'|'deposit'|'withdraw'|'invest'|'redeem'|'loan-granted'|'loan-taken'|'settings';accountId:string};
+export type ResourceNavigationAction={kind:'transfer'|'deposit'|'withdraw'|'invest'|'redeem'|'loan-granted'|'loan-taken'|'settings';accountId:string;resourceType:string;resourceRestriction:string|null;isInvestment:boolean};
 export type ResourceActionTarget={
  accountId:string;
  name:string;
@@ -32,7 +32,7 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
  const benefit=resource.type==='meal_benefit';
  const cashLike=resource.type==='cash'||resource.type==='digital_wallet';
  const bankLike=resource.type==='checking'||resource.type==='savings';
- const act=(kind:ResourceNavigationAction['kind'])=>{setOpen(false);onAction?.({kind,accountId:resource.accountId});};
+ const act=(kind:ResourceNavigationAction['kind'])=>{setOpen(false);onAction?.({kind,accountId:resource.accountId,resourceType:resource.type,resourceRestriction:resource.resourceRestriction,isInvestment:resource.isInvestment});};
  return <div ref={rootRef} className="relative rounded-2xl border border-slate-800 bg-white/[0.035]">
   <button type="button" aria-expanded={open} onClick={()=>setOpen(value=>!value)} className="flex min-h-[92px] w-full flex-col items-start gap-2 rounded-2xl p-3 text-left hover:bg-white/[0.025]">
    <div className="flex w-full items-start justify-between gap-2"><ResourceIcon resource={resource}/><ChevronRight className={`h-4 w-4 shrink-0 text-slate-600 transition-transform ${open?'rotate-90':''}`}/></div>
