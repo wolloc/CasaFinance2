@@ -13,9 +13,13 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(home,/ResourceActionRow/);
  assert.match(home,/onResourceAction/);
  assert.doesNotMatch(row,/Registrar despesa/);
- assert.match(row,/Transferir deste recurso/);
- assert.match(row,/Aportar ou resgatar/);
- assert.match(row,/Pegar dinheiro emprestado/);
+ assert.match(row,/Depositar em conta/);
+ assert.match(row,/Transferir/);
+ assert.match(row,/Sacar/);
+ assert.match(row,/Aportar em investimento/);
+ assert.match(row,/Resgatar/);
+ assert.match(row,/Emprestar dinheiro/);
+ assert.match(row,/Pegar emprestado/);
  assert.match(row,/Editar recurso/);
  assert.match(row,/ResourceIcon resource=\{resource\}/);
  assert.match(row,/Utensils/);
@@ -36,8 +40,13 @@ test('Home resources expose contextual actions instead of becoming new financial
 
 test('resources expose only contextual movements; new expenses stay in the global FAB',()=>{
  assert.doesNotMatch(row,/act\('expense'\)|Registrar despesa/);
- assert.match(row,/!patrimonial&&!benefit&&<button[^>]*>.*transfer/s);
- assert.match(row,/patrimonial&&<button[^>]*>.*reserve/s);
+ assert.match(row,/cashLike&&!benefit&&!patrimonial/);
+ assert.match(row,/bankLike&&!benefit&&!patrimonial/);
+ assert.match(row,/patrimonial&&<>/);
+ assert.match(row,/act\('deposit'\)/);
+ assert.match(row,/act\('withdraw'\)/);
+ assert.match(row,/act\('invest'\)/);
+ assert.match(row,/act\('redeem'\)/);
 });
 
 test('resource actions route to existing canonical journeys',()=>{
@@ -47,9 +56,11 @@ test('resource actions route to existing canonical journeys',()=>{
  assert.match(app,/setAccountReviewIntent\(\{accountId:action\.accountId,source:'overdraft'\}\)/);
  assert.match(adjustment,/consumeResourceAdjustmentIntent/);
  assert.match(adjustment,/financial\.accounts\.some\(account=>account\.id===resourceIntent\.accountId\)/);
- assert.match(adjustment,/initialResourceId=\{resourceIntent\?\.kind==='reserve'/);
- assert.match(adjustment,/initialAccountId=\{resourceIntent\?\.kind==='loan'/);
- assert.match(adjustment,/initialDirection=\{resourceIntent\?\.kind==='loan'\?'taken'/);
+ assert.match(adjustment,/resourceSelection=resourceIntent/);
+ assert.match(adjustment,/initialResourceId=\{resourceIntent&&\['invest','redeem'\]/);
+ assert.match(adjustment,/initialTransactionalAccountId=\{resourceIntent\?\.kind==='invest'/);
+ assert.match(adjustment,/initialDirection=\{resourceIntent\?\.kind==='loan-granted'\?'granted'/);
+ assert.match(adjustment,/resourceIntent\?\.kind==='loan-taken'\?'taken'/);
  assert.match(investment,/initialResourceId/);
  assert.match(investment,/setInvestmentAccountId\(''\)/);
  assert.match(investment,/resourceRows\.some\(item=>item\.account_id===initialResourceId\)/);
