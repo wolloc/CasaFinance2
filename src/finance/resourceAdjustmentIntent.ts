@@ -1,5 +1,5 @@
 export type ResourceAdjustmentKind='transfer'|'deposit'|'withdraw'|'invest'|'redeem'|'loan-granted'|'loan-taken';
-export type ResourceAdjustmentIntent={kind:ResourceAdjustmentKind;accountId:string};
+export type ResourceAdjustmentIntent={kind:ResourceAdjustmentKind;accountId:string;resourceType?:string;resourceRestriction?:string|null;isInvestment?:boolean};
 let pending:ResourceAdjustmentIntent|null=null;
 
 // Ephemeral navigation context only. It never records or mutates a financial fact.
