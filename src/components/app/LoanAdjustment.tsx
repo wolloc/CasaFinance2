@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Banknote, Landmark, LoaderCircle, UserPlus } from 'lucide-react';
+import { Banknote, Landmark, LoaderCircle, PiggyBank, UserPlus, Wallet } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { createFinancialParty, createLoanPrincipalWithSchedule, listFinancialParties, type FinancialParty } from '../../finance/loanPrincipals.js';
 import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
+import { FinancialResourceChoice } from './FinancialResourceChoice.js';
 
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
@@ -46,6 +47,8 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
   const selectedParty = useMemo(() => parties.find((party) => party.id === counterpartyId), [parties, counterpartyId]);
   const selectedAccount = useMemo(() => accounts.find((account) => account.id === accountId), [accounts, accountId]);
   const contextualBank = direction === 'taken' && initialAccountId && selectedAccount?.institution?.trim() ? selectedAccount.institution.trim() : null;
+  const accountOwners=(account:HouseholdAccount)=>{const ids=account.owner_member_ids?.length?account.owner_member_ids:account.owner_member_id?[account.owner_member_id]:[];const names=ids.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));return names.length>1?names.join(' + '):names[0]??null;};
+  const accountIcon=(account:HouseholdAccount)=>account.type==='cash'||account.type==='digital_wallet'?<Wallet/>:account.type==='savings'?<PiggyBank/>:<Landmark/>;
   const lockedDirection = Boolean(initialDirection);
   const lockedAccount = Boolean(initialAccountId && selectedAccount);
   const normalizedInterest=Number(normalizeAmount(totalInterest||'0'))||0;
@@ -84,7 +87,7 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
         <label className="block text-sm">Com quem foi o empréstimo?<select value={counterpartyId} onChange={(event) => { setCounterpartyId(event.target.value); if (event.target.value) setNewPartyName(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Adicionar outra pessoa</option>{parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
         {!counterpartyId && <label className="block text-sm">Nome da pessoa<input value={newPartyName} onChange={(event) => setNewPartyName(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Ex.: Robson" /></label>}
       </>}
-      {lockedAccount&&selectedAccount?<div className="rounded-xl bg-slate-950/70 p-3"><p className="text-xs text-slate-500">{direction === 'granted' ? 'Saiu de' : 'Entrou em'}</p><strong className="mt-1 block text-sm">{selectedAccount.name}</strong>{selectedAccount.institution&&<span className="mt-1 block text-xs text-slate-500">{selectedAccount.institution}</span>}</div>:<label className="block text-sm">{direction === 'granted' ? 'De qual conta saiu o dinheiro?' : 'Em qual conta entrou o dinheiro?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.institution?`${account.name} · ${account.institution}`:account.name}</option>)}</select></label>}
+      <fieldset><legend className="text-sm font-semibold">{direction === 'granted' ? 'De qual recurso saiu o dinheiro?' : 'Em qual recurso entrou o dinheiro?'}</legend>{lockedAccount&&selectedAccount?<div className="mt-2 max-w-[11rem]"><FinancialResourceChoice active onClick={()=>{}} icon={accountIcon(selectedAccount)} institution={selectedAccount.institution} name={selectedAccount.name} ownerLabel={accountOwners(selectedAccount)}/></div>:<div className="mt-2 grid grid-cols-3 gap-2">{accounts.map(account=><FinancialResourceChoice key={account.id} active={accountId===account.id} onClick={()=>setAccountId(account.id)} icon={accountIcon(account)} institution={account.institution} name={account.name} ownerLabel={accountOwners(account)}/>)}</div>}</fieldset>
       <label className="block text-sm">Quanto foi emprestado?<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label>
       <label className="block text-sm">Quando aconteceu?<input type="date" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label>
       <fieldset><legend className="text-sm font-semibold">{direction==='taken'?'Como pretende pagar este valor?':'Como pretende receber este valor?'}</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={()=>{setRepaymentMode('single');setInstallmentCount(1);}} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${repaymentMode==='single'?'border-blue-500 bg-blue-950/40 text-blue-200':'border-slate-700 text-slate-400'}`}>Uma vez</button><button type="button" onClick={()=>{setRepaymentMode('installments');if(installmentCount<2)setInstallmentCount(3);}} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${repaymentMode==='installments'?'border-blue-500 bg-blue-950/40 text-blue-200':'border-slate-700 text-slate-400'}`}>Parcelado</button></div></fieldset>
