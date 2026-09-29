@@ -183,6 +183,10 @@ test('Golden Journey visual abre Nova Despesa em duas etapas e mostra recursos r
   const dialog = page.getByRole('dialog', { name: 'Nova despesa' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('Quem fez esse gasto?')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Wallace', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Guilherme', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Guilherme', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Wallace', exact: true }).click();
   await expect(dialog.getByText('Com o que gastou?')).toBeVisible();
   await dialog.getByLabel(/Com o que gastou/).fill('Mercado');
   await dialog.getByRole('button', { name: 'Continuar' }).click();
