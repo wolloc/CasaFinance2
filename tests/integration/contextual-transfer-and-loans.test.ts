@@ -14,8 +14,8 @@ const scheduledPayment=await readFile(new URL('../../src/components/app/LoanSche
 const schedule=await readFile(new URL('../../src/finance/loanSchedule.ts',import.meta.url),'utf8');
 
 test('selected resource opens transfer as a direct form with the source already contextualized',()=>{
-  assert.match(row,/Transferir deste recurso/);
-  assert.match(adjustment,/contextualTransfer=resourceIntent\?\.kind==='transfer'/);
+  assert.match(row,/Transferir/);
+  assert.match(adjustment,/contextualMovement=Boolean/);
   assert.match(adjustment,/Saiu de/);
   assert.match(adjustment,/transferSource\.name/);
   assert.match(adjustment,/Entrou em/);
@@ -28,14 +28,15 @@ test('selected resource opens transfer as a direct form with the source already 
 
 test('borrowing from a resource reuses LoanAdjustment with taken direction and selected destination account',()=>{
   assert.match(row,/Pegar dinheiro emprestado/);
-  assert.match(app,/action\.kind==='loan'/);
-  assert.match(adjustment,/initialDirection=\{resourceIntent\?\.kind==='loan'\?'taken'/);
-  assert.match(adjustment,/initialAccountId=\{resourceIntent\?\.kind==='loan'\?resourceIntent\.accountId/);
+  assert.match(app,/action\.kind!==\'settings\'/);
+  assert.match(adjustment,/resourceIntent\?\.kind==='loan-taken'\?'taken'/);
+  assert.match(adjustment,/initialAccountId=\{contextualLoan&&resourceIntent\?resourceIntent\.accountId/);
   assert.match(loan,/initialAccountId/);
   assert.match(loan,/setAccountId\(initialAccountId\)/);
   assert.match(loan,/createLoanPrincipal/);
   assert.match(loan,/contextualBank/);
   assert.match(loan,/selectedAccount\.institution/);
+  assert.match(loan,/FinancialResourceChoice/);
   assert.match(loan,/credor e esta conta como destino/);
 });
 
@@ -49,8 +50,11 @@ test('Values with people exposes explicit lending and borrowing intents',()=>{
   assert.match(loan,/Peguei emprestado/);
 });
 
-test('old granted-loan route is gone instead of preserving a parallel journey',()=>{
-  assert.doesNotMatch(app,/loan-granted/);
+test('lending and borrowing from a resource share the canonical loan journey',()=>{
+  assert.match(row,/act\('loan-granted'\)/);
+  assert.match(row,/act\('loan-taken'\)/);
+  assert.match(adjustment,/resourceIntent\?\.kind==='loan-granted'\?'granted'/);
+  assert.match(adjustment,/resourceIntent\?\.kind==='loan-taken'\?'taken'/);
   assert.doesNotMatch(app,/openGrantedLoan/);
 });
 
