@@ -84,15 +84,15 @@ test('salvar uma nova despesa invalida a lente mensal sem perder a perspectiva g
 
 test('Gastos mantém total da visão compacto e categorias sob demanda sem virar orçamento',()=>{
  assert.match(browser,/FinancialListSummaryCard tone="expense"/);
- assert.match(browser,/realizado/);
- assert.match(browser,/comprometido/);
+ assert.doesNotMatch(browser,/\{money\(realized\)\}<\/span> realizado/);
+ assert.doesNotMatch(browser,/\{money\(remaining\)\}<\/span> comprometido/);
  assert.match(browser,/FinancialCategoryBreakdown/);
  assert.match(categories,/Ver categorias/);
  assert.match(categories,/<details/);
  assert.match(browser,/footer="Leitura dos gastos realizados; não é meta ou orçamento\."/);
  assert.match(browser,/row\.category\?\.name\?\.trim\(\)\|\|'Sem categoria'/);
  assert.match(browser,/FinancialMonthSummary[\s\S]*categories=\{financialSummary\.categories\}/);
- assert.match(browser,/function FinancialMonthSummary\(\{total,realized,remaining,categories\}/);
+ assert.match(browser,/function FinancialMonthSummary\(\{total,categories\}/);
 });
 
 test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcular motor financeiro',()=>{

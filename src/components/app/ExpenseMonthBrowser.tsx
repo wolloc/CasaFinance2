@@ -104,8 +104,8 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   </section>;
 }
 
-function FinancialMonthSummary({total,realized,remaining,categories}:{total:number;realized:number;remaining:number;categories:CategorySummary[]}){
-  return <FinancialListSummaryCard tone="expense" total={money(total)} meta={<><p><span className="text-emerald-300">{money(realized)}</span> realizado</p><p><span className="text-amber-300">{money(remaining)}</span> comprometido</p></>}><FinancialCategoryBreakdown categories={categories} total={total} tone="commitment" showBars/></FinancialListSummaryCard>;
+function FinancialMonthSummary({total,categories}:{total:number;realized:number;remaining:number;categories:CategorySummary[]}){
+  return <FinancialListSummaryCard tone="expense" total={money(total)}><FinancialCategoryBreakdown categories={categories} total={total} tone="commitment" showBars/></FinancialListSummaryCard>;
 }
 function EconomicMonthSummary({total,count,categories}:{total:number;count:number;categories:CategorySummary[]}){
   return <FinancialListSummaryCard tone="expense" total={money(total)} meta={<span>{count} {count===1?'compra':'compras'}</span>}><FinancialCategoryBreakdown categories={categories} total={total} tone="expense" showBars footer="Leitura dos gastos realizados; não é meta ou orçamento."/></FinancialListSummaryCard>;
