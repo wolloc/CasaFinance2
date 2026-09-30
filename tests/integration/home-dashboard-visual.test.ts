@@ -9,8 +9,8 @@ const projectionReview = await readFile(new URL('../../src/components/app/Projec
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
   for(const value of ['Agora','Entrou','Ainda entra','Já comprometido','Ainda compromete','Deve sobrar no fim do mês']) assert.match(home,new RegExp(value));
   assert.match(home,/healthText\[health\.health\]/);
-  assert.match(home,/confidence&&confidence\.confidence_state!=='well_updated'/);
-  assert.match(home,/confidence\.confidence_label/);
+  assert.doesNotMatch(home,/confidence\.confidence_label/);
+  assert.match(home,/Alguns dados não atualizaram agora/);
 });
 
 test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
@@ -29,10 +29,12 @@ test('Home deixa a análise por categorias para Gastos e Entradas',()=>{
   assert.doesNotMatch(home,/FinancialSectionHeading title="O que mais pesou"/);
 });
 
-test('posição realizada usa relação compacta entre membros',()=>{
+test('posição realizada entre moradores aparece em Como estamos e mantém detalhe na seção de pessoas',()=>{
+  assert.match(home,/Entre moradores/);
+  assert.match(home,/currentMemberSettlements/);
+  assert.match(home,/deve a/);
   assert.match(settlements,/memberPairs/);
   assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
-  assert.match(settlements,/currentText/);
 });
 
 
