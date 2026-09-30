@@ -94,7 +94,7 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
 
     <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1"><button type="button" onClick={()=>{setMode('economic');setQuery('')}} aria-pressed={mode==='economic'} className={`min-h-12 rounded-lg px-2 text-xs font-semibold ${mode==='economic'?'bg-blue-700 text-white':'text-slate-400'}`}>Gastos realizados</button><button type="button" onClick={()=>{setMode('financial');setQuery('')}} aria-pressed={mode==='financial'} className={`min-h-12 rounded-lg px-2 text-xs font-semibold ${mode==='financial'?'bg-blue-700 text-white':'text-slate-400'}`}>{customRange?'Compromissos do período':'Compromissos do mês'}</button></div>
 
-    {!loading&&!error&&(mode==='financial'?financialRows.length>0:economicRows.length>0)&&(mode==='financial'?<FinancialMonthSummary total={financialSummary.total} realized={financialSummary.realized} remaining={financialSummary.remaining} categories={financialSummary.categories}/>:<EconomicMonthSummary total={economicSummary.total} count={economicSummary.count} categories={economicSummary.categories}/>)}
+    {!loading&&!error&&(mode==='financial'?financialRows.length>0:economicRows.length>0)&&(mode==='financial'?<FinancialMonthSummary total={financialSummary.total} count={financialRows.length} categories={financialSummary.categories}/>:<EconomicMonthSummary total={economicSummary.total} count={economicSummary.count} categories={economicSummary.categories}/>)}
 
 
     {!loading&&!error&&totalCount>0&&<div className="mt-4"><FinancialListSearch value={query} onChange={setQuery} ariaLabel="Buscar gastos deste período" placeholder={mode==='financial'?'Buscar compromisso...':'Buscar compra, categoria ou pessoa...'} resultText={`${visibleCount} de ${totalCount} ${mode==='financial'?'compromissos':'gastos'} encontrados.`}/></div>}
@@ -104,9 +104,9 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   </section>;
 }
 
-function FinancialMonthSummary({total,categories}:{total:number;realized:number;remaining:number;categories:CategorySummary[]}){
-  return <FinancialListSummaryCard tone="expense" total={money(total)}><FinancialCategoryBreakdown categories={categories} total={total} tone="commitment" showBars/></FinancialListSummaryCard>;
+function FinancialMonthSummary({total,count,categories}:{total:number;count:number;categories:CategorySummary[]}){
+  return <FinancialListSummaryCard tone="expense" total={money(total)} meta={<span>{count} {count===1?'lançamento':'lançamentos'}</span>}><FinancialCategoryBreakdown categories={categories} total={total} tone="commitment" showBars/></FinancialListSummaryCard>;
 }
 function EconomicMonthSummary({total,count,categories}:{total:number;count:number;categories:CategorySummary[]}){
-  return <FinancialListSummaryCard tone="expense" total={money(total)} meta={<span>{count} {count===1?'compra':'compras'}</span>}><FinancialCategoryBreakdown categories={categories} total={total} tone="expense" showBars footer="Leitura dos gastos realizados; não é meta ou orçamento."/></FinancialListSummaryCard>;
+  return <FinancialListSummaryCard tone="expense" total={money(total)} meta={<span>{count} {count===1?'lançamento':'lançamentos'}</span>}><FinancialCategoryBreakdown categories={categories} total={total} tone="expense" showBars footer="Leitura dos gastos realizados; não é meta ou orçamento."/></FinancialListSummaryCard>;
 }

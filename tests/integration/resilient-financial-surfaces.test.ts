@@ -28,7 +28,8 @@ test('Dashboard preserves available canonical sections instead of failing all re
 });
 
 test('Home never turns an unavailable dashboard section into an apparent financial zero',()=>{
- assert.match(home,/Algumas análises não puderam ser confirmadas agora/);
+ assert.match(home,/Alguns dados não atualizaram agora/);
+ assert.match(home,/unavailableLabels/);
  assert.match(home,/Saldo atual em contas e dinheiro físico/);
  assert.match(home,/Não confirmado/);
  assert.match(home,/Não foi possível confirmar os saldos dos recursos da Casa/);
