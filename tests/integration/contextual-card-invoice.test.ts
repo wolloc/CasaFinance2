@@ -14,7 +14,11 @@ test('card click routes to a card-scoped invoice journey',()=>{
  assert.match(contextual,/Próxima fatura/);
  assert.match(contextual,/Pagar tudo ou parte/);
  assert.match(contextual,/Adiantar pagamento/);
- assert.match(contextual,/Lançamentos da fatura/);
+ assert.match(contextual,/Lançamentos/);
+ assert.match(contextual,/sortedItems/);
+ assert.match(contextual,/itemDisplayDate/);
+ assert.match(contextual,/left-1\/2 top-7/);
+ assert.doesNotMatch(contextual,/groupedItems/);
  assert.doesNotMatch(contextual,/FinancialPerspectiveSelector/);
 });
 
@@ -23,7 +27,7 @@ test('contextual invoice items reuse the canonical financial commitment read mod
  assert.match(items,/source_invoice_id/);
  assert.match(contextual,/Estornado/);
  assert.match(contextual,/Cancelado/);
- assert.match(contextual,/Saldo inicial do cartão/);
+ assert.match(contextual,/Saldo inicial/);
  assert.match(items,/transaction_date/);
  assert.match(contextual,/purchase_date/);
  assert.doesNotMatch(items,/\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
@@ -45,9 +49,9 @@ test('contextual invoice exposes card limit and future commitment from canonical
  assert.match(items,/financial_card_health_positions/);
  assert.match(items,/available_limit/);
  assert.match(items,/future_known_commitments/);
- assert.match(contextual,/Limite livre/);
- assert.match(contextual,/Futuro conhecido/);
- assert.match(contextual,/Crédito comprometido/);
+ assert.match(contextual,/Limite disponível/);
+ assert.match(contextual,/Futuro/);
+ assert.match(contextual,/utilization_ratio/);
  assert.match(contextual,/purchase_commitment_count/);
  assert.match(contextual,/installment_count/);
 });

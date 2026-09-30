@@ -28,3 +28,17 @@ test('linhas de Entrada e Gasto compartilham escala visual',()=>{
     assert.match(source,/text-\[11px\]/);
   }
 });
+
+
+test('Entradas e Gastos usam timeline visual sem agrupar os cards',()=>{
+  assert.match(income,/sortedVisibleRows/);
+  assert.match(expense,/sortedFinancialRows/);
+  assert.match(expense,/sortedEconomicRows/);
+  for(const source of [income,expense]){
+    assert.match(source,/left-3 top-0 w-px/);
+    assert.match(source,/rounded-full ring-4 ring-slate-900/);
+    assert.match(source,/localeCompare/);
+  }
+  assert.doesNotMatch(income,/groupByDate|groupedVisibleRows/);
+  assert.doesNotMatch(expense,/groupByDate|groupedFinancialRows|groupedEconomicRows/);
+});
