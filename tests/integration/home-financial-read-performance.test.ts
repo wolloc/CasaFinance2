@@ -7,7 +7,8 @@ const sql=await readFile(new URL('../../supabase/migrations/20260930110500_optim
 test('monthly projection materializes canonical commitments once per RPC',()=>{
   assert.match(sql,/commitment_base as materialized/i);
   assert.match(sql,/from commitment_base c/);
-  const rawRefs=(sql.match(/from public\.financial_commitment_positions c/gi)??[]).length;
+  const projectionBody=sql.slice(sql.indexOf('create or replace function public.financial_monthly_projection'),sql.indexOf('comment on function public.financial_monthly_projection'));
+  const rawRefs=(projectionBody.match(/from public\.financial_commitment_positions c/gi)??[]).length;
   assert.equal(rawRefs,1);
 });
 
