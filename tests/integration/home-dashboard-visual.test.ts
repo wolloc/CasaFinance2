@@ -8,7 +8,9 @@ const settlements = await readFile(new URL('../../src/components/app/SettlementH
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
-  for(const value of ['Agora','Entrou','Ainda entra','Já comprometido','Ainda compromete','Deve sobrar no fim do mês']) assert.match(home,new RegExp(value));
+  assert.match(home,/Agora/);
+  assert.match(home,/MonthlyPositionStatement/);
+  for(const value of ['Extrato do mês','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
   assert.match(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
