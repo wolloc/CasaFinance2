@@ -23,7 +23,7 @@ import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
 import type { FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { FinancialDetailDialogHeader } from './FinancialDetailDialogHeader.js';
 
-export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0 }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number }) {
+export function TransactionsScreen({ mode, perspective, onPerspectiveChange, createRequestId = 0, refreshKey = 0, onFinancialChange }: { mode: TransactionKind; perspective: FinancialPerspective; onPerspectiveChange: (value: FinancialPerspective)=>void; createRequestId?: number; refreshKey?: number; onFinancialChange?:()=>void }) {
   const recurringIntent = useMemo(() => mode === 'expense' ? consumeRecurringExpenseActionIntent() : null, [mode]);
   const projectionExpenseIntent = useMemo(() => mode === 'expense' ? consumeProjectionExpenseReviewIntent() : null, [mode]);
   const directExpenseIntent = useMemo(() => mode === 'expense' ? consumeDirectExpensePaymentIntent() : null, [mode]);
@@ -37,17 +37,17 @@ export function TransactionsScreen({ mode, perspective, onPerspectiveChange, cre
   const [detailRecurringOpen,setDetailRecurringOpen]=useState(false);
   useEffect(()=>{if(!expenseSaved)return;const timer=window.setTimeout(()=>setExpenseSaved(false),3500);return()=>window.clearTimeout(timer);},[expenseSaved]);
 
-  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} createRequestId={createRequestId} /></ScreenErrorBoundary>;
+  if (mode === 'income') return <ScreenErrorBoundary screenName="suas entradas"><IncomeLedgerScreen refreshKey={refreshKey} onFinancialChange={onFinancialChange} perspective={perspective} onPerspectiveChange={onPerspectiveChange} initialMoneyMovementId={incomeIntent?.moneyMovementId} initialReviewMoneyMovementId={projectionIncomeIntent?.moneyMovementId} createRequestId={createRequestId} /></ScreenErrorBoundary>;
 
   return <div className="space-y-4">
-    <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); }} />
+    <NewExpenseWizard openRequestId={createRequestId} onSaved={() => { setExpenseSaved(true); setExpenseListVersion((value) => value + 1); onFinancialChange?.(); }} />
     {expenseSaved && <FinancialSaveFeedback message="Despesa registrada. A lista e os efeitos financeiros foram atualizados."/>}
 
     {projectionExpenseIntent && <ForecastExpenseReviewCard commitmentKey={projectionExpenseIntent?.commitmentKey} />}
     {recurringIntent && <RecurringExpenseCommitmentCenter initialIntent={recurringIntent} />}
     {directExpenseIntent && <DirectExpensePaymentAction initialTransactionId={directExpenseIntent?.transactionId} />}
 
-    <ExpenseMonthBrowser perspective={perspective} onPerspectiveChange={onPerspectiveChange} refreshKey={expenseListVersion} onOpenTransaction={(transactionId,recurringRuleId)=>{setDetailTransactionId(transactionId);setDetailRecurringRuleId(recurringRuleId??null);setDetailActionsOpen(false);setDetailRecurringOpen(false)}} />
+    <ExpenseMonthBrowser perspective={perspective} onPerspectiveChange={onPerspectiveChange} refreshKey={expenseListVersion+refreshKey} onOpenTransaction={(transactionId,recurringRuleId)=>{setDetailTransactionId(transactionId);setDetailRecurringRuleId(recurringRuleId??null);setDetailActionsOpen(false);setDetailRecurringOpen(false)}} />
     {detailTransactionId&&<div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:items-center"><section role="dialog" aria-modal="true" aria-label="Detalhe do gasto" className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 p-4 shadow-2xl"><FinancialDetailDialogHeader tone="expense" eyebrow="Gasto" title="Detalhe do gasto" subtitle="Histórico, correções e ações especiais deste lançamento." onClose={()=>{setDetailTransactionId(null);setDetailRecurringRuleId(null);setDetailActionsOpen(false);setDetailRecurringOpen(false)}} closeLabel="Fechar detalhe do gasto"/><HouseholdTransactionsSetup embedded mode="expense" focusTransactionId={detailTransactionId}/>{detailRecurringRuleId&&<div className="mt-4"><button type="button" onClick={()=>setDetailRecurringOpen(value=>!value)} className="min-h-11 w-full rounded-xl border border-violet-900 bg-violet-950/20 px-3 text-sm font-bold text-violet-300">{detailRecurringOpen?'Fechar recorrência':'Gerenciar esta recorrência'}</button>{detailRecurringOpen&&<div className="mt-3"><RecurringExpenseManagement focusRuleId={detailRecurringRuleId} onChanged={()=>{setExpenseListVersion(value=>value+1);setDetailRecurringOpen(false)}}/></div>}</div>}<details className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/45" onToggle={event=>setDetailActionsOpen(event.currentTarget.open)}><summary className="min-h-11 cursor-pointer list-none px-3 py-3 text-sm font-semibold text-slate-300">Ações especiais<span className="mt-1 block text-xs font-normal text-slate-500">Pagamento por terceiro, devoluções e correção de comprador/responsabilidade.</span></summary>{detailActionsOpen&&<div className="space-y-4 border-t border-slate-800 p-3"><ExternalExpensePaymentAction initialTransactionId={detailTransactionId}/><PartialDirectRefundAction initialTransactionId={detailTransactionId}/><CardRefundAction initialTransactionId={detailTransactionId}/><PostPaymentCardRefundAction initialTransactionId={detailTransactionId}/><ExpenseRoleCorrectionAction initialTransactionId={detailTransactionId}/></div>}</details></section></div>}
   </div>;
 }
