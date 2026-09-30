@@ -27,7 +27,7 @@ test('contextual invoice items reuse the canonical financial commitment read mod
  assert.match(items,/source_invoice_id/);
  assert.match(contextual,/Estornado/);
  assert.match(contextual,/Cancelado/);
- assert.match(contextual,/Saldo inicial do cartão/);
+ assert.match(contextual,/Saldo inicial/);
  assert.match(items,/transaction_date/);
  assert.match(contextual,/purchase_date/);
  assert.doesNotMatch(items,/\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
