@@ -63,7 +63,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const{household:position,health,attention,projection,cards,settlements,resources,guidance,availability}=dashboard;
  const currentMonth=availability.projection?projection[0]:undefined;
  const currentCash=health?.current_cash!=null?Number(health.current_cash):resources?resources.availableCash:null;
- const projectedEndingCash=health?.projected_ending_cash!=null?Number(health.projected_ending_cash):position?Number(position.projected_balance):null;
  const gap=guidance?Number(guidance.coverage_gap):null;
  const hasPartialFailure=Object.values(availability).some(value=>!value);
  const unavailableLabels=[!availability.household&&'posição da Casa',!availability.members&&'moradores',!availability.health&&'saúde do mês',!availability.confidence&&'qualidade das previsões',!availability.attention&&'itens de atenção',!availability.projection&&'projeção mensal',!availability.cards&&'cartões',!availability.settlements&&'valores entre moradores',!availability.resources&&'recursos',!availability.guidance&&'orientação de cobertura'].filter((value):value is string=>Boolean(value));
