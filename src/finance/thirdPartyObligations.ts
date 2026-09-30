@@ -19,6 +19,36 @@ export type ThirdPartyObligation = {
   responsibility_members: Array<{ member_id: string; percentage: number; amount: number }>;
 };
 
+export type ThirdPartyObligationHistoryEvent = {
+  id: string;
+  obligation_id: string;
+  kind: 'receipt' | 'payment' | 'cancellation' | 'write_off' | 'adjustment';
+  amount: number;
+  occurred_at: string;
+  notes: string | null;
+};
+
+export type ThirdPartyObligationHistoryItem = {
+  id: string;
+  kind: 'receivable' | 'payable';
+  origin_kind: string;
+  counterparty_id: string;
+  original_amount: number;
+  obligation_date: string;
+  due_date: string | null;
+  state: 'open' | 'partially_settled' | 'settled' | 'cancelled' | 'written_off';
+  description: string;
+  notes: string | null;
+  outstanding_amount: number;
+  events: ThirdPartyObligationHistoryEvent[];
+};
+
+export type ThirdPartyObligationHistory = {
+  counterparty_id: string;
+  counterparty_name: string;
+  obligations: ThirdPartyObligationHistoryItem[];
+};
+
 export type FinancialPartyOption = { id: string; name: string };
 export type ReceivableLossAllocation = { memberId: string; percentage: number };
 export type DebtForgivenessAllocation = { memberId: string; percentage: number };
@@ -254,6 +284,73 @@ export async function listOpenThirdPartyObligations(client: SupabaseClient, hous
     } as ThirdPartyObligation;
   }).filter((row) => row.outstanding_amount > 0);
 }
+export async function listThirdPartyObligationHistory(client: SupabaseClient, householdId: string, counterpartyId: string): Promise<ThirdPartyObligationHistory> {
+  const [party, obligations] = await Promise.all([
+    client.from('financial_parties')
+      .select('id,name')
+      .eq('household_id', householdId)
+      .eq('id', counterpartyId)
+      .maybeSingle(),
+    client.from('financial_obligations')
+      .select('id,kind,origin_kind,counterparty_id,original_amount,obligation_date,due_date,state,description,notes')
+      .eq('household_id', householdId)
+      .eq('counterparty_id', counterpartyId)
+      .order('obligation_date', { ascending: false }),
+  ]);
+  if (party.error) throw party.error;
+  if (obligations.error) throw obligations.error;
+
+  const obligationIds=(obligations.data??[]).map(row=>String(row.id));
+  const events=obligationIds.length>0
+    ?await client.from('obligation_events')
+      .select('id,obligation_id,kind,amount,occurred_at,notes')
+      .eq('household_id',householdId)
+      .in('obligation_id',obligationIds)
+      .order('occurred_at',{ascending:true})
+    :{data:[],error:null};
+  if(events.error)throw events.error;
+
+  const eventsByObligation=new Map<string,ThirdPartyObligationHistoryEvent[]>();
+  for(const event of events.data??[]){
+    const key=String(event.obligation_id);
+    const current=eventsByObligation.get(key)??[];
+    current.push({
+      id:String(event.id),
+      obligation_id:key,
+      kind:event.kind as ThirdPartyObligationHistoryEvent['kind'],
+      amount:Number(event.amount),
+      occurred_at:String(event.occurred_at),
+      notes:event.notes?String(event.notes):null,
+    });
+    eventsByObligation.set(key,current);
+  }
+
+  return {
+    counterparty_id:counterpartyId,
+    counterparty_name:party.data?.name??'Outra pessoa',
+    obligations:(obligations.data??[]).map(row=>{
+      const obligationEvents=eventsByObligation.get(String(row.id))??[];
+      const reduced=obligationEvents
+        .filter(event=>['receipt','payment','cancellation','write_off'].includes(event.kind))
+        .reduce((sum,event)=>sum+event.amount,0);
+      return {
+        id:String(row.id),
+        kind:row.kind as 'receivable'|'payable',
+        origin_kind:String(row.origin_kind),
+        counterparty_id:String(row.counterparty_id),
+        original_amount:Number(row.original_amount),
+        obligation_date:String(row.obligation_date),
+        due_date:row.due_date?String(row.due_date):null,
+        state:row.state as ThirdPartyObligationHistoryItem['state'],
+        description:String(row.description),
+        notes:row.notes?String(row.notes):null,
+        outstanding_amount:Math.max(0,Number(row.original_amount)-reduced),
+        events:obligationEvents,
+      };
+    }),
+  };
+}
+
 export async function listEditableManualThirdPartyObligations(client: SupabaseClient, householdId: string) {
   const rows = await listOpenThirdPartyObligations(client, householdId);
   return rows.filter((row) => row.origin_kind === 'manual' && row.state === 'open' && row.settled_amount === 0);
