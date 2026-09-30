@@ -8,7 +8,7 @@ const period = await readFile(new URL('../../src/components/app/FinancialPeriodN
 const categories = await readFile(new URL('../../src/components/app/FinancialCategoryBreakdown.tsx', import.meta.url), 'utf8');
 
 test('Entradas abre como lista e a criação só aparece quando a ação global solicita', () => {
-  assert.match(source, /<IncomeCreationAction onCreated=\{\(\)=>\{refresh\(\);setIncomeSaved\(true\);\}\} openRequestId=\{createRequestId\}\/>/);
+  assert.match(source, /<IncomeCreationAction onCreated=\{\(\)=>\{refreshFinancial\(\);setIncomeSaved\(true\);\}\} openRequestId=\{createRequestId\}\/>/);
   assert.match(creation,/if\(!open\)return null/);
   assert.match(creation,/openRequestId>0/);
   assert.match(creation,/aria-label="Nova entrada"/);
