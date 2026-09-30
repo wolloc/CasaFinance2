@@ -12,6 +12,7 @@ export type CardInvoiceItem = {
   remaining_amount: number | string;
   commitment_state: string;
   description: string;
+  purchase_date: string | null;
 };
 
 export async function listCardInvoiceItems(client: SupabaseClient, householdId: string, invoiceId: string): Promise<CardInvoiceItem[]> {
@@ -23,7 +24,15 @@ export async function listCardInvoiceItems(client: SupabaseClient, householdId: 
     .order('financial_date', { ascending: true })
     .order('commitment_key', { ascending: true });
   if (response.error) throw response.error;
-  return (response.data ?? []) as CardInvoiceItem[];
+  const rows=(response.data??[]) as Omit<CardInvoiceItem,'purchase_date'>[];
+  const transactionIds=[...new Set(rows.map(row=>row.source_transaction_id).filter((id):id is string=>Boolean(id)))];
+  const purchaseDates=new Map<string,string>();
+  if(transactionIds.length>0){
+    const transactions=await client.from('transactions').select('id,transaction_date').eq('household_id',householdId).in('id',transactionIds);
+    if(transactions.error)throw transactions.error;
+    for(const row of transactions.data??[])purchaseDates.set(String(row.id),String(row.transaction_date));
+  }
+  return rows.map(row=>({...row,purchase_date:row.source_transaction_id?purchaseDates.get(row.source_transaction_id)??null:null}));
 }
 
 
