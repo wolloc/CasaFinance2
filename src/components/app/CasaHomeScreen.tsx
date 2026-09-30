@@ -24,8 +24,6 @@ import { MonthlyPositionStatement } from './MonthlyPositionStatement.js';
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value.slice(0,10)}T12:00:00Z`));
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
-const healthText={green:'Saudável',yellow:'Atenção',red:'Crítico'}as const;
-const healthClass={green:'text-emerald-300',yellow:'text-amber-300',red:'text-rose-300'}as const;
 const unavailable=(message:string)=><p role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4 text-sm text-amber-100">{message}</p>;
 type Dashboard=Awaited<ReturnType<typeof getFinancialDashboard>>;
 
@@ -132,15 +130,15 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const attributedResourceTotal=memberResources.reduce((sum,item)=>sum+Number(item.attributed_amount),0);
   return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section><FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/><div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Posso movimentar hoje</p><strong className="mt-1 block text-3xl">{money(current.opening_liquidity)}</strong></div></div>
-    <div className="mt-5"><MonthlyPositionStatement
+    <MonthlyPositionStatement
      opening={Number(current.opening_liquidity)}
      realizedIncome={Number(current.realized_true_income_in_month)}
      expectedIncome={Number(current.expected_reliable_income_remaining)+Number(current.scheduled_settlement_inflow)}
      realizedOutflow={Number(current.realized_funding_in_month)}
      remainingOutflow={Number(current.projected_funding_remaining)+Number(current.scheduled_settlement_outflow)}
      ending={Number(current.projected_ending_liquidity)}
-    /></div>
+     currentAvailable={Number(current.opening_liquidity)}
+    />
     <p className="mt-3 text-[11px] text-slate-500">Minha responsabilidade econômica restante: {money(current.economic_responsibility_remaining)}.</p>
     {Number(current.unattributed_funding_remaining)>0&&<p className="mt-2 rounded-xl border border-amber-900/60 bg-amber-950/15 p-3 text-xs text-amber-100">Há {money(current.unattributed_funding_remaining)} de compromissos da Casa sem rota individual definida. Esse valor não foi descontado do seu saldo nem atribuído ao outro morador automaticamente.</p>}
    </div></section>
@@ -171,8 +169,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   <section>
    <FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/>
    <div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Agora</p>{currentCash===null?<strong className="mt-1 block text-xl">Não confirmado</strong>:<strong className="mt-1 block text-3xl">{money(currentCash)}</strong>}<p className="mt-1 text-[11px] text-slate-500">Saldo atual em contas e dinheiro físico.</p></div>{health&&<span className={`rounded-full bg-slate-800 px-2.5 py-1 text-xs font-bold ${healthClass[health.health]}`}>{healthText[health.health]}</span>}</div>
-    {!availability.projection||!currentMonth?<p className="mt-5 text-sm text-slate-400">Ainda não há resumo financeiro confirmado para este mês.</p>:<div className="mt-5"><MonthlyPositionStatement
+    {!availability.projection||!currentMonth?<p className="text-sm text-slate-400">Ainda não há resumo financeiro confirmado para este mês.</p>:<MonthlyPositionStatement
      opening={Number(currentMonth.opening_cash)}
      realizedIncome={Number(currentMonth.realized_true_income_in_month)}
      expectedIncome={Number(currentMonth.expected_reliable_income_remaining)}
@@ -183,12 +180,12 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      coverageState={guidance?.guidance_state}
      coverageGap={gap??0}
      reserveAndInvestments={guidance?Number(guidance.reserve_balance)+Number(guidance.investment_balance):0}
-    /></div>}
+    />}
     {availability.settlements&&currentMemberSettlements.length>0&&<div className="mt-4 rounded-2xl border border-cyan-800/70 bg-cyan-950/30 p-3.5"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-300">Entre moradores</p><div className="mt-2 space-y-2">{currentMemberSettlements.map(row=><div key={row.debtor_member_id+'-'+row.creditor_member_id} className="flex items-center justify-between gap-3"><span className="text-sm font-semibold text-cyan-50">{memberName(row.debtor_member_id)} deve a {memberName(row.creditor_member_id)}</span><strong className="text-lg font-black text-cyan-200">{money(row.net_position)}</strong></div>)}</div></div>}
 
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}
-   {guidance&&guidance.guidance_state!=='covered'&&<article className="mt-3 rounded-2xl border border-rose-900/70 bg-rose-950/20 p-4"><h3 className="font-bold">{guidance.guidance_title}</h3>{guidance.guidance_state==='covered_by_expected_income'?<p className="mt-1 text-sm">O caixa atual sozinho não cobre tudo, mas as entradas confiáveis previstas fecham o mês.</p>:<><p className="mt-1 text-sm">Faltam <strong>{money(gap??0)}</strong> na projeção para cobrir os compromissos conhecidos.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={()=>onCoverageAction?.('transfer',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Mover dinheiro de outra conta da Casa</button>{Number(guidance.reserve_balance)+Number(guidance.investment_balance)>0&&<button onClick={()=>onCoverageAction?.('reserve',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Usar dinheiro de uma reserva ou investimento</button>}<button onClick={()=>onCoverageAction?.('loan',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Pegar dinheiro emprestado</button></div></>}</article>}
+   {guidance&&(guidance.guidance_state==='needs_resource_reallocation'||guidance.guidance_state==='needs_funding_plan')&&<article className="mt-3 rounded-2xl border border-slate-800 bg-slate-900/45 p-4"><p className="text-sm font-bold text-slate-200">Quer ajustar esse mês?</p><p className="mt-1 text-xs text-slate-400">Essas ações mudam a forma de cobertura; nenhuma é aplicada automaticamente.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={()=>onCoverageAction?.('transfer',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Mover dinheiro de outra conta</button>{Number(guidance.reserve_balance)+Number(guidance.investment_balance)>0&&<button onClick={()=>onCoverageAction?.('reserve',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Usar reserva ou investimento</button>}<button onClick={()=>onCoverageAction?.('loan',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Ver opção de empréstimo</button></div></article>}
   </section>
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}
