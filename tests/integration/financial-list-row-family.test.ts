@@ -22,7 +22,7 @@ test('busca não muda o total do período',()=>{
 
 test('linhas de Entrada e Gasto compartilham escala visual',()=>{
   for(const source of [income,expense]){
-    assert.match(source,/h-10 w-10 shrink-0/);
+    assert.match(source,/h-9 w-9 shrink-0/);
     assert.match(source,/text-sm font-bold/);
     assert.match(source,/text-base font-black/);
     assert.match(source,/text-\[11px\]/);
@@ -30,15 +30,11 @@ test('linhas de Entrada e Gasto compartilham escala visual',()=>{
 });
 
 
-test('Entradas e Gastos usam timeline visual sem agrupar os cards',()=>{
+test('Entradas e Gastos mantêm ordenação recente sem linha ou bolinha de timeline',()=>{
   assert.match(income,/sortedVisibleRows/);
   assert.match(expense,/sortedFinancialRows/);
   assert.match(expense,/sortedEconomicRows/);
-  for(const source of [income,expense]){
-    assert.match(source,/left-3 top-0 w-px/);
-    assert.match(source,/rounded-full ring-4 ring-slate-900/);
-    assert.match(source,/localeCompare/);
-  }
-  assert.doesNotMatch(income,/groupByDate|groupedVisibleRows/);
-  assert.doesNotMatch(expense,/groupByDate|groupedFinancialRows|groupedEconomicRows/);
+  for(const source of [income,expense]) assert.match(source,/localeCompare/);
+  assert.doesNotMatch(income,/left-3 top-0 w-px|rounded-full ring-4 ring-slate-900/);
+  assert.doesNotMatch(expense,/left-3 top-0 w-px|rounded-full ring-4 ring-slate-900/);
 });

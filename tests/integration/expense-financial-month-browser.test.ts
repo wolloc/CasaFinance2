@@ -34,8 +34,11 @@ test('Gastos prioriza o navegador mensal e leva histórico/correções para o la
  assert.ok(month>=0,'financial month browser must be present');
  assert.ok(contextualDetail>month,'transaction detail must be contextual to the monthly list');
  assert.match(browser,/Compromissos do mês/);
- assert.match(browser,/Item da fatura; o pagamento não vira outro gasto/);
- assert.match(browser,/border-orange-500/);
+ assert.doesNotMatch(browser,/Item da fatura; o pagamento não vira outro gasto/);
+ assert.doesNotMatch(browser,/border-orange-500/);
+ assert.doesNotMatch(browser,/Gasto recorrente/);
+ assert.doesNotMatch(browser,/Ainda compromete \{money\(row\.remaining_amount\)\}/);
+ assert.match(browser,/bg-violet-500\/15 font-semibold text-violet-200/);
  assert.match(browser,/FinancialPeriodNavigator/);
  assert.match(period,/Mês anterior/);
  assert.match(period,/Mês seguinte/);

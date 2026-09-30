@@ -33,6 +33,8 @@ test('posição realizada entre moradores aparece em Como estamos e mantém deta
   assert.match(home,/Entre moradores/);
   assert.match(home,/currentMemberSettlements/);
   assert.match(home,/deve a/);
+  assert.match(home,/border-cyan-800\/70 bg-cyan-950\/30/);
+  assert.match(home,/text-lg font-black text-cyan-200/);
   assert.match(settlements,/memberPairs/);
   assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
 });

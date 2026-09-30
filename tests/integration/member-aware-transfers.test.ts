@@ -11,7 +11,7 @@ test('cross-member transfers default to affecting the continuous member position
   assert.match(adjustment,/memberTransferContext/);
   assert.match(adjustment,/setAffectMemberPosition\(Boolean\(memberTransferContext\)\)/);
   assert.match(adjustment,/Considerar na posição entre vocês/);
-  assert.match(adjustment,/marcada por padrão|considera este movimento na posição líquida entre vocês por padrão/i);
+  assert.doesNotMatch(adjustment,/considera este movimento na posição líquida entre vocês por padrão|Você veio de um recurso específico da Casa/i);
   assert.match(adjustment,/createMemberPositionTransfer/);
   assert.match(adjustment,/createResourceTransfer/);
 });
