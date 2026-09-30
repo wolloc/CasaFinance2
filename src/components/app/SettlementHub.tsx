@@ -6,6 +6,7 @@ import { listMemberSettlementEvents, listMemberSettlementPositions, type MemberS
 import { listOpenThirdPartyObligations, type ThirdPartyObligation } from '../../finance/thirdPartyObligations.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialSectionHeading } from './FinancialSectionHeading.js';
+import { ThirdPartyContextModal } from './ThirdPartyContextModal.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const dateLabel=(value:string|null)=>{if(!value)return 'Sem vencimento';const date=new Date(`${value}T12:00:00`);const today=new Date();today.setHours(0,0,0,0);date.setHours(0,0,0,0);if(date.getTime()<today.getTime())return `Venceu em ${date.toLocaleDateString('pt-BR')}`;if(date.getTime()===today.getTime())return 'Vence hoje';return `Vence em ${date.toLocaleDateString('pt-BR')}`;};
@@ -35,6 +36,7 @@ export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(i
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState(false);
   const[refreshKey,setRefreshKey]=useState(0);
+  const[selectedThirdParty,setSelectedThirdParty]=useState<ThirdPartyGroup|null>(null);
 
   useEffect(()=>{let cancelled=false;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listMemberSettlementPositions(supabase,household.id),listOpenThirdPartyObligations(supabase,household.id),listMemberSettlementEvents(supabase,household.id)]).then(([members,thirdParties,events])=>{if(cancelled)return;setMemberRows(members);setThirdPartyRows(thirdParties);setMemberEvents(events);}).catch(()=>{if(cancelled)return;setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,refreshKey]);
 
@@ -103,7 +105,7 @@ export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(i
         const responsibilityLabels=[...new Set(group.rows.map(responsibilityLabel))];
         const responsibility=responsibilityLabels.length===1?responsibilityLabels[0]:'Responsabilidade mista';
         return <details key={group.counterpartyId} className="group rounded-2xl border border-slate-800 bg-slate-900/35">
-          <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <summary onClick={event=>{event.preventDefault();setSelectedThirdParty(group);}} className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="block truncate text-sm">{group.name}</strong><span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{responsibility}</span></div><p className="mt-1 text-xs text-slate-500">{status}{group.nearestDue?` · ${dateLabel(group.nearestDue)}`:''}</p></div>
             <strong className={`whitespace-nowrap ${group.net>0?'text-emerald-300':group.net<0?'text-rose-300':'text-slate-300'}`}>{money(Math.abs(group.net))}</strong>
           </summary>
@@ -115,5 +117,6 @@ export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(i
         </details>;
       })}
     </div>}
+    {selectedThirdParty&&<ThirdPartyContextModal counterpartyId={selectedThirdParty.counterpartyId} name={selectedThirdParty.name} net={selectedThirdParty.net} openRows={selectedThirdParty.rows} onClose={()=>setSelectedThirdParty(null)} onResolve={onResolve}/>}
   </section>;
 }
