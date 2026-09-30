@@ -3,18 +3,22 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 const home = await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx', import.meta.url), 'utf8');
+const statement = await readFile(new URL('../../src/components/app/MonthlyPositionStatement.tsx', import.meta.url), 'utf8');
 const settlements = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
-  for(const value of ['Agora','Entrou','Ainda entra','Já comprometido','Ainda compromete','Deve sobrar no fim do mês']) assert.match(home,new RegExp(value));
+  assert.match(home,/Agora/);
+  assert.match(home,/MonthlyPositionStatement/);
+  for(const value of ['Extrato do mês','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
   assert.match(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
 });
 
 test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
-  for(const value of ['Como estamos?','Entrou','Ainda entra','Já comprometido','Ainda compromete']) assert.match(home,new RegExp(value));
+  for(const value of ['Como estamos?','MonthlyPositionStatement']) assert.match(home,new RegExp(value));
+  for(const value of ['Extrato do mês','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
   assert.doesNotMatch(home,/title="Mês em resumo"/);
   assert.match(home,/realized_true_income_in_month/);
   assert.match(home,/expected_reliable_income_remaining/);

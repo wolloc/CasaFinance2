@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const home=fs.readFileSync('src/components/app/CasaHomeScreen.tsx','utf8');
+const statement=fs.readFileSync('src/components/app/MonthlyPositionStatement.tsx','utf8');
 const income=fs.readFileSync('src/components/app/IncomeLedgerScreen.tsx','utf8');
 
 test('Home does not discard canonical dashboard reads when recurrence maintenance fails',()=>{
@@ -39,11 +40,13 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 
 
 test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
- assert.match(home,/Entrou/);
- assert.match(home,/Ainda entra/);
- assert.match(home,/Já comprometido/);
- assert.match(home,/Ainda compromete/);
- assert.match(home,/Deve sobrar no fim do mês/);
+ assert.match(home,/MonthlyPositionStatement/);
+ assert.match(statement,/Extrato do mês/);
+ assert.match(statement,/Entradas já realizadas/);
+ assert.match(statement,/Entradas confiáveis ainda esperadas/);
+ assert.match(statement,/Saídas\/compromissos já realizados/);
+ assert.match(statement,/O que ainda deve sair/);
+ assert.match(statement,/Posição projetada no fim do mês/);
  assert.match(home,/Onde está nosso dinheiro/);
  assert.match(home,/Valor acompanhado/);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos'"]) assert.match(home,new RegExp(value));
