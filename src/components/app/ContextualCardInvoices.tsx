@@ -9,7 +9,6 @@ import { listFinancialInvoices, type FinancialInvoice } from '../../finance/fina
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
 const monthLabel=(value:string)=>new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(`${value.slice(0,10)}T12:00:00Z`));
-const timelineDateLabel=(value:string)=>{const label=new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'2-digit',month:'long',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));return label.charAt(0).toUpperCase()+label.slice(1);};
 const itemStateLabel=(item:CardInvoiceItem)=>item.commitment_state==='reversed'?'Estornado':item.commitment_state==='cancelled'?'Cancelado':null;
 const itemDisplayDate=(item:CardInvoiceItem)=>item.purchase_date??item.financial_date;
 
@@ -31,7 +30,7 @@ export function ContextualCardInvoices({cardId,onPay}:{cardId:string;onPay?:(inv
  useEffect(()=>{let active=true;if(!supabase||!household||!selectedInvoiceId){setItems([]);return()=>{active=false;};}setItemsLoading(true);setItemsError(false);listCardInvoiceItems(supabase,household.id,selectedInvoiceId).then(next=>{if(active)setItems(next);}).catch(()=>{if(active){setItems([]);setItemsError(true);}}).finally(()=>{if(active)setItemsLoading(false);});return()=>{active=false;};},[household?.id,selectedInvoiceId]);
 
  const selectedIndex=useMemo(()=>rows.findIndex(row=>row.invoice_id===selectedInvoiceId),[rows,selectedInvoiceId]);
- const groupedItems=useMemo(()=>{const groups=new Map<string,CardInvoiceItem[]>();for(const item of items){const date=itemDisplayDate(item);const current=groups.get(date)??[];current.push(item);groups.set(date,current);}return [...groups.entries()].sort(([a],[b])=>b.localeCompare(a));},[items]);
+ const sortedItems=useMemo(()=>[...items].sort((a,b)=>itemDisplayDate(b).localeCompare(itemDisplayDate(a))),[items]);
  const activeInvoice=selectedIndex>=0?rows[selectedIndex]:null;
  const paymentInvoice=activeInvoice?invoices.find(row=>row.invoice_id===activeInvoice.invoice_id)??null:null;
  const cardName=activeInvoice?.card_name??rows[0]?.card_name??'Cartão';
@@ -71,9 +70,9 @@ export function ContextualCardInvoices({cardId,onPay}:{cardId:string;onPay?:(inv
    {paymentInvoice&&Number(paymentInvoice.outstanding_amount)>0&&<button type="button" onClick={()=>onPay?.(paymentInvoice)} className="mt-5 min-h-12 w-full rounded-2xl bg-blue-600 px-4 text-sm font-bold">{activeInvoice.is_future_invoice?'Adiantar pagamento':'Pagar tudo ou parte'}</button>}
   </section>
 
-  <section className="rounded-[1.75rem] border border-slate-800 bg-slate-900/55 p-4">
-   <h2 className="font-bold">Lançamentos</h2>
-   {itemsLoading?<LoaderCircle className="mx-auto my-6 h-5 w-5 animate-spin text-violet-300"/>:itemsError?<p role="alert" className="mt-3 rounded-xl border border-rose-900 bg-rose-950/20 p-3 text-sm text-rose-200">Não foi possível carregar os lançamentos desta fatura.</p>:items.length===0?<p className="mt-3 py-6 text-center text-sm text-slate-500">Nenhum lançamento encontrado nesta fatura.</p>:<div className="mt-4 space-y-5">{groupedItems.map(([date,dateItems])=><section key={date}><h3 className="mb-2 text-sm font-black text-slate-200">{timelineDateLabel(date)}</h3><div className="divide-y divide-slate-800">{dateItems.map(item=>{const state=itemStateLabel(item);const itemType=item.source_type==='card_opening_adjustment'?'Saldo inicial':item.source_installment_id?'Parcela':'Compra';return <article key={item.commitment_key} className="flex items-center gap-3 py-3 first:pt-1"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-400"><CreditCard className="h-4 w-4"/></span><div className="min-w-0 flex-1"><h4 className="truncate text-sm font-semibold">{item.description}</h4><p className="mt-0.5 text-xs text-slate-500">{itemType}{state?' · '+state:''}</p></div><strong className="shrink-0 text-sm">{money(item.effective_amount)}</strong></article>})}</div></section>)}</div>}
+  <section>
+   <h2 className="px-1 font-bold">Lançamentos</h2>
+   {itemsLoading?<LoaderCircle className="mx-auto my-6 h-5 w-5 animate-spin text-violet-300"/>:itemsError?<p role="alert" className="mt-3 rounded-xl border border-rose-900 bg-rose-950/20 p-3 text-sm text-rose-200">Não foi possível carregar os lançamentos desta fatura.</p>:items.length===0?<p className="mt-3 py-6 text-center text-sm text-slate-500">Nenhum lançamento encontrado nesta fatura.</p>:<div className="mt-3 space-y-2">{sortedItems.map((item,index)=>{const state=itemStateLabel(item);const itemType=item.source_type==='card_opening_adjustment'?'Saldo inicial':item.source_installment_id?'Parcela':'Compra';const date=itemDisplayDate(item);return <div key={item.commitment_key} className="relative flex gap-3 pl-1"><div className="relative flex w-4 shrink-0 justify-center"><span className="mt-5 h-2.5 w-2.5 rounded-full border-2 border-violet-400 bg-slate-950"/>{index<sortedItems.length-1&&<span className="absolute left-1/2 top-7 h-[calc(100%+0.5rem)] w-px -translate-x-1/2 bg-slate-700"/>}</div><article className="min-w-0 flex-1 rounded-2xl border border-slate-800 bg-slate-900/75 p-3"><div className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-400"><CreditCard className="h-4 w-4"/></span><div className="min-w-0 flex-1"><p className="text-[11px] font-semibold text-slate-500">{shortDate(date)}</p><h3 className="mt-0.5 truncate text-sm font-semibold">{item.description}</h3><p className="mt-0.5 text-xs text-slate-500">{itemType}{state?' · '+state:''}</p></div><strong className="shrink-0 text-sm">{money(item.effective_amount)}</strong></div></article></div>})}</div>}
   </section>
  </div>;
 }
