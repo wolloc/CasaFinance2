@@ -30,7 +30,7 @@ export function MonthlyPositionStatement({
   const coverageCopy=coverageState==='covered'
     ?{title:'O que já está disponível cobre o mês',detail:'Os recursos líquidos atuais cobrem os compromissos conhecidos.',tone:'text-emerald-300',Icon:CircleCheck}
     :coverageState==='covered_by_expected_income'
-      ?{title:'O mês fecha com as entradas esperadas',detail:'O caixa de agora não cobre tudo sozinho, mas as entradas confiáveis previstas completam a cobertura.',tone:'text-blue-300',Icon:CircleDollarSign}
+      ?{title:'O mês fecha com as entradas esperadas',detail:'O caixa de agora não cobre tudo sozinho, mas as entradas previstas completam a cobertura.',tone:'text-blue-300',Icon:CircleDollarSign}
       :coverageState==='needs_resource_reallocation'
         ?{title:'Vai precisar puxar outro recurso',detail:'Caixa e entradas previstas não cobrem tudo. Reserva ou investimento podem completar a cobertura.',tone:'text-amber-300',Icon:Landmark}
         :coverageState==='needs_funding_plan'
@@ -53,7 +53,7 @@ export function MonthlyPositionStatement({
       <div className="space-y-2 border-t border-slate-800 px-4 py-3 text-sm">
         <div className="flex justify-between gap-3"><span className="text-slate-500">Saldo na abertura do mês</span><strong>{money(opening)}</strong></div>
         <div className="flex justify-between gap-3"><span className="text-emerald-300">+ Entradas já realizadas</span><strong className="text-emerald-200">{money(realizedIncome)}</strong></div>
-        <div className="flex justify-between gap-3"><span className="text-blue-300">+ Entradas confiáveis ainda esperadas</span><strong className="text-blue-200">{money(expectedIncome)}</strong></div>
+        <div className="flex justify-between gap-3"><span className="text-blue-300">+ Entradas previstas ainda esperadas</span><strong className="text-blue-200">{money(expectedIncome)}</strong></div>
         <div className="flex justify-between gap-3"><span className="text-rose-300">− Saídas/compromissos já realizados</span><strong className="text-rose-200">{money(realizedOutflow)}</strong></div>
         <div className="flex justify-between gap-3"><span className="text-amber-300">− O que ainda deve sair</span><strong className="text-amber-200">{money(remainingOutflow)}</strong></div>
         <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-800 pt-3"><div><p className="text-xs text-slate-500">Posição projetada no fim do mês</p><p className="mt-1 text-[11px] text-slate-600">Previsto não é realizado; o valor muda conforme novos fatos são confirmados.</p></div><strong className={`whitespace-nowrap text-xl ${ending<0?'text-rose-300':'text-slate-100'}`}>{money(ending)}</strong></div>
