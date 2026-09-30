@@ -43,7 +43,7 @@ test('Home consolidates the monthly equation and keeps resource classes distinct
  assert.match(home,/MonthlyPositionStatement/);
  assert.match(statement,/Extrato do mês/);
  assert.match(statement,/Entradas já realizadas/);
- assert.match(statement,/Entradas confiáveis ainda esperadas/);
+ assert.match(statement,/Entradas previstas ainda esperadas/);
  assert.match(statement,/Saídas\/compromissos já realizados/);
  assert.match(statement,/O que ainda deve sair/);
  assert.match(statement,/Posição projetada no fim do mês/);
