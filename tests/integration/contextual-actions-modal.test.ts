@@ -13,3 +13,5 @@ test('contextual financial actions open over the current surface instead of repl
   assert.match(app,/screen==='income'\|\|\(screen==='new-adjustment'&&returnTab==='income'\)/);
   assert.doesNotMatch(app,/Voltar<\/button><NewAdjustmentScreen/);
 });
+
+test('ação financeira concluída volta automaticamente à tela de origem',()=>{assert.match(app,/NewAdjustmentScreen onCompleted=/);assert.match(app,/setScreen\(returnTab\)/);});
