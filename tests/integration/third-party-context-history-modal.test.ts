@@ -21,7 +21,8 @@ test('third-party history reads canonical obligations and obligation events with
   assert.match(service,/from\('financial_obligations'\)/);
   assert.match(service,/from\('obligation_events'\)/);
   assert.match(service,/counterparty_id/);
-  assert.doesNotMatch(service,/insert\(|create_manual_third_party_obligation.*listThirdPartyObligationHistory/s);
+  const historyReader=service.slice(service.indexOf('export async function listThirdPartyObligationHistory'),service.indexOf('export async function listEditableManualThirdPartyObligations'));
+  assert.doesNotMatch(historyReader,/\.rpc\(|insert\(|update\(|delete\(/);
 });
 
 test('context modal keeps settlement actions contextual and separates history from new economics',()=>{
