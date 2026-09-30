@@ -15,8 +15,10 @@ test('card click routes to a card-scoped invoice journey',()=>{
  assert.match(contextual,/Pagar tudo ou parte/);
  assert.match(contextual,/Adiantar pagamento/);
  assert.match(contextual,/Lançamentos/);
- assert.match(contextual,/timelineDateLabel/);
- assert.match(contextual,/groupedItems/);
+ assert.match(contextual,/sortedItems/);
+ assert.match(contextual,/itemDisplayDate/);
+ assert.match(contextual,/left-1\/2 top-7/);
+ assert.doesNotMatch(contextual,/groupedItems/);
  assert.doesNotMatch(contextual,/FinancialPerspectiveSelector/);
 });
 
