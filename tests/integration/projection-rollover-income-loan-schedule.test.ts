@@ -37,5 +37,6 @@ test('overdue loan installment becomes actionable without being called a new exp
 test('individual projection never silently consumes unattributed household funding',()=>{
   assert.match(home,/unattributed_funding_remaining/);
   assert.match(home,/não foi descontado do seu saldo nem atribuído ao outro morador automaticamente/);
-  assert.match(home,/continuam sem rota individual definida e não foram debitados desta perspectiva/);
+  assert.match(home,/sem rota individual definida/);
+  assert.match(home,/não foi tirado automaticamente do seu saldo/);
 });
