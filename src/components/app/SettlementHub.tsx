@@ -71,9 +71,9 @@ export function SettlementHub({onResolve,perspective='household',embedded=false}
     }).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.name.localeCompare(b.name));
   },[thirdPartyRows,perspective]);
 
-  if(loading)return embedded?<LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/>:<section><FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/><LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
+  if(loading)return <section>{!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>}<LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
 
-  const content=<>
+  return <section>
     {!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>} 
     {!error&&!embedded&&<div className="mb-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'taken'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-900 bg-cyan-950/15 px-3 text-xs font-semibold text-cyan-200"><Banknote className="h-4 w-4"/>Peguei emprestado</button><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'granted'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-800 px-3 text-xs font-semibold text-slate-300"><Banknote className="h-4 w-4"/>Emprestei dinheiro</button></div>}
     {error&&<div className="rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">Não foi possível conferir os valores com pessoas agora.</p><button type="button" onClick={retry} className="mt-3 min-h-10 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
