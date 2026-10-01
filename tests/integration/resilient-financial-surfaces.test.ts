@@ -43,7 +43,10 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
  assert.match(home,/MonthlyPositionStatement/);
  assert.match(statement,/Entender essa previsão/);
- assert.match(statement,/Hoje/);
+ assert.match(statement,/Recursos para usar hoje/);
+ assert.match(statement,/Benefícios/);
+ assert.match(statement,/Investimentos/);
+ assert.match(statement,/Caixa hoje/);
  assert.match(statement,/Ainda entra/);
  assert.match(statement,/Ainda sai/);
  assert.match(statement,/Fim do mês/);
@@ -53,7 +56,7 @@ test('Home consolidates the monthly equation and keeps resource classes distinct
  assert.match(statement,/O que ainda deve sair/);
  assert.match(statement,/Posição projetada no fim do mês/);
  assert.match(map,/Onde está nosso dinheiro/);
- assert.match(map,/Nos nossos recursos/);
+ assert.match(map,/>Contas</);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
  assert.doesNotMatch(map,/label:'Dinheiro reservado'/);
 });

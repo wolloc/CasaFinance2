@@ -136,6 +136,8 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
  if(perspective!=='household'){
   const current=memberProjection[0];
+  const memberBenefitBalance=memberResources.filter(item=>item.type==='meal_benefit').reduce((sum,item)=>sum+Number(item.attributed_amount),0);
+  const memberInvestmentBalance=memberResources.filter(item=>item.is_investment).reduce((sum,item)=>sum+Number(item.attributed_amount),0);
   return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section><FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/><div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
     <MonthlyPositionStatement
@@ -146,6 +148,8 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      remainingOutflow={Number(current.projected_funding_remaining)+Number(current.scheduled_settlement_outflow)}
      ending={Number(current.projected_ending_liquidity)}
      currentAvailable={Number(current.opening_liquidity)}
+     benefitBalance={memberBenefitBalance}
+     investmentBalance={memberInvestmentBalance}
     />
     <p className="mt-3 text-[11px] text-slate-500">Minha responsabilidade econômica restante: {money(current.economic_responsibility_remaining)}.</p>
     {Number(current.unattributed_funding_remaining)>0&&<p className="mt-2 rounded-xl border border-amber-900/60 bg-amber-950/15 p-3 text-xs text-amber-100">Há {money(current.unattributed_funding_remaining)} de compromissos da Casa sem rota individual definida. Esse valor não foi descontado do seu saldo nem atribuído ao outro morador automaticamente.</p>}
@@ -181,6 +185,8 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      coverageState={guidance?.guidance_state}
      coverageGap={gap??0}
      reserveAndInvestments={guidance?Number(guidance.reserve_balance)+Number(guidance.investment_balance):0}
+     benefitBalance={resources?.benefits??0}
+     investmentBalance={resources?.investments??0}
     />}
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}

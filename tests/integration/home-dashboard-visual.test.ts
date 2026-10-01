@@ -9,7 +9,7 @@ const projectionReview = await readFile(new URL('../../src/components/app/Projec
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
   assert.match(home,/MonthlyPositionStatement/);
-  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Se tudo seguir como previsto, a Casa termina o mês com','Hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
+  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Se tudo seguir como previsto, a Casa termina o mês com','Recursos para usar hoje','Investimentos','Caixa hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
   assert.doesNotMatch(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
@@ -41,9 +41,9 @@ test('projeção futura mostra tendência entre meses comparáveis',()=>{
   assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
 });
 
-test('Home reúne recursos cartões e terceiros em um único mapa financeiro',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'",'Nos nossos recursos','Nos cartões','Com outras pessoas'])assert.match(map,new RegExp(value));assert.match(map,/SettlementHub/);assert.match(map,/includeMembers=\{false\}/);});
+test('Home reúne recursos cartões e terceiros em um único mapa financeiro',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'",'>Contas<','>Cartões<','>Outras pessoas<'])assert.match(map,new RegExp(value));assert.match(map,/SettlementHub/);assert.match(map,/includeMembers=\{false\}/);});
 
-test('Home map separates assets credit and people without double counting',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');assert.match(map,/Onde está nosso dinheiro\?/);assert.match(map,/não entram no total dos recursos/);assert.match(map,/Valores a receber ou pagar fora da Casa/);});
+test('Home map separates assets credit and people without double counting',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');assert.match(map,/Onde está nosso dinheiro\?/);assert.match(map,/Valores a receber ou pagar fora da Casa/);assert.match(map,/Neste mês/);assert.match(map,/Próximos meses/);assert.match(map,/Limite total/);assert.doesNotMatch(map,/cardExposure/);});
 
 test('Home não transforma planejamento futuro normal em alerta de atenção',()=>{
   assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55&&!excluded\.has\(item\.entity_id\)\)/);

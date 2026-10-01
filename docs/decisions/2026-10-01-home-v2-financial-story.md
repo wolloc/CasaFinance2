@@ -30,20 +30,26 @@ Os próximos meses continuam mostrando tendência e fechamento esperado, sem vir
 ### 5. Onde está nosso dinheiro?
 Passa a ser um mapa financeiro unificado e explorável.
 
-#### Nos nossos recursos
+#### Contas
+Reúne os recursos acompanhados da Casa:
 - contas;
 - dinheiro físico/carteira;
 - benefícios;
 - investimentos e reservas.
 
-O total apresentado aqui representa apenas recursos/patrimônio acompanhado.
+No topo de **Como estamos?**, benefícios passam a compor **Recursos para usar hoje** junto ao caixa, mas permanecem explicitamente restritos ao tipo de gasto permitido. Investimentos aparecem como fotografia patrimonial separada do caixa do mês.
 
-#### Nos cartões
-Mostra crédito e compromissos dos cartões.
+#### Cartões
+O resumo de cartões não soma cartões como se fossem um saldo único. Ele mostra:
+- quantidade de cartões acompanhados;
+- compromisso deste mês;
+- compromissos dos próximos meses;
+- limite total;
+- barra visual de utilização por cartão.
 
-**Cartão não é patrimônio nem dinheiro disponível.** Sua exposição fica no mesmo mapa para orientação, mas não é somada ao total dos recursos.
+**Cartão não é patrimônio nem dinheiro disponível.** Limite e compromissos ficam no mesmo mapa apenas para leitura de capacidade e pressão financeira.
 
-#### Com outras pessoas
+#### Outras pessoas
 Mostra valores com terceiros:
 - a receber;
 - a pagar;

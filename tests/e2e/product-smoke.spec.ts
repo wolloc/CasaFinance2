@@ -224,13 +224,13 @@ test('Golden Journey visual protege a estrutura consolidada da Home', async ({ p
 
   await expect(page.getByText('Como estamos?', { exact: true })).toBeVisible();
   await expect(page.getByText('Onde está nosso dinheiro?', { exact: true })).toBeVisible();
-  await expect(page.getByText('Nos nossos recursos', { exact: true })).toBeVisible();
-  await expect(page.getByText('Nos cartões', { exact: true })).toBeVisible();
-  await expect(page.getByText('Com outras pessoas', { exact: true })).toBeVisible();
+  await expect(page.getByText('Contas', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Cartões', { exact: true })).toBeVisible();
+  await expect(page.getByText('Outras pessoas', { exact: true })).toBeVisible();
   await expect(page.getByText('O que mais pesou', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Mês em resumo', { exact: true })).toHaveCount(0);
 
-  const contas = page.getByText('Contas', { exact: true });
+  const contas = page.getByText('Contas', { exact: true }).nth(1);
   await expect(contas).toBeVisible();
   await contas.click();
   await expect(page.getByText('Conta Principal', { exact: true })).toBeVisible();
