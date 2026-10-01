@@ -261,23 +261,6 @@ begin
    pos.receivable,pos.payable,p.net_change,p.ending_amount from projected p cross join positions pos where p.chain_index>=v_offset order by p.chain_index;
 end $$;
 
-alter table public.commitment_funding_plans enable row level security;
-revoke all on table public.commitment_funding_plans from public,anon;
-revoke insert,update,delete,truncate,references,trigger on table public.commitment_funding_plans from authenticated;
-grant select on table public.commitment_funding_plans to authenticated;
-create policy commitment_funding_plans_household_select on public.commitment_funding_plans for select to authenticated using(public.is_active_household_member(household_id));
-
-revoke all on public.financial_account_member_allocations,public.financial_member_liquidity_positions,public.financial_member_commitment_responsibility_positions,public.financial_projected_funding_routes,public.financial_member_funding_positions,public.financial_member_true_income_positions,public.financial_member_settlement_cash_flows,public.financial_recurring_projection_positions,public.financial_member_recurring_responsibility_positions,public.financial_member_recurring_funding_positions from public,anon;
-grant select on public.financial_account_member_allocations,public.financial_member_liquidity_positions,public.financial_member_commitment_responsibility_positions,public.financial_projected_funding_routes,public.financial_member_funding_positions,public.financial_member_true_income_positions,public.financial_member_settlement_cash_flows,public.financial_recurring_projection_positions,public.financial_member_recurring_responsibility_positions,public.financial_member_recurring_funding_positions to authenticated;
-revoke all on function public.set_commitment_funding_plan(uuid,uuid,numeric,text,uuid,uuid,uuid,uuid,uuid,text),public.cancel_commitment_funding_plan(uuid,uuid),public.replace_commitment_funding_plan(uuid,uuid,uuid,numeric,text,text),public.financial_member_monthly_projection(uuid,uuid,date,integer) from public,anon;
-grant execute on function public.set_commitment_funding_plan(uuid,uuid,numeric,text,uuid,uuid,uuid,uuid,uuid,text),public.cancel_commitment_funding_plan(uuid,uuid),public.replace_commitment_funding_plan(uuid,uuid,uuid,numeric,text,text),public.financial_member_monthly_projection(uuid,uuid,date,integer) to authenticated;
-
-comment on view public.financial_member_liquidity_positions is 'Available cash attributed only through canonical active account ownerships; one owner gets 100%, exactly two active household members get deterministic 50/50, and invalid ownership remains unattributed. Negative balances remain negative and overdraft is excluded.';
-comment on view public.financial_member_commitment_responsibility_positions is 'Monthly economic responsibility derived exclusively from economic_allocations over canonical deduplicated commitments.';
-comment on view public.financial_projected_funding_routes is 'Remaining funding route hierarchy: explicit partial overrides, selected account, valid card default, then unattributed. Card owner, buyer, creator, responsibility, and legacy account owner are never fallbacks.';
-comment on view public.financial_member_funding_positions is 'Realized funding comes only from funding_events; projected funding covers only the remaining commitment. Both are attributed through canonical account ownership.';
-comment on view public.financial_member_settlement_cash_flows is 'Scheduled-only intermember cash flows. Realized schedules and unscheduled positions never enter future cash projection.';
-
 create or replace function public.financial_household_health_position(p_household_id uuid)
 returns table (
   household_id uuid,
