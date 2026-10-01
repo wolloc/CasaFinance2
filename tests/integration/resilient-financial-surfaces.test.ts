@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 const home=fs.readFileSync('src/components/app/CasaHomeScreen.tsx','utf8');
 const statement=fs.readFileSync('src/components/app/MonthlyPositionStatement.tsx','utf8');
+const map=fs.readFileSync('src/components/app/HomeFinancialMap.tsx','utf8');
 const income=fs.readFileSync('src/components/app/IncomeLedgerScreen.tsx','utf8');
 
 test('Home does not discard canonical dashboard reads when recurrence maintenance fails',()=>{
@@ -32,7 +33,7 @@ test('Home never turns an unavailable dashboard section into an apparent financi
  assert.match(home,/Alguns dados não atualizaram agora/);
  assert.match(home,/unavailableLabels/);
  assert.match(home,/currentAvailable=\{currentCash\}/);
- assert.match(statement,/Quanto temos hoje\?/);
+ assert.match(statement,/Se tudo seguir como previsto, a Casa termina o mês com/);
  assert.match(home,/Não foi possível confirmar os saldos dos recursos da Casa/);
  assert.match(home,/Ainda não há resumo financeiro confirmado para este mês/);
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);
@@ -42,16 +43,17 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
  assert.match(home,/MonthlyPositionStatement/);
  assert.match(statement,/Entender essa previsão/);
- assert.match(statement,/Quanto temos hoje\?/);
- assert.match(statement,/O que ainda acontece\?/);
- assert.match(statement,/Como devemos terminar\?/);
+ assert.match(statement,/Hoje/);
+ assert.match(statement,/Ainda entra/);
+ assert.match(statement,/Ainda sai/);
+ assert.match(statement,/Fim do mês/);
  assert.match(statement,/Entradas já realizadas/);
  assert.match(statement,/Entradas previstas ainda esperadas/);
  assert.match(statement,/Saídas\/compromissos já realizados/);
  assert.match(statement,/O que ainda deve sair/);
  assert.match(statement,/Posição projetada no fim do mês/);
- assert.match(home,/Onde está nosso dinheiro/);
- assert.match(home,/Valor acompanhado/);
- for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos'"]) assert.match(home,new RegExp(value));
- assert.doesNotMatch(home,/label:'Dinheiro reservado'/);
+ assert.match(map,/Onde está nosso dinheiro/);
+ assert.match(map,/Nos nossos recursos/);
+ for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
+ assert.doesNotMatch(map,/label:'Dinheiro reservado'/);
 });
