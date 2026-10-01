@@ -10,7 +10,7 @@ import { FinancialResourceChoice } from './FinancialResourceChoice.js';
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const now = new Date(); const offset = now.getTimezoneOffset(); return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10); };
 
-export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection, initialAccountId, showBack = true }: { onBack: () => void; backLabel?: string; initialDirection?: 'granted' | 'taken'; initialAccountId?: string; showBack?: boolean }) {
+export function LoanAdjustment({ onBack, onCompleted, backLabel = 'Voltar', initialDirection, initialAccountId, showBack = true }: { onBack: () => void; onCompleted?: (message:string) => void; backLabel?: string; initialDirection?: 'granted' | 'taken'; initialAccountId?: string; showBack?: boolean }) {
   const { household, householdMembers, user } = useSupabaseAuth();
   const [direction, setDirection] = useState<'granted' | 'taken'>(initialDirection ?? 'granted');
   const [parties, setParties] = useState<FinancialParty[]>([]);
@@ -72,8 +72,12 @@ export function LoanAdjustment({ onBack, backLabel = 'Voltar', initialDirection,
       let partyId = counterpartyId; if (!partyId) { const existing = parties.find((party) => party.name.trim().toLocaleLowerCase('pt-BR') === partyName.toLocaleLowerCase('pt-BR')); partyId = existing?.id ?? await createFinancialParty(supabase, household.id, partyName); }
       const description = direction === 'taken' ? `Empréstimo de ${partyName}` : `Empréstimo para ${partyName}`;
       await createLoanPrincipalWithSchedule(supabase,{householdId:household.id,direction,counterpartyId:partyId,accountId,amount:normalizedAmount,occurredAt,firstDueDate,installmentCount:count,totalInterest:direction==='taken'?normalizeAmount(totalInterest||'0'):'0',totalFee:direction==='taken'?normalizeAmount(totalFee||'0'):'0',costResponsibleMemberId:direction==='taken'&&(normalizedInterest>0||normalizedFee>0)?costResponsibleMemberId:null,description});
-      setSuccess(direction === 'granted' ? 'Pronto. O dinheiro saiu da conta escolhida e o Casa guardou que essa pessoa precisa devolver esse valor. Isso não virou uma despesa.' : 'Pronto. O dinheiro entrou na conta escolhida e o Casa guardou que esse valor precisa ser devolvido. Isso não virou uma renda.');
-      setAmount('');setRepaymentMode('single');setInstallmentCount(1);setFirstDueDate('');setTotalInterest('');setTotalFee('');setNewPartyName('');await load();
+      const completionMessage=direction === 'granted'
+        ? 'Empréstimo registrado. O dinheiro saiu da conta escolhida e o valor a receber já foi atualizado.'
+        : `Empréstimo registrado. O dinheiro entrou na conta escolhida e ${count} ${count===1?'pagamento previsto foi considerado':'pagamentos previstos foram considerados'} na projeção.`;
+      setAmount('');setRepaymentMode('single');setInstallmentCount(1);setFirstDueDate('');setTotalInterest('');setTotalFee('');setNewPartyName('');
+      if(onCompleted){onCompleted(completionMessage);return;}
+      setSuccess(completionMessage);await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar o empréstimo.'); }
     finally { setSaving(false); }
   };
