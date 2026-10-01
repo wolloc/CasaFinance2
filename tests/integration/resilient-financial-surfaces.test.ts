@@ -31,8 +31,8 @@ test('Dashboard preserves available canonical sections instead of failing all re
 test('Home never turns an unavailable dashboard section into an apparent financial zero',()=>{
  assert.match(home,/Alguns dados não atualizaram agora/);
  assert.match(home,/unavailableLabels/);
- assert.match(home,/Saldo atual em contas e dinheiro físico/);
- assert.match(home,/Não confirmado/);
+ assert.match(home,/currentAvailable=\{currentCash\}/);
+ assert.match(statement,/Quanto temos hoje\?/);
  assert.match(home,/Não foi possível confirmar os saldos dos recursos da Casa/);
  assert.match(home,/Ainda não há resumo financeiro confirmado para este mês/);
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);
@@ -41,7 +41,10 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 
 test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
  assert.match(home,/MonthlyPositionStatement/);
- assert.match(statement,/Extrato do mês/);
+ assert.match(statement,/Entender essa previsão/);
+ assert.match(statement,/Quanto temos hoje\?/);
+ assert.match(statement,/O que ainda acontece\?/);
+ assert.match(statement,/Como devemos terminar\?/);
  assert.match(statement,/Entradas já realizadas/);
  assert.match(statement,/Entradas previstas ainda esperadas/);
  assert.match(statement,/Saídas\/compromissos já realizados/);

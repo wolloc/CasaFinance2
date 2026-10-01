@@ -8,17 +8,16 @@ const settlements = await readFile(new URL('../../src/components/app/SettlementH
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
-  assert.match(home,/Agora/);
   assert.match(home,/MonthlyPositionStatement/);
-  for(const value of ['Extrato do mês','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
-  assert.match(home,/healthText\[health\.health\]/);
+  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Quanto temos hoje?','O que ainda acontece?','Como devemos terminar?','Entender essa previsão']) assert.match(statement,new RegExp(value));
+  assert.doesNotMatch(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
 });
 
 test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
   for(const value of ['Como estamos?','MonthlyPositionStatement']) assert.match(home,new RegExp(value));
-  for(const value of ['Extrato do mês','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
+  for(const value of ['Entender essa previsão','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
   assert.doesNotMatch(home,/title="Mês em resumo"/);
   assert.match(home,/realized_true_income_in_month/);
   assert.match(home,/expected_reliable_income_remaining/);
@@ -45,7 +44,7 @@ test('posição realizada entre moradores aparece em Como estamos e mantém deta
 
 
 test('projeção futura mostra tendência entre meses comparáveis',()=>{
-  assert.match(home,/vs\. mês anterior/);
+  assert.match(home,/em relação ao mês anterior/);
   assert.match(home,/previousEnding/);
   assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
 });
@@ -81,9 +80,9 @@ test('Home mantém histórico entre membros dentro do detalhe da relação',()=>
   assert.match(settlements,/text-cyan-200/);
 });
 
-test('Olhando pra frente separa realizado comprometido e planejado sem inflar riqueza futura',()=>{
-  for(const value of ['Realizado','Comprometido','Planejado','já aconteceu','já existe para pagar','ainda pode mudar']) assert.match(home,new RegExp(value,'i'));
-  assert.match(home,/mês de referência/i);
+test('Olhando pra frente traduz o motor em leitura humana sem inflar riqueza futura',()=>{
+  for(const value of ['Se tudo seguir como previsto','ainda entra','ainda sai']) assert.match(home,new RegExp(value,'i'));
+  assert.doesNotMatch(home,/Realizado.*Comprometido.*Planejado/is);
   assert.match(home,/remaining_commitments_in_month/);
   assert.match(home,/prior_pending_outflow/);
   assert.match(home,/projected_recurring_commitments/);
