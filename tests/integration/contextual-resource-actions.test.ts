@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const home=await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
+const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');
 const row=await readFile(new URL('../../src/components/app/ResourceActionRow.tsx',import.meta.url),'utf8');
 const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
 const adjustment=await readFile(new URL('../../src/components/app/NewAdjustmentScreen.tsx',import.meta.url),'utf8');
@@ -10,8 +11,8 @@ const investment=await readFile(new URL('../../src/components/app/InvestmentRese
 const adjustmentIntent=await readFile(new URL('../../src/finance/resourceAdjustmentIntent.ts',import.meta.url),'utf8');
 
 test('Home resources expose contextual actions instead of becoming new financial writes',()=>{
- assert.match(home,/ResourceActionRow/);
- assert.match(home,/onResourceAction/);
+ assert.match(map,/ResourceActionRow/);
+ assert.match(map,/onResourceAction/);
  assert.doesNotMatch(row,/Registrar despesa/);
  assert.match(row,/Depositar em conta/);
  assert.match(row,/Transferir/);
@@ -28,10 +29,10 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/resource\.institution/);
  assert.match(row,/resource\.ownerLabel/);
  assert.match(row,/detailLabel/);
- assert.match(home,/ordered=\[\.\.\.group\.rows\]\.sort/);
- assert.match(home,/grid grid-cols-2 gap-2 border-t/);
- assert.match(home,/group\/resources/);
- assert.match(home,/Valor acompanhado/);
+ assert.match(map,/group\.rows\.sort/);
+ assert.match(map,/grid grid-cols-2 gap-2 border-t/);
+ assert.match(map,/Nos nossos recursos/);
+ assert.match(map,/Nos recursos/);
  assert.match(row,/useState\(false\)/);
  assert.match(row,/document\.addEventListener\('pointerdown'/);
  assert.match(row,/absolute left-1\/2 top-\[calc\(100%-6px\)\]/);

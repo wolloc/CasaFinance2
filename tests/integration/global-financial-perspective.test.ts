@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const app=await readFile(new URL('../../src/components/app/CasaFinanceApp.tsx',import.meta.url),'utf8');
 const home=await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx',import.meta.url),'utf8');
+const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');
 const expenses=await readFile(new URL('../../src/components/app/ExpenseMonthBrowser.tsx',import.meta.url),'utf8');
 const expenseService=await readFile(new URL('../../src/finance/expenseMonthViews.ts',import.meta.url),'utf8');
 const income=await readFile(new URL('../../src/components/app/IncomeLedgerScreen.tsx',import.meta.url),'utf8');
@@ -46,8 +47,8 @@ test('perspectiva de cartões mostra responsabilidade sem ratear limite do instr
 test('recursos individuais usam alocação canônica de titularidade',()=>{
  assert.match(resources,/financial_account_member_allocations/);
  assert.match(resources,/allocation_ratio/);
- assert.match(home,/Onde está nosso dinheiro/);
- assert.match(home,/Sua parte/);
- assert.match(home,/attributed_amount/);
+ assert.match(map,/Onde está nosso dinheiro/);
+ assert.match(map,/Sua parte/);
+ assert.match(map,/attributed_amount/);
  assert.doesNotMatch(resources,/\/\s*2/);
 });

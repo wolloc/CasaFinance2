@@ -9,7 +9,7 @@ const projectionReview = await readFile(new URL('../../src/components/app/Projec
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
   assert.match(home,/MonthlyPositionStatement/);
-  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Quanto temos hoje?','O que ainda acontece?','Como devemos terminar?','Entender essa previsão']) assert.match(statement,new RegExp(value));
+  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Se tudo seguir como previsto, a Casa termina o mês com','Hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
   assert.doesNotMatch(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
@@ -32,15 +32,7 @@ test('Home deixa a análise por categorias para Gastos e Entradas',()=>{
   assert.doesNotMatch(home,/FinancialSectionHeading title="O que mais pesou"/);
 });
 
-test('posição realizada entre moradores aparece em Como estamos e mantém detalhe na seção de pessoas',()=>{
-  assert.match(home,/Entre moradores/);
-  assert.match(home,/currentMemberSettlements/);
-  assert.match(home,/deve a/);
-  assert.match(home,/border-cyan-800\/70 bg-cyan-950\/30/);
-  assert.match(home,/text-lg font-black text-cyan-200/);
-  assert.match(settlements,/memberPairs/);
-  assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
-});
+test('posição entre moradores vira uma resposta própria da Home',()=>{assert.match(home,/FinancialSectionHeading title="Entre vocês"/);assert.match(home,/currentMemberSettlements/);assert.match(home,/deve a/);assert.match(home,/Tudo equilibrado entre vocês/);assert.match(settlements,/memberPairs/);});
 
 
 test('projeção futura mostra tendência entre meses comparáveis',()=>{
@@ -49,14 +41,9 @@ test('projeção futura mostra tendência entre meses comparáveis',()=>{
   assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
 });
 
-test('Home torna recursos exploráveis e cartões navegáveis sem CTA duplicado dominante',()=>{
-  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos'",'Valor acompanhado']) assert.match(home,new RegExp(value));
-  assert.match(home,/role="button" tabIndex=\{0\} onClick=\{\(\)=>onOpenCard\?\.\(c\.card_id\)\}/);
-  assert.doesNotMatch(home,/Todas as faturas/);
-  assert.doesNotMatch(home,/Ver cartão e fatura/);
-});
+test('Home reúne recursos cartões e terceiros em um único mapa financeiro',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'",'Nos nossos recursos','Nos cartões','Com outras pessoas'])assert.match(map,new RegExp(value));assert.match(map,/SettlementHub/);assert.match(map,/includeMembers=\{false\}/);});
 
-test('Home simplifica recursos sem repetir explicações técnicas',()=>{assert.match(home,/Onde está nosso dinheiro/);assert.match(home,/Valor acompanhado/);assert.doesNotMatch(home,/label:'Dinheiro reservado'/);assert.match(home,/detailLabel:item\.resource_restriction==='reserve'\?'Reserva'/);assert.doesNotMatch(home,/Este total não significa dinheiro livre/);});
+test('Home map separates assets credit and people without double counting',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');assert.match(map,/Onde está nosso dinheiro\?/);assert.match(map,/não entram no total dos recursos/);assert.match(map,/Valores a receber ou pagar fora da Casa/);});
 
 test('Home não transforma planejamento futuro normal em alerta de atenção',()=>{
   assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55&&!excluded\.has\(item\.entity_id\)\)/);

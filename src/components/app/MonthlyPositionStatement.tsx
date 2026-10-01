@@ -51,29 +51,20 @@ export function MonthlyPositionStatement({
         </div>
       </div>
 
-      <p className="mt-4 text-sm leading-6 text-slate-300">
-        Temos <strong className="text-white">{money(effectiveAvailable)}</strong> disponíveis hoje.
-        {' '}Ainda devem entrar <strong className="text-emerald-200">{money(expectedIncome)}</strong> e sair <strong className="text-rose-200">{money(remainingOutflow)}</strong>.
-      </p>
-
-      <div className="mt-4 rounded-2xl bg-slate-950/45 p-4">
-        <p className="text-xs text-slate-400">Se tudo acontecer como previsto, terminamos o mês com</p>
-        <strong className={`mt-1 block text-3xl ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
+      <div className="mt-5">
+        <p className="text-xs text-slate-500">Se tudo seguir como previsto, a Casa termina o mês com</p>
+        <strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-white/[0.04] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Quanto temos hoje?</p>
-          <strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong>
-        </div>
-        <div className="rounded-xl bg-white/[0.04] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">O que ainda acontece?</p>
-          <span className="mt-1 block text-xs font-bold text-emerald-200">+ {money(expectedIncome)}</span>
-          <span className="block text-xs font-bold text-rose-200">− {money(remainingOutflow)}</span>
-        </div>
-        <div className="rounded-xl bg-white/[0.04] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Como devemos terminar?</p>
-          <strong className={`mt-1 block text-sm ${ending<0?'text-rose-300':'text-slate-100'}`}>{money(ending)}</strong>
+      <div className="mt-5 overflow-x-auto pb-1">
+        <div className="flex min-w-[520px] items-center">
+          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Hoje</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
+          <div className="mx-2 h-px flex-1 bg-slate-700"/>
+          <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Ainda entra</p><strong className="mt-1 block text-sm text-emerald-200">+ {money(expectedIncome)}</strong></div>
+          <div className="mx-2 h-px flex-1 bg-slate-700"/>
+          <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-rose-400/80">Ainda sai</p><strong className="mt-1 block text-sm text-rose-200">− {money(remainingOutflow)}</strong></div>
+          <div className="mx-2 h-px flex-1 bg-slate-700"/>
+          <div className="min-w-[118px] text-right"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Fim do mês</p><strong className={`mt-1 block text-sm ${ending<0?'text-rose-300':'text-slate-100'}`}>{money(ending)}</strong></div>
         </div>
       </div>
 

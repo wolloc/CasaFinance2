@@ -28,7 +28,7 @@ type ThirdPartyGroup={
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string}){
+export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean}){
   const{household,householdMembers}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
@@ -57,8 +57,8 @@ export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(i
       const forwardProjected=Number(forward?.projected_outstanding??0)-Number(reverse?.projected_outstanding??0);
       const projected=forwardProjected>0?forward:forwardProjected<0?reverse:null;
       return{key,leftId,rightId,realized,projected,projectedAmount:Math.abs(forwardProjected)};
-    }).filter(pair=>(pair.realized||pair.projectedAmount>0)&&(perspective==='household'||pair.leftId===perspective||pair.rightId===perspective));
-  },[memberRows,perspective]);
+    }).filter(pair=>includeMembers&&(pair.realized||pair.projectedAmount>0)&&(perspective==='household'||pair.leftId===perspective||pair.rightId===perspective));
+  },[memberRows,perspective,includeMembers]);
 
   const thirdPartyGroups=useMemo<ThirdPartyGroup[]>(()=>{
     const visibleRows=perspective==='household'?thirdPartyRows:thirdPartyRows.flatMap(row=>{const member=row.responsibility_members.find(item=>item.member_id===perspective);if(!member||!(member.amount>0))return[];return[{...row,outstanding_amount:Math.min(row.outstanding_amount,member.amount),responsibility_members:[member]}];});
@@ -71,11 +71,11 @@ export function SettlementHub({onResolve,perspective='household'}:{onResolve?:(i
     }).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.name.localeCompare(b.name));
   },[thirdPartyRows,perspective]);
 
-  if(loading)return <section><FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/><LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
+  if(loading)return <section>{!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>}<LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
 
   return <section>
-    <FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>
-    {!error&&<div className="mb-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'taken'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-900 bg-cyan-950/15 px-3 text-xs font-semibold text-cyan-200"><Banknote className="h-4 w-4"/>Peguei emprestado</button><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'granted'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-800 px-3 text-xs font-semibold text-slate-300"><Banknote className="h-4 w-4"/>Emprestei dinheiro</button></div>}
+    {!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>} 
+    {!error&&!embedded&&<div className="mb-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'taken'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-900 bg-cyan-950/15 px-3 text-xs font-semibold text-cyan-200"><Banknote className="h-4 w-4"/>Peguei emprestado</button><button type="button" onClick={()=>onResolve?.({kind:'loan',direction:'granted'})} className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-800 px-3 text-xs font-semibold text-slate-300"><Banknote className="h-4 w-4"/>Emprestei dinheiro</button></div>}
     {error&&<div className="rounded-xl border border-rose-900 bg-rose-950/30 p-3"><p role="alert" className="text-sm text-rose-200">Não foi possível conferir os valores com pessoas agora.</p><button type="button" onClick={retry} className="mt-3 min-h-10 rounded-xl border border-rose-800 px-3 text-sm font-semibold text-rose-200">Tentar novamente</button></div>}
 
     {!error&&memberPairs.length===0&&thirdPartyGroups.length===0&&<div className="rounded-2xl border border-dashed border-slate-800 p-4"><p className="text-sm font-semibold text-slate-300">Tudo equilibrado por enquanto.</p></div>}
