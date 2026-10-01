@@ -9,6 +9,7 @@ import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
 import { SettlementHub } from './SettlementHub.js';
+import { HomeFinancialMap } from './HomeFinancialMap.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
