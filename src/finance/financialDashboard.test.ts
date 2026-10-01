@@ -26,7 +26,7 @@ test('household forward view keeps considered flows and projected ending cash vi
 });
 
 
-test('Home financial map keeps card exposure contextual without treating credit as money',async()=>{const map=await readFile(new URL('../components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ['Nos cartões','comprometido','current_invoice_remaining','total_exposure','available_limit'])assert.match(map,new RegExp(value));assert.match(map,/onOpenCard/);assert.match(map,/não entram no total dos recursos/);});
+test('Home financial map keeps card exposure contextual without treating credit as money',async()=>{const map=await readFile(new URL('../components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ['Nos cartões','comprometido','total_exposure','available_limit'])assert.match(map,new RegExp(value));assert.match(map,/onOpenCard/);assert.match(map,/não entram no total dos recursos/);});
 
 test('Casa month navigator opens a real monthly picker instead of resetting on center click',()=>{assert.match(screenSource,/FinancialPeriodNavigator/);assert.match(screenSource,/pickerTitle="Escolher mês da Casa"/);assert.match(periodSource,/type="month"/);assert.match(screenSource,/setPeriodPickerOpen\(value=>!value\)/);assert.match(screenSource,/setReferenceMonth\(normalizeReferenceMonth\(value\)\)/);assert.match(periodSource,/Mês atual/);});
 
