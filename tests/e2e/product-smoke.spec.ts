@@ -145,7 +145,7 @@ test('cobertura abre apenas a próxima etapa e não executa RPC financeira de es
   const rpcCalls = await installSupabaseMock(page);
   await login(page);
   const before = [...rpcCalls];
-  await page.getByRole('button', { name: 'Mover dinheiro de outra conta da Casa' }).click();
+  await page.getByRole('button', { name: 'Mover dinheiro de outra conta' }).click();
   await expect(page.getByRole('heading', { name: 'Cobrir falta projetada' })).toBeVisible();
   await expect(page.getByText(/É apenas uma referência/)).toBeVisible();
   const after = rpcCalls.slice(before.length);
