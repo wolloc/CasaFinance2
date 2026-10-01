@@ -13,7 +13,7 @@ test('member perspective keeps the same Home vocabulary instead of becoming a se
   assert.doesNotMatch(home,/perspectiveLabel=/);
 });
 
-test('resource hierarchy lives in one unified map',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"])assert.match(map,new RegExp(value));assert.match(map,/Nos nossos recursos/);assert.match(map,/Nos cartões/);assert.match(map,/Com outras pessoas/);});
+test('resource hierarchy lives in one unified map',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"])assert.match(map,new RegExp(value));assert.match(map,/>Contas</);assert.match(map,/>Cartões</);assert.match(map,/>Outras pessoas</);});
 
 test('Home sections avoid permanent explanatory copy when the card itself communicates the meaning',()=>{
   assert.doesNotMatch(upcoming,/sem contar o mesmo compromisso duas vezes/);
