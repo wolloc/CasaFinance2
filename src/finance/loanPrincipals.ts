@@ -92,3 +92,37 @@ export async function createLoanPrincipalWithSchedule(client:SupabaseClient,inpu
     p_notes:notes,
   });
 }
+
+
+export type LoanPayerAllocation={memberId:string;percentage:number};
+
+export async function setLoanPayerPlan(client:SupabaseClient,input:{
+  householdId:string;
+  obligationId:string;
+  allocations:LoanPayerAllocation[];
+}){
+  const normalized=input.allocations.map(item=>({member_id:item.memberId,percentage:item.percentage}));
+  const batchKey=[
+    input.obligationId,
+    ...normalized.map(item=>`${item.member_id}:${item.percentage.toFixed(4)}`).sort(),
+  ].join('|');
+  const result=await client.rpc('set_obligation_member_payer_plan',{
+    p_household_id:input.householdId,
+    p_obligation_id:input.obligationId,
+    p_allocations:normalized,
+    p_batch_key:batchKey,
+  });
+  if(result.error)throw result.error;
+  return result.data as string;
+}
+
+export async function listLoanPayerPlan(client:SupabaseClient,householdId:string,obligationId:string):Promise<LoanPayerAllocation[]>{
+  const result=await client.from('obligation_member_payer_plans')
+    .select('member_id,percentage')
+    .eq('household_id',householdId)
+    .eq('obligation_id',obligationId)
+    .eq('state','active')
+    .order('member_id');
+  if(result.error)throw result.error;
+  return (result.data??[]).map(row=>({memberId:String(row.member_id),percentage:Number(row.percentage)}));
+}
