@@ -230,7 +230,7 @@ test('Golden Journey visual protege a estrutura consolidada da Home', async ({ p
   await expect(page.getByText('O que mais pesou', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Mês em resumo', { exact: true })).toHaveCount(0);
 
-  const contas = page.getByText('Contas', { exact: true }).first();
+  const contas = page.getByText('Contas', { exact: true }).nth(1);
   await expect(contas).toBeVisible();
   await contas.click();
   await expect(page.getByText('Conta Principal', { exact: true })).toBeVisible();
