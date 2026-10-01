@@ -73,8 +73,8 @@ export function LoanAdjustment({ onBack, onCompleted, backLabel = 'Voltar', init
       const description = direction === 'taken' ? `Empréstimo de ${partyName}` : `Empréstimo para ${partyName}`;
       await createLoanPrincipalWithSchedule(supabase,{householdId:household.id,direction,counterpartyId:partyId,accountId,amount:normalizedAmount,occurredAt,firstDueDate,installmentCount:count,totalInterest:direction==='taken'?normalizeAmount(totalInterest||'0'):'0',totalFee:direction==='taken'?normalizeAmount(totalFee||'0'):'0',costResponsibleMemberId:direction==='taken'&&(normalizedInterest>0||normalizedFee>0)?costResponsibleMemberId:null,description});
       const completionMessage=direction === 'granted'
-        ? 'Empréstimo registrado. O dinheiro saiu da conta escolhida e o valor a receber já foi atualizado.'
-        : `Empréstimo registrado. O dinheiro entrou na conta escolhida e ${count} ${count===1?'pagamento previsto foi considerado':'pagamentos previstos foram considerados'} na projeção.`;
+        ? 'Empréstimo registrado. O dinheiro saiu da conta escolhida e o valor a receber já foi atualizado. Isso não virou uma despesa.'
+        : `Empréstimo registrado. O dinheiro entrou na conta escolhida e ${count} ${count===1?'pagamento previsto foi considerado':'pagamentos previstos foram considerados'} na projeção. Isso não virou uma renda.`;
       setAmount('');setRepaymentMode('single');setInstallmentCount(1);setFirstDueDate('');setTotalInterest('');setTotalFee('');setNewPartyName('');
       if(onCompleted){onCompleted(completionMessage);return;}
       setSuccess(completionMessage);await load();
