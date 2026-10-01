@@ -67,7 +67,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const hasPartialFailure=Object.values(availability).some(value=>!value);
  const unavailableLabels=[!availability.household&&'posição da Casa',!availability.members&&'moradores',!availability.health&&'saúde do mês',!availability.confidence&&'qualidade das previsões',!availability.attention&&'itens de atenção',!availability.projection&&'projeção mensal',!availability.cards&&'cartões',!availability.settlements&&'valores entre moradores',!availability.resources&&'recursos',!availability.guidance&&'orientação de cobertura'].filter((value):value is string=>Boolean(value));
  const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Morador';
- const currentMemberSettlements=settlements.filter(row=>Number(row.net_position)>0);
  const selector=<FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>;
  const resourceOwnerLabel=(ids:string[])=>{const names=ids.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));return names.length>1?names.join(' + '):names[0]??null;};
  const trackingMonth=referenceContext?.tracking_started_on?normalizeReferenceMonth(referenceContext.tracking_started_on):null;
