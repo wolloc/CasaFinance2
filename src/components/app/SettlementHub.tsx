@@ -28,7 +28,7 @@ type ThirdPartyGroup={
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve,perspective='household',embedded=false}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean}){
+export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean}){
   const{household,householdMembers}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
@@ -57,8 +57,8 @@ export function SettlementHub({onResolve,perspective='household',embedded=false}
       const forwardProjected=Number(forward?.projected_outstanding??0)-Number(reverse?.projected_outstanding??0);
       const projected=forwardProjected>0?forward:forwardProjected<0?reverse:null;
       return{key,leftId,rightId,realized,projected,projectedAmount:Math.abs(forwardProjected)};
-    }).filter(pair=>(pair.realized||pair.projectedAmount>0)&&(perspective==='household'||pair.leftId===perspective||pair.rightId===perspective));
-  },[memberRows,perspective]);
+    }).filter(pair=>includeMembers&&(pair.realized||pair.projectedAmount>0)&&(perspective==='household'||pair.leftId===perspective||pair.rightId===perspective));
+  },[memberRows,perspective,includeMembers]);
 
   const thirdPartyGroups=useMemo<ThirdPartyGroup[]>(()=>{
     const visibleRows=perspective==='household'?thirdPartyRows:thirdPartyRows.flatMap(row=>{const member=row.responsibility_members.find(item=>item.member_id===perspective);if(!member||!(member.amount>0))return[];return[{...row,outstanding_amount:Math.min(row.outstanding_amount,member.amount),responsibility_members:[member]}];});
