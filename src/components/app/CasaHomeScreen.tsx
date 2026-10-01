@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, CircleGauge, CreditCard, Landmark, LoaderCircle, WalletCards } from 'lucide-react';
+import { ChevronRight, CircleGauge, Landmark, LoaderCircle } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getFinancialDashboard, getMemberFinancialPerspective, type MemberMonthlyProjection } from '../../finance/financialDashboard.js';
@@ -8,7 +8,6 @@ import { ensureRecurringIncomeHorizon } from '../../finance/recurringIncome.js';
 import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
-import { SettlementHub } from './SettlementHub.js';
 import { HomeFinancialMap } from './HomeFinancialMap.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
@@ -16,7 +15,7 @@ import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
 import { listCardOverviews, type CardOverview } from '../../finance/cardOverview.js';
 import { listHouseholdResourcePositions, listMemberResourcePositions, type HouseholdResourcePosition, type MemberResourcePosition } from '../../finance/memberResources.js';
 import { UpcomingFinancialEvents } from './UpcomingFinancialEvents.js';
-import { ResourceActionRow, type ResourceNavigationAction } from './ResourceActionRow.js';
+import type { ResourceNavigationAction } from './ResourceActionRow.js';
 import { getHouseholdReferenceProjection, getMemberReferenceProjection, getReferenceMonthContext, normalizeReferenceMonth, shiftReferenceMonth, type ReferenceMonthContext } from '../../finance/referenceMonthDashboard.js';
 import { FinancialPageHeader } from './FinancialPageHeader.js';
 import { FinancialSectionHeading } from './FinancialSectionHeading.js';
@@ -137,8 +136,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
  if(perspective!=='household'){
   const current=memberProjection[0];
-  const cardRows=memberCards.map(card=>({card,responsibility:card.member_responsibilities.find(item=>item.member_id===perspective)})).filter(item=>Number(item.responsibility?.member_responsibility_exposure??0)>0);
-  const attributedResourceTotal=memberResources.reduce((sum,item)=>sum+Number(item.attributed_amount),0);
   return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section><FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/><div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
     <MonthlyPositionStatement
