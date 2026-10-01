@@ -78,7 +78,7 @@ export function MonthlyPositionStatement({
 
       <div className="mt-5 overflow-x-auto pb-1">
         <div className="flex min-w-[520px] items-center">
-          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Hoje</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
+          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Caixa hoje</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
           <div className="mx-2 h-px flex-1 bg-slate-700"/>
           <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Ainda entra</p><strong className="mt-1 block text-sm text-emerald-200">+ {money(expectedIncome)}</strong></div>
           <div className="mx-2 h-px flex-1 bg-slate-700"/>
