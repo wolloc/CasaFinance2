@@ -33,7 +33,8 @@ test('Home never turns an unavailable dashboard section into an apparent financi
  assert.match(home,/Alguns dados não atualizaram agora/);
  assert.match(home,/unavailableLabels/);
  assert.match(home,/currentAvailable=\{currentCash\}/);
- assert.match(statement,/Se tudo seguir como previsto, a Casa termina o mês com/);
+ assert.match(statement,/pode terminar o mês com/);
+ assert.match(statement,/subjectLabel/);
  assert.match(home,/Não foi possível confirmar os saldos dos recursos da Casa/);
  assert.match(home,/Ainda não há resumo financeiro confirmado para este mês/);
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);

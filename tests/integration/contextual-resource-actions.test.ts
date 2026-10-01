@@ -32,7 +32,6 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(map,/group\.rows\.sort/);
  assert.match(map,/grid grid-cols-2 gap-2 border-t/);
  assert.match(map,/>Contas</);
- assert.match(map,/Nos recursos/);
  assert.match(row,/useState\(false\)/);
  assert.match(row,/document\.addEventListener\('pointerdown'/);
  assert.match(row,/absolute left-1\/2 top-\[calc\(100%-6px\)\]/);

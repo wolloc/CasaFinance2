@@ -45,10 +45,7 @@ export function HomeFinancialMap({
   },{current:0,future:0,limit:0});
 
   return <section className="space-y-3">
-    <div className="flex items-end justify-between gap-3 px-1">
-      <div><h2 className="text-lg font-black text-slate-100">Onde está nosso dinheiro?</h2><p className="mt-1 text-xs text-slate-500">Recursos, crédito e valores que estão com outras pessoas.</p></div>
-      <div className="text-right"><p className="text-[10px] uppercase tracking-wide text-slate-500">Nos recursos</p><strong className="text-lg text-slate-100">{money(resourceTotal)}</strong></div>
-    </div>
+    <div className="px-1"><h2 className="text-lg font-black text-slate-100">Onde está nosso dinheiro?</h2></div>
 
     <details open className="group rounded-[1.6rem] border border-slate-800 bg-slate-900/45">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">

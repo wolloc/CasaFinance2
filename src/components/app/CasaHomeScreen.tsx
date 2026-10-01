@@ -9,6 +9,7 @@ import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
 import { HomeFinancialMap } from './HomeFinancialMap.js';
+import { SettlementHub } from './SettlementHub.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { FinancialPeriodNavigator } from './FinancialPeriodNavigator.js';
@@ -66,7 +67,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const hasPartialFailure=Object.values(availability).some(value=>!value);
  const unavailableLabels=[!availability.household&&'posição da Casa',!availability.members&&'moradores',!availability.health&&'saúde do mês',!availability.confidence&&'qualidade das previsões',!availability.attention&&'itens de atenção',!availability.projection&&'projeção mensal',!availability.cards&&'cartões',!availability.settlements&&'valores entre moradores',!availability.resources&&'recursos',!availability.guidance&&'orientação de cobertura'].filter((value):value is string=>Boolean(value));
  const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Morador';
- const currentMemberSettlements=settlements.filter(row=>Number(row.net_position)>0);
  const selector=<FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>;
  const resourceOwnerLabel=(ids:string[])=>{const names=ids.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));return names.length>1?names.join(' + '):names[0]??null;};
  const trackingMonth=referenceContext?.tracking_started_on?normalizeReferenceMonth(referenceContext.tracking_started_on):null;
@@ -150,12 +150,13 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      currentAvailable={Number(current.opening_liquidity)}
      benefitBalance={memberBenefitBalance}
      investmentBalance={memberInvestmentBalance}
+     subjectLabel={memberName(perspective)}
     />
     <p className="mt-3 text-[11px] text-slate-500">Minha responsabilidade econômica restante: {money(current.economic_responsibility_remaining)}.</p>
     {Number(current.unattributed_funding_remaining)>0&&<p className="mt-2 rounded-xl border border-amber-900/60 bg-amber-950/15 p-3 text-xs text-amber-100">Há {money(current.unattributed_funding_remaining)} de compromissos da Casa sem rota individual definida. Esse valor não foi descontado do seu saldo nem atribuído ao outro morador automaticamente.</p>}
    </div></section>
 
-   <section><FinancialSectionHeading title="Entre vocês"/><div className="grid grid-cols-2 gap-3"><article className="rounded-2xl border border-emerald-900/50 bg-emerald-950/20 p-4"><p className="text-xs text-emerald-300">Tenho a receber</p><strong className="mt-1 block text-lg">{money(current.settlement_receivable_position)}</strong></article><article className="rounded-2xl border border-amber-900/50 bg-amber-950/20 p-4"><p className="text-xs text-amber-300">Tenho a repassar</p><strong className="mt-1 block text-lg">{money(current.settlement_payable_position)}</strong></article></div></section>
+   <section><FinancialSectionHeading title="Entre vocês"/><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeThirdParties={false}/></section>
 
    <HomeFinancialMap resources={memberResources} cards={memberCards} perspective={perspective} memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction}/>
 
@@ -187,6 +188,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      reserveAndInvestments={guidance?Number(guidance.reserve_balance)+Number(guidance.investment_balance):0}
      benefitBalance={resources?.benefits??0}
      investmentBalance={resources?.investments??0}
+     subjectLabel="Casa"
     />}
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}
@@ -195,7 +197,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   <section>
    <FinancialSectionHeading title="Entre vocês"/>
-   {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):currentMemberSettlements.length===0?<div className="rounded-2xl border border-dashed border-cyan-900/50 bg-cyan-950/10 p-4"><p className="text-sm font-bold text-cyan-100">Tudo equilibrado entre vocês.</p><p className="mt-1 text-xs text-slate-500">Não há valor pendente entre moradores neste momento.</p></div>:<div className="space-y-2">{currentMemberSettlements.map(row=><article key={row.debtor_member_id+'-'+row.creditor_member_id} className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-900/50 bg-cyan-950/15 p-4"><div><p className="text-xs text-slate-500">Agora</p><p className="mt-1 text-sm font-bold text-cyan-50">{memberName(row.debtor_member_id)} deve a {memberName(row.creditor_member_id)}</p></div><strong className="text-xl font-black text-cyan-200">{money(row.net_position)}</strong></article>)}</div>}
+   {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):<SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeThirdParties={false}/>}
   </section>
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}

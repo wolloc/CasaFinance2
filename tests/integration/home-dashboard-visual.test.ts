@@ -8,8 +8,8 @@ const settlements = await readFile(new URL('../../src/components/app/SettlementH
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
-  assert.match(home,/MonthlyPositionStatement/);
-  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','Se tudo seguir como previsto, a Casa termina o mês com','Recursos para usar hoje','Investimentos','Caixa hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
+  assert.match(home,/MonthlyPositionStatement/);assert.match(statement,/subjectLabel/);
+  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','pode terminar o mês com','Recursos para usar hoje','Investimentos','Caixa hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
   assert.doesNotMatch(home,/healthText\[health\.health\]/);
   assert.doesNotMatch(home,/confidence\.confidence_label/);
   assert.match(home,/Alguns dados não atualizaram agora/);
@@ -32,7 +32,7 @@ test('Home deixa a análise por categorias para Gastos e Entradas',()=>{
   assert.doesNotMatch(home,/FinancialSectionHeading title="O que mais pesou"/);
 });
 
-test('posição entre moradores vira uma resposta própria da Home',()=>{assert.match(home,/FinancialSectionHeading title="Entre vocês"/);assert.match(home,/currentMemberSettlements/);assert.match(home,/deve a/);assert.match(home,/Tudo equilibrado entre vocês/);assert.match(settlements,/memberPairs/);});
+test('posição entre moradores vira uma resposta própria e abre histórico',()=>{assert.match(home,/FinancialSectionHeading title="Entre vocês"/);assert.match(home,/SettlementHub/);assert.match(home,/includeThirdParties=\{false\}/);assert.match(settlements,/memberPairs/);assert.match(settlements,/Ver histórico e compromissos/);});
 
 
 test('projeção futura mostra tendência entre meses comparáveis',()=>{

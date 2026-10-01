@@ -13,11 +13,12 @@ test('Casa current month uses an integrated monthly statement from opening to pr
   assert.match(home,/expectedIncome=\{Number\(currentMonth\.expected_reliable_income_remaining\)\}/);
   assert.match(home,/remainingOutflow=\{Number\(currentMonth\.remaining_commitments_in_month\)\+Number\(currentMonth\.projected_recurring_commitments\)\+Number\(currentMonth\.prior_pending_outflow\)\}/);
   assert.match(home,/ending=\{Number\(currentMonth\.projected_ending_cash\)\}/);
+  assert.match(home,/subjectLabel="Casa"/);
 });
 
 test('monthly statement keeps liquidity coverage separate from reserves and investments',()=>{
   for(const copy of [
-    'Se tudo seguir como previsto, a Casa termina o mês com',
+    'pode terminar o mês com',
     'Recursos para usar hoje',
     'Caixa hoje',
     'Ainda entra',
@@ -38,4 +39,5 @@ test('member perspective gets the same statement without inventing household cov
   assert.match(home,/expectedIncome=\{Number\(current\.expected_reliable_income_remaining\)\+Number\(current\.scheduled_settlement_inflow\)\}/);
   assert.match(home,/remainingOutflow=\{Number\(current\.projected_funding_remaining\)\+Number\(current\.scheduled_settlement_outflow\)\}/);
   assert.match(home,/ending=\{Number\(current\.projected_ending_liquidity\)\}/);
+  assert.match(home,/subjectLabel=\{memberName\(perspective\)\}/);
 });

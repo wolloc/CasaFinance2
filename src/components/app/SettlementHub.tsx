@@ -28,7 +28,7 @@ type ThirdPartyGroup={
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean}){
+export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean}){
   const{household,householdMembers}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
@@ -64,12 +64,13 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
     const visibleRows=perspective==='household'?thirdPartyRows:thirdPartyRows.flatMap(row=>{const member=row.responsibility_members.find(item=>item.member_id===perspective);if(!member||!(member.amount>0))return[];return[{...row,outstanding_amount:Math.min(row.outstanding_amount,member.amount),responsibility_members:[member]}];});
     const groups=new Map<string,ThirdPartyObligation[]>();
     for(const row of visibleRows)groups.set(row.counterparty_id,[...(groups.get(row.counterparty_id)??[]),row]);
+    if(!includeThirdParties)return [];
     return [...groups.entries()].map(([counterpartyId,rows])=>{
       const net=rows.reduce((sum,row)=>sum+(row.kind==='receivable'?Number(row.outstanding_amount):-Number(row.outstanding_amount)),0);
       const dueDates=rows.map(row=>row.due_date).filter((value):value is string=>Boolean(value)).sort();
       return{counterpartyId,name:rows[0]?.counterparty_name??'Outra pessoa',rows,net,nearestDue:dueDates[0]??null};
     }).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.name.localeCompare(b.name));
-  },[thirdPartyRows,perspective]);
+  },[thirdPartyRows,perspective,includeThirdParties]);
 
   if(loading)return <section>{!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>}<LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
 

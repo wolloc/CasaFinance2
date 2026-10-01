@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { HandCoins, LoaderCircle } from 'lucide-react';
+import { HandCoins, Landmark, LoaderCircle, PiggyBank, Wallet } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdFinancialAccounts, type HouseholdAccount } from '../../finance/householdFinancialAccounts.js';
 import { listOpenThirdPartyObligations, settleThirdPartyObligation, type ThirdPartyObligation } from '../../finance/thirdPartyObligations.js';
 import { FinancialSaveFeedback } from './FinancialSaveFeedback.js';
+import { FinancialResourceChoice } from './FinancialResourceChoice.js';
 
 const formatMoney = (value: unknown) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const normalizeAmount = (value: string) => value.trim().replace(/\./g, '').replace(',', '.');
 const localDate = () => { const date = new Date(); const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10); };
 
-export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: { onBack: () => void; initialObligationId?: string }) {
+export function ThirdPartySettlementAdjustment({ onBack, onCompleted, initialObligationId }: { onBack: () => void; onCompleted?: (message:string) => void; initialObligationId?: string }) {
   const { household, householdMembers } = useSupabaseAuth();
   const [obligations, setObligations] = useState<ThirdPartyObligation[]>([]);
   const [accounts, setAccounts] = useState<HouseholdAccount[]>([]);
@@ -36,7 +37,7 @@ export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: 
         listHouseholdFinancialAccounts(supabase, household.id),
       ]);
       setObligations(openObligations);
-      setAccounts(financial.accounts);
+      setAccounts(financial.accounts.filter(account=>!account.resource_restriction&&['cash','checking','savings','digital_wallet'].includes(account.type)));
       if (initialObligationId) {
         const initial = openObligations.find((item) => item.id === initialObligationId);
         if (initial) { setObligationId(initial.id); setAmount(Number(initial.outstanding_amount).toFixed(2).replace('.', ',')); }
@@ -49,6 +50,8 @@ export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: 
   const selected = useMemo(() => obligations.find((item) => item.id === obligationId), [obligations, obligationId]);
   const outstanding = Number(selected?.outstanding_amount ?? 0);
   const needsFunder = selected?.kind === 'payable' && Boolean(selected.source_transaction_id);
+  const accountOwners=(account:HouseholdAccount)=>{const ids=account.owner_member_ids?.length?account.owner_member_ids:account.owner_member_id?[account.owner_member_id]:[];const names=ids.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));return names.length>1?names.join(' + '):names[0]??null;};
+  const accountIcon=(account:HouseholdAccount)=>account.type==='cash'||account.type==='digital_wallet'?<Wallet/>:account.type==='savings'?<PiggyBank/>:<Landmark/>;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -64,10 +67,12 @@ export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: 
     setSaving(true); setError(null); setSuccess(null);
     try {
       await settleThirdPartyObligation(supabase, { householdId: household.id, obligationId: selected.id, accountId, amount: normalizedAmount, occurredAt, funderMemberId: needsFunder ? funderMemberId : undefined, notes });
-      setSuccess(selected.kind === 'receivable'
-        ? 'Recebimento registrado. O dinheiro entrou na conta informada e o valor que essa pessoa devia diminuiu, sem criar uma nova renda.'
-        : 'Pagamento registrado. O dinheiro saiu da conta informada e o valor devido diminuiu, sem criar um novo gasto.');
+      const completionMessage=selected.kind === 'receivable'
+        ? 'Recebimento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados, sem criar uma nova renda.'
+        : 'Pagamento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados, sem criar um novo gasto.';
       setObligationId(''); setAccountId(''); setFunderMemberId(''); setAmount(''); setNotes('');
+      if(onCompleted){onCompleted(completionMessage);return;}
+      setSuccess(completionMessage);
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar este acerto.'); }
     finally { setSaving(false); }
@@ -80,7 +85,7 @@ export function ThirdPartySettlementAdjustment({ onBack, initialObligationId }: 
       {initialObligationId&&selected&&<p className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-3 text-xs text-cyan-200">Este valor veio da Home e foi conferido novamente. Nada será movimentado até você confirmar.</p>}
       <label className="block text-sm">O que aconteceu?<select value={obligationId} onChange={(event) => { setObligationId(event.target.value); const next=obligations.find(item=>item.id===event.target.value); setAmount(next?Number(next.outstanding_amount).toFixed(2).replace('.', ','):''); setAccountId(''); setFunderMemberId(''); }} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{obligations.map((item) => <option key={item.id} value={item.id}>{item.kind === 'receivable' ? `${item.counterparty_name} pagou / vai pagar` : `Pagar ${item.counterparty_name}`} · {formatMoney(item.outstanding_amount)}</option>)}</select></label>
       {selected && <div className="rounded-xl bg-slate-950 p-3 text-sm"><p className="font-semibold">{selected.description}</p><p className="mt-1 text-slate-400">Ainda falta <strong className="text-amber-200">{formatMoney(outstanding)}</strong></p></div>}
-      {selected && <label className="block text-sm">{selected.kind === 'receivable' ? 'Em qual conta o dinheiro entrou?' : 'De qual conta o dinheiro saiu?'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>}
+      {selected && <fieldset><legend className="text-sm font-semibold">{selected.kind === 'receivable' ? 'Em qual conta o dinheiro entrou?' : 'De qual conta o dinheiro saiu?'}</legend><div className="mt-2 grid grid-cols-3 gap-2">{accounts.map(account=><FinancialResourceChoice key={account.id} active={accountId===account.id} onClick={()=>setAccountId(account.id)} icon={accountIcon(account)} institution={account.institution} name={account.name} ownerLabel={accountOwners(account)}/>)}</div>{accounts.length===0&&<p className="mt-2 rounded-xl border border-dashed border-slate-800 p-3 text-xs text-slate-500">Nenhuma conta transacional está disponível para este acerto.</p>}</fieldset>}
       {needsFunder && <label className="block text-sm">Quem pagou com o próprio dinheiro?<select value={funderMemberId} onChange={(event) => setFunderMemberId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3"><option value="">Selecione</option>{householdMembers.map((member) => <option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>}
       {selected && <><label className="block text-sm">Quanto foi pago?<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="0,00" /></label><label className="block text-sm">Quando aconteceu?<input type="date" value={occurredDate} onChange={(event) => setOccurredDate(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label><label className="block text-sm">Observação (opcional)<textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-700 bg-slate-950 p-3" /></label></>}
       {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/50 p-3 text-sm text-rose-200">{error}</p>}

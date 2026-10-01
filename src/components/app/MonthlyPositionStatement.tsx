@@ -17,6 +17,7 @@ export function MonthlyPositionStatement({
   reserveAndInvestments=0,
   benefitBalance=0,
   investmentBalance=0,
+  subjectLabel='Casa',
 }:{
   opening:number;
   realizedIncome:number;
@@ -30,6 +31,7 @@ export function MonthlyPositionStatement({
   reserveAndInvestments?:number;
   benefitBalance?:number;
   investmentBalance?:number;
+  subjectLabel?:string;
 }){
   const effectiveAvailable=currentAvailable??opening;
   const usableToday=effectiveAvailable+benefitBalance;
@@ -50,14 +52,11 @@ export function MonthlyPositionStatement({
     <article className={`rounded-[1.6rem] border p-4 ${coverageCopy.panel}`}>
       <div className="flex items-start gap-3">
         <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950/45 ${coverageCopy.tone}`}><CoverageIcon className="h-4 w-4"/></span>
-        <div>
-          <p className={`font-black ${coverageCopy.tone}`}>{coverageCopy.title}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-300">{coverageCopy.detail}</p>
-        </div>
+        <div><p className={`font-black ${coverageCopy.tone}`}>{coverageCopy.title}</p></div>
       </div>
 
       <div className="mt-5">
-        <p className="text-xs text-slate-500">Se tudo seguir como previsto, a Casa termina o mês com</p>
+        <p className="text-xs text-slate-500">{subjectLabel} pode terminar o mês com</p>
         <strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
       </div>
 
@@ -73,8 +72,6 @@ export function MonthlyPositionStatement({
           <p className="mt-1 text-[10px] leading-4 text-slate-500">Patrimônio separado do caixa do mês</p>
         </div>
       </div>
-
-      {benefitBalance>0&&<p className="mt-2 text-[11px] leading-4 text-slate-500">Benefícios entram como recurso utilizável, mas continuam restritos ao tipo de gasto permitido.</p>}
 
       <div className="mt-5 overflow-x-auto pb-1">
         <div className="flex min-w-[520px] items-center">
