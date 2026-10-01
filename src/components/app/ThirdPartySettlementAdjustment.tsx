@@ -68,8 +68,8 @@ export function ThirdPartySettlementAdjustment({ onBack, onCompleted, initialObl
     try {
       await settleThirdPartyObligation(supabase, { householdId: household.id, obligationId: selected.id, accountId, amount: normalizedAmount, occurredAt, funderMemberId: needsFunder ? funderMemberId : undefined, notes });
       const completionMessage=selected.kind === 'receivable'
-        ? 'Recebimento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados.'
-        : 'Pagamento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados.';
+        ? 'Recebimento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados, sem criar uma nova renda.'
+        : 'Pagamento registrado. A conta escolhida e o valor com esta pessoa já foram atualizados, sem criar um novo gasto.';
       setObligationId(''); setAccountId(''); setFunderMemberId(''); setAmount(''); setNotes('');
       if(onCompleted){onCompleted(completionMessage);return;}
       setSuccess(completionMessage);
