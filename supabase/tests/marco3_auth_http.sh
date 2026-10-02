@@ -53,8 +53,11 @@ list_members() {
 wallace_email="wallace-http-${RUN_ID}@example.invalid"
 guilherme_email="guilherme-http-${RUN_ID}@example.invalid"
 third_email="third-http-${RUN_ID}@example.invalid"
+echo '[auth-gate] signup wallace' >&2
 wallace_json="$(sign_up "$wallace_email")"
+echo '[auth-gate] signup guilherme' >&2
 guilherme_json="$(sign_up "$guilherme_email")"
+echo '[auth-gate] signup third' >&2
 third_json="$(sign_up "$third_email")"
 wallace_token="$(printf '%s' "$wallace_json" | json_field '.access_token')"
 guilherme_token="$(printf '%s' "$guilherme_json" | json_field '.access_token')"
@@ -66,7 +69,9 @@ guilherme_user_id="$(printf '%s' "$guilherme_json" | json_field '.user.id')"
 [[ "$(awk -F. '{print NF}' <<<"$guilherme_token")" -eq 3 ]]
 [[ "$(awk -F. '{print NF}' <<<"$third_token")" -eq 3 ]]
 
+echo '[auth-gate] bootstrap wallace' >&2
 rpc "$wallace_token" bootstrap_household '{"household_name":"Casa HTTP Wallace e Guilherme","household_currency":"BRL","household_timezone":"America/Sao_Paulo"}' >/dev/null
+echo '[auth-gate] bootstrap third' >&2
 rpc "$third_token" bootstrap_household '{"household_name":"Casa HTTP Terceira","household_currency":"BRL","household_timezone":"America/Sao_Paulo"}' >/dev/null
 
 wallace_houses="$(list_households "$wallace_token")"
@@ -77,6 +82,7 @@ wallace_house_id="$(printf '%s' "$wallace_houses" | jq -r '.[0].id')"
 third_house_id="$(printf '%s' "$third_houses" | jq -r '.[0].id')"
 
 # Wallace, as owner, creates an email-bound invitation for Guilherme.
+echo '[auth-gate] create invitation' >&2
 invitation_json="$(rpc "$wallace_token" create_household_invitation "{\"invited_email\":\"${guilherme_email}\"}")"
 invitation_token="$(printf '%s' "$invitation_json" | jq -er '.[0].token')"
 invitation_house_id="$(printf '%s' "$invitation_json" | jq -er '.[0].household_id')"
@@ -84,6 +90,7 @@ invitation_house_id="$(printf '%s' "$invitation_json" | jq -er '.[0].household_i
 [[ "${#invitation_token}" -eq 64 ]]
 
 # Guilherme accepts with his own real JWT and joins exactly Wallace's Casa.
+echo '[auth-gate] accept invitation' >&2
 accept_json="$(rpc "$guilherme_token" accept_household_invitation "{\"invitation_token\":\"${invitation_token}\"}")"
 [[ "$(printf '%s' "$accept_json" | jq -r '.[0].status')" == 'accepted' ]]
 [[ "$(printf '%s' "$accept_json" | jq -r '.[0].household_id')" == "$wallace_house_id" ]]
@@ -102,6 +109,7 @@ guilherme_members="$(list_members "$guilherme_token" "$wallace_house_id")"
 [[ "$(printf '%s' "$wallace_members" | jq -r --arg id "$guilherme_user_id" '.[] | select(.profile_id==$id) | .role')" == 'member' ]]
 
 # A fresh Wallace login must still resolve the same shared Casa.
+echo '[auth-gate] relogin wallace' >&2
 wallace_relogin_json="$(sign_in "$wallace_email")"
 wallace_relogin_token="$(printf '%s' "$wallace_relogin_json" | json_field '.access_token')"
 [[ "$(printf '%s' "$wallace_relogin_json" | json_field '.user.id')" == "$wallace_user_id" ]]
