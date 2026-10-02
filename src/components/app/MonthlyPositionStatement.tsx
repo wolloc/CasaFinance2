@@ -18,6 +18,7 @@ export function MonthlyPositionStatement({
   benefitBalance=0,
   investmentBalance=0,
   subjectLabel='Casa',
+  periodMode='current',
 }:{
   opening:number;
   realizedIncome:number;
@@ -32,10 +33,16 @@ export function MonthlyPositionStatement({
   benefitBalance?:number;
   investmentBalance?:number;
   subjectLabel?:string;
+  periodMode?:'current'|'future';
 }){
   const effectiveAvailable=currentAvailable??opening;
   const usableToday=effectiveAvailable+benefitBalance;
-  const coverageCopy=coverageState==='covered'
+  const futurePeriod=periodMode==='future';
+  const coverageCopy=futurePeriod
+    ?(ending<0
+      ?{title:'Este mês projetado pede atenção',detail:'Com o que já sabemos hoje, a projeção termina negativa.',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
+      :{title:'Este mês projetado está no caminho certo',detail:'Com o que já sabemos hoje, a projeção termina positiva.',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck})
+    :coverageState==='covered'
     ?{title:'Estamos tranquilos neste mês',detail:'Com o que já temos hoje, os compromissos conhecidos ficam cobertos.',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck}
     :coverageState==='covered_by_expected_income'
       ?{title:'O mês fecha, contando com o que ainda entra',detail:'O dinheiro de hoje não cobre tudo sozinho, mas as entradas previstas completam o mês.',tone:'text-blue-300',panel:'border-blue-900/50 bg-blue-950/15',Icon:CircleDollarSign}
@@ -56,26 +63,26 @@ export function MonthlyPositionStatement({
       </div>
 
       <div className="mt-5">
-        <p className="text-xs text-slate-500">{subjectLabel} pode terminar o mês com</p>
+        <p className="text-xs text-slate-500">{futurePeriod?`${subjectLabel} pode terminar este mês com`:`${subjectLabel} pode terminar o mês com`}</p>
         <strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <div className="rounded-2xl bg-slate-950/45 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Recursos para usar hoje</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Saldo projetado na abertura':'Recursos para usar hoje'}</p>
           <strong className="mt-1 block text-lg text-slate-100">{money(usableToday)}</strong>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">Caixa {money(effectiveAvailable)}{benefitBalance>0?` · Benefícios ${money(benefitBalance)}`:''}</p>
+          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'Projeção acumulada dos meses anteriores':<>Caixa {money(effectiveAvailable)}{benefitBalance>0?` · Benefícios ${money(benefitBalance)}`:''}</>}</p>
         </div>
         <div className="rounded-2xl bg-slate-950/45 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Investimentos</p>
-          <strong className="mt-1 block text-lg text-slate-100">{money(investmentBalance)}</strong>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">Patrimônio separado do caixa do mês</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Patrimônio por recurso':'Investimentos'}</p>
+          <strong className="mt-1 block text-lg text-slate-100">{futurePeriod?'Não projetado':money(investmentBalance)}</strong>
+          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'O Casa não inventa em qual conta ou investimento o saldo futuro estará.':'Patrimônio separado do caixa do mês'}</p>
         </div>
       </div>
 
       <div className="mt-5 overflow-x-auto pb-1">
         <div className="flex min-w-[520px] items-center">
-          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Caixa hoje</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
+          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Abertura projetada':'Caixa hoje'}</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
           <div className="mx-2 h-px flex-1 bg-slate-700"/>
           <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Ainda entra</p><strong className="mt-1 block text-sm text-emerald-200">+ {money(expectedIncome)}</strong></div>
           <div className="mx-2 h-px flex-1 bg-slate-700"/>

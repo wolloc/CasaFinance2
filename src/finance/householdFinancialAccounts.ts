@@ -196,12 +196,18 @@ export async function updateHouseholdCardIdentity(client: SupabaseClient, househ
   name: string;
   institution?: string;
   lastFour?: string;
+  creditLimit: string;
+  closingDay: number;
+  dueDay: number;
 }) {
   const response = await client.from('cards')
     .update({
       name: input.name.trim(),
       institution: input.institution?.trim() || null,
       last_four: input.lastFour?.trim() || null,
+      credit_limit: input.creditLimit,
+      closing_day: input.closingDay,
+      due_day: input.dueDay,
     })
     .eq('household_id', householdId)
     .eq('id', cardId)

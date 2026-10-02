@@ -26,10 +26,11 @@ test('Home only requests projections after the reference context says future',()
   assert.doesNotMatch(homeSource,/context\.period_kind==='past'[\s\S]{0,200}getHouseholdReferenceProjection/);
 });
 
-test('past current and future cannot reuse the same visual semantics',()=>{
+test('past current and future use period-correct semantics while future keeps the current Home grammar',()=>{
   assert.match(homeSource,/Fotografia histórica/);
-  assert.match(homeSource,/Olhando para este mês/);
-  assert.match(homeSource,/É uma leitura do que já sabemos hoje/);
+  assert.match(homeSource,/periodMode="future"/);
+  assert.match(homeSource,/FinancialSectionHeading title="Como estamos\?"/);
+  assert.doesNotMatch(homeSource,/Olhando para este mês/);
   assert.match(homeSource,/scheduled_settlement_inflow/);
   assert.match(homeSource,/não reutilizou dados do mês atual/i);
   assert.match(homeSource,/referenceMonth!==currentReferenceMonth/);

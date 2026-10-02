@@ -40,7 +40,12 @@ test('card ownership is not transaction responsibility', () => {
   assert.doesNotMatch(cardRegistrationSource, /buyer_member_id|responsible_member_id|funder_member_id/);
   assert.match(serviceSource, /p_buyer_member_id/);
   const identityEdit = serviceSource.slice(serviceSource.indexOf('export async function updateHouseholdCardIdentity'), serviceSource.indexOf('export async function recordOpeningCardPurchase'));
-  assert.doesNotMatch(identityEdit, /owner_member_id|buyer_member_id|responsible_member_id|funder_member_id|credit_limit|closing_day|due_day/);
+  assert.doesNotMatch(identityEdit, /owner_member_id|buyer_member_id|responsible_member_id|funder_member_id/);
+  for (const field of ['credit_limit','closing_day','due_day']) assert.match(identityEdit, new RegExp(field));
+  assert.match(screenSource, /Limite do cartão/);
+  assert.match(screenSource, /Dia em que fecha/);
+  assert.match(screenSource, /Dia em que vence/);
+  assert.match(screenSource, /Compras e faturas já registradas não são reescritas/);
 });
 
 test('legacy DatabaseStore remains outside the Supabase financial path', () => {
