@@ -96,10 +96,13 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const isPast=referenceContext?.period_kind==='past';
   const futureRows=perspective==='household'?referenceProjection:referenceMemberProjection;
   const futureCurrent=futureRows[0];
-  const futureIncome=futureCurrent?Number(futureCurrent.realized_true_income_in_month)+Number(futureCurrent.expected_reliable_income_remaining)+(perspective==='household'?0:Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_inflow)):0;
-  const futureOutflow=futureCurrent?(perspective==='household'
-    ?Number((futureCurrent as Dashboard['projection'][number]).realized_commitments_in_month)+Number((futureCurrent as Dashboard['projection'][number]).remaining_commitments_in_month)+Number((futureCurrent as Dashboard['projection'][number]).projected_recurring_commitments)+Number((futureCurrent as Dashboard['projection'][number]).prior_pending_outflow)
-    :Number((futureCurrent as MemberMonthlyProjection).realized_funding_in_month)+Number((futureCurrent as MemberMonthlyProjection).projected_funding_remaining)+Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_outflow)):0;
+  const futureOpening=futureCurrent?(perspective==='household'?Number((futureCurrent as Dashboard['projection'][number]).opening_cash):Number((futureCurrent as MemberMonthlyProjection).opening_liquidity)):0;
+  const futureRealizedIncome=futureCurrent?Number(futureCurrent.realized_true_income_in_month):0;
+  const futureExpectedIncome=futureCurrent?Number(futureCurrent.expected_reliable_income_remaining)+(perspective==='household'?0:Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_inflow)):0;
+  const futureRealizedOutflow=futureCurrent?(perspective==='household'?Number((futureCurrent as Dashboard['projection'][number]).realized_commitments_in_month):Number((futureCurrent as MemberMonthlyProjection).realized_funding_in_month)):0;
+  const futureRemainingOutflow=futureCurrent?(perspective==='household'
+    ?Number((futureCurrent as Dashboard['projection'][number]).remaining_commitments_in_month)+Number((futureCurrent as Dashboard['projection'][number]).projected_recurring_commitments)+Number((futureCurrent as Dashboard['projection'][number]).prior_pending_outflow)
+    :Number((futureCurrent as MemberMonthlyProjection).projected_funding_remaining)+Number((futureCurrent as MemberMonthlyProjection).scheduled_settlement_outflow)):0;
   const futureEnding=futureCurrent?(perspective==='household'?Number((futureCurrent as Dashboard['projection'][number]).projected_ending_cash):Number((futureCurrent as MemberMonthlyProjection).projected_ending_liquidity)):null;
   const openingCash=referenceContext?.historical_opening_cash==null?null:Number(referenceContext.historical_opening_cash);
   const closingCash=referenceContext?.historical_closing_cash==null?null:Number(referenceContext.historical_closing_cash);
@@ -116,21 +119,24 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      {perspective==='household'&&openingCash!==null&&closingCash!==null&&<p className="mt-4 text-sm text-slate-300">O caixa acompanhado variou <strong className={closingCash-openingCash<0?'text-rose-300':'text-emerald-300'}>{closingCash-openingCash>=0?'+ ':''}{money(closingCash-openingCash)}</strong> dentro da cobertura canônica do período.</p>}
     </section>
    </>:<>
-    <section className="rounded-[2rem] border border-violet-900/50 bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900 p-5">
-     <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-300">Olhando para este mês</p>
-     <h2 className="mt-1 text-xl font-black capitalize">{monthLabel(referenceMonth)}</h2>
-     {!futureCurrent?<p className="mt-5 text-sm text-slate-300">Ainda não temos informação suficiente para projetar este período.</p>:<>
-      <p className={'mt-3 text-lg font-black '+((futureEnding??0)<0?'text-rose-200':'text-emerald-200')}>{(futureEnding??0)<0?'Esse mês pede atenção':'Se nada mudar, esse mês fecha positivo'}</p>
-      <p className="mt-1 text-xs leading-5 text-white/65">É uma leitura do que já sabemos hoje. Conforme entradas e pagamentos acontecem, essa previsão se atualiza.</p>
-      <div className="mt-5 grid grid-cols-3 gap-2">
-       <article className="rounded-xl bg-white/[0.08] p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Deve entrar</p><strong className="mt-1 block text-sm text-emerald-200">{money(futureIncome)}</strong></article>
-       <article className="rounded-xl bg-white/[0.08] p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Deve sair</p><strong className="mt-1 block text-sm text-rose-200">{money(futureOutflow)}</strong></article>
-       <article className="rounded-xl bg-white/[0.08] p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-white/50">Deve terminar</p><strong className={'mt-1 block text-sm '+((futureEnding??0)<0?'text-rose-200':'text-white')}>{futureEnding===null?'Não confirmado':money(futureEnding)}</strong></article>
-      </div>
-      {perspective!=='household'&&Number((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)>0&&<p className="mt-3 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-100">{money((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)} ainda não têm responsável definido entre os moradores. O valor já está na projeção da Casa, mas não foi atribuído à sua projeção individual.</p>}
-     </>}
+    <section>
+     <FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/>
+     <div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
+      {!futureCurrent||futureEnding===null?<p className="text-sm text-slate-400">Ainda não temos informação suficiente para projetar este período.</p>:<MonthlyPositionStatement
+       opening={futureOpening}
+       realizedIncome={futureRealizedIncome}
+       expectedIncome={futureExpectedIncome}
+       realizedOutflow={futureRealizedOutflow}
+       remainingOutflow={futureRemainingOutflow}
+       ending={futureEnding}
+       currentAvailable={futureOpening}
+       subjectLabel={perspective==='household'?'Casa':selectedMember?.display_name??'Morador'}
+       periodMode="future"
+      />}
+      {futureCurrent&&perspective!=='household'&&Number((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)>0&&<p className="mt-3 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-100">{money((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)} ainda não têm responsável definido entre os moradores. O valor já está na projeção da Casa, mas não foi atribuído à sua projeção individual.</p>}
+     </div>
     </section>
-    {futureRows.length>1&&<section><FinancialSectionHeading title="E depois?"/><div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">{futureRows.slice(1).map(row=>{const ending=perspective==='household'?Number((row as Dashboard['projection'][number]).projected_ending_cash):Number((row as MemberMonthlyProjection).projected_ending_liquidity);return <article key={row.financial_month} className="min-w-[68%] snap-start rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><div className="flex items-center gap-2"><span className={'h-2.5 w-2.5 rounded-full '+(ending<0?'bg-rose-400':'bg-emerald-400')}/><b className="capitalize">{monthLabel(row.financial_month)}</b></div><p className="mt-3 text-xs text-slate-500">{ending<0?'Pode faltar dinheiro no fechamento':'Deve fechar com'}</p><strong className={ending<0?'text-rose-300':'text-slate-100'}>{money(ending)}</strong></article>})}</div></section>}
+    {futureRows.length>1&&<section><FinancialSectionHeading title="Olhando pra frente"/><div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">{futureRows.slice(1).map(row=>{const ending=perspective==='household'?Number((row as Dashboard['projection'][number]).projected_ending_cash):Number((row as MemberMonthlyProjection).projected_ending_liquidity);return <article key={row.financial_month} className="min-w-[68%] snap-start rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><div className="flex items-center gap-2"><span className={'h-2.5 w-2.5 rounded-full '+(ending<0?'bg-rose-400':'bg-emerald-400')}/><b className="capitalize">{monthLabel(row.financial_month)}</b></div><p className="mt-3 text-xs text-slate-500">{ending<0?'Pode faltar dinheiro no fechamento':'Deve fechar com'}</p><strong className={ending<0?'text-rose-300':'text-slate-100'}>{money(ending)}</strong></article>})}</div></section>}
    </>}
   </div>;
  }
