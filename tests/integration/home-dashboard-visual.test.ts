@@ -76,3 +76,14 @@ test('Olhando pra frente traduz o motor em leitura humana sem inflar riqueza fut
   assert.match(home,/expected_reliable_income_remaining/);
   assert.doesNotMatch(home,/não aumentam o saldo atual nem são somadas como riqueza futura acumulada/i);
 });
+
+
+test('mês futuro reaproveita a gramática visual da Home sem inventar patrimônio futuro',()=>{
+  assert.match(home,/periodMode="future"/);
+  assert.match(statement,/periodMode/);
+  assert.match(statement,/Saldo projetado na abertura/);
+  assert.match(statement,/Patrimônio por recurso/);
+  assert.match(statement,/Não projetado/);
+  assert.match(statement,/O Casa não inventa em qual conta ou investimento o saldo futuro estará/);
+  assert.doesNotMatch(home,/border-violet-900\/50/);
+});
