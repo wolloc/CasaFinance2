@@ -125,15 +125,15 @@ begin
   from auth.users u where u.id = caller_id
   on conflict (id) do nothing;
 
-  select * into existing_membership
-  from public.household_members
-  where household_id=invitation.household_id and profile_id=caller_id
+  select member.* into existing_membership
+  from public.household_members member
+  where member.household_id=invitation.household_id and member.profile_id=caller_id
   for update;
 
   if existing_membership.id is not null then
-    update public.household_members
+    update public.household_members member
     set deactivated_at=null, role='member', joined_at=now()
-    where id=existing_membership.id;
+    where member.id=existing_membership.id;
   else
     insert into public.household_members (household_id, profile_id, role)
     values (invitation.household_id, caller_id, 'member');
