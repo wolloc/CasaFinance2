@@ -70,7 +70,7 @@ begin
 
   select stored_invitation.* into invitation
   from public.household_invitations as stored_invitation
-  where stored_invitation.token_hash = digest(convert_to(invitation_token, 'UTF8'), 'sha256')
+  where stored_invitation.token_hash = extensions.digest(convert_to(invitation_token, 'UTF8'), 'sha256')
   for update;
 
   if invitation.id is null then
