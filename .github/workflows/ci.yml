@@ -179,6 +179,7 @@ jobs:
           set -euo pipefail
           tests=(
             supabase/tests/marco3_rls_security.test.sql
+            supabase/tests/member_management.test.sql
             supabase/tests/pr_a_mixed_external_responsibility.test.sql
             supabase/tests/pr_b_realized_expense_positions.test.sql
             supabase/tests/pr_c_wizard_idempotency.test.sql
