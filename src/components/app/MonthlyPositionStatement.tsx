@@ -74,9 +74,9 @@ export function MonthlyPositionStatement({
           <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'Projeção acumulada dos meses anteriores':<>Caixa {money(effectiveAvailable)}{benefitBalance>0?` · Benefícios ${money(benefitBalance)}`:''}</>}</p>
         </div>
         <div className="rounded-2xl bg-slate-950/45 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Referência patrimonial':'Investimentos'}</p>
-          <strong className="mt-1 block text-lg text-slate-100">{money(investmentBalance)}</strong>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'Não entra automaticamente na projeção do caixa':'Patrimônio separado do caixa do mês'}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Patrimônio por recurso':'Investimentos'}</p>
+          <strong className="mt-1 block text-lg text-slate-100">{futurePeriod?'Não projetado':money(investmentBalance)}</strong>
+          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'O Casa não inventa em qual conta ou investimento o saldo futuro estará.':'Patrimônio separado do caixa do mês'}</p>
         </div>
       </div>
 
