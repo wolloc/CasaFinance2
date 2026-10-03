@@ -47,8 +47,6 @@ export function HomeFinancialMap({
   },{current:0,future:0,limit:0});
 
   return <section className="space-y-3">
-    <div className="px-1"><h2 className="text-lg font-black text-slate-100">Onde está nosso dinheiro?</h2></div>
-
     <details open className="group rounded-[1.6rem] border border-slate-800 bg-slate-900/45">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300"><WalletCards className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Contas</p><p className="text-[11px] text-slate-500">{resources.length} {resources.length===1?'recurso acompanhado':'recursos acompanhados'}</p></div></div>
