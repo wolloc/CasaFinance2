@@ -477,6 +477,8 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
       buyer_member_id:row.buyer_member_id,
       instrument_kind:normalizeInstrument(row.payment_instrument).kind,
       instrument_label:normalizeInstrument(row.payment_instrument).label,
+      installment_number:installmentByTransaction.get(row.id)?.installment_number??null,
+      total_installments:installmentByTransaction.get(row.id)?.total_installments??null,
     }];
   }) as EconomicMonthExpense[];
 }
