@@ -153,6 +153,14 @@ export async function updateHouseholdTransaction(client: SupabaseClient, househo
   if(response.error)throw response.error;releaseRetryStableRequestKey('transaction-correction',identity);
 }
 
+export async function updateHouseholdTransactionCategory(client: SupabaseClient, householdId: string, transactionId: string, categoryId: string | null) {
+  const identity=[householdId,transactionId,categoryId??null] as const;
+  const requestKey=getRetryStableRequestKey('transaction-category-correction',identity);
+  const response=await client.rpc('correct_transaction_category',{p_household_id:householdId,p_transaction_id:transactionId,p_category_id:categoryId,p_reason:'Categoria ajustada pelo usuário',p_request_key:requestKey});
+  if(response.error)throw response.error;
+  releaseRetryStableRequestKey('transaction-category-correction',identity);
+}
+
 export async function cancelHouseholdTransaction(client: SupabaseClient, householdId: string, transactionId: string) {
   const reason='Cancelado pelo usuário';const identity=[householdId,transactionId,reason] as const;const requestKey=getRetryStableRequestKey('transaction-cancel',identity);
   const response=await client.rpc('cancel_unrealized_transaction',{p_household_id:householdId,p_transaction_id:transactionId,p_reason:reason,p_request_key:requestKey});
@@ -178,7 +186,7 @@ export function transactionAvailableActions(transaction: HouseholdTransaction) {
   const hasLinkedFinancialFacts = transaction.invoice_id !== null || dependencies.has_recurring_occurrence || dependencies.has_financial_obligation || dependencies.has_external_payment_event || dependencies.has_installment_plan || dependencies.has_funding_event;
   const unrealized = (transaction.economic_state === 'forecast' || transaction.economic_state === 'confirmed') && Number(transaction.realized_amount) === 0 && !hasLinkedFinancialFacts;
   const directPaidExpense = transaction.type === 'expense' && transaction.economic_state === 'realized' && transaction.status === 'paid' && transaction.payment_instrument?.kind === 'account' && transaction.invoice_id === null && !dependencies.has_financial_obligation && !dependencies.has_external_payment_event && !dependencies.has_installment_plan && Math.abs(dependencies.direct_funding_total - Number(transaction.realized_amount)) < 0.005 && dependencies.direct_funding_account_count === 1;
-  return { canEdit: unrealized, canCancel: unrealized, canRefund: directPaidExpense, closed: transaction.economic_state === 'cancelled' || transaction.economic_state === 'reversed' || transaction.status === 'cancelled' || transaction.status === 'refunded' };
+  const canEditCategory=transaction.economic_state!=='cancelled'&&transaction.economic_state!=='reversed'&&transaction.status!=='cancelled'&&transaction.status!=='refunded'; return { canEdit: unrealized, canEditCategory, canCancel: unrealized, canRefund: directPaidExpense, closed: transaction.economic_state === 'cancelled' || transaction.economic_state === 'reversed' || transaction.status === 'cancelled' || transaction.status === 'refunded' };
 }
 
 export async function createAndSettleSharedExpense(client: SupabaseClient, householdId: string, input: TransactionInput, funderMemberId: string, partyDueDate: string | null) {
