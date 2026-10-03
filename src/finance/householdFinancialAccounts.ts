@@ -26,8 +26,8 @@ export async function listIncomeDestinationAccounts(client: SupabaseClient, hous
       .select(accountColumns)
       .eq('household_id', householdId)
       .is('deactivated_at', null)
-      .in('type', ['cash','checking','savings','digital_wallet'])
-      .is('resource_restriction', null)
+      .in('type', ['cash','checking','savings','digital_wallet','meal_benefit'])
+      .or('resource_restriction.is.null,type.eq.meal_benefit')
       .order('name'),
     client.from('account_ownerships')
       .select('account_id,member_id')
