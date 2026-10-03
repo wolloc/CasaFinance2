@@ -31,7 +31,7 @@ const monthEnd=(value:string)=>{const[year,month]=value.split('-').map(Number);c
 const formatDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`)).replace('.','');
 const compactDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
 
-export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoneyMovementId,initialReviewMoneyMovementId,createRequestId=0,refreshKey:globalRefreshKey=0,onFinancialChange}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;initialMoneyMovementId?:string;initialReviewMoneyMovementId?:string;createRequestId?:number;refreshKey?:number;onFinancialChange?:()=>void}){
+export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoneyMovementId,initialReviewMoneyMovementId,createRequestId=0,refreshKey:globalRefreshKey=0,onFinancialChange,onCreate}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;initialMoneyMovementId?:string;initialReviewMoneyMovementId?:string;createRequestId?:number;refreshKey?:number;onFinancialChange?:()=>void;onCreate?:()=>void}){
  const{household,householdMembers}=useSupabaseAuth();
  const[rows,setRows]=useState<HouseholdTransaction[]>([]);
  const[beneficiariesByTransaction,setBeneficiariesByTransaction]=useState<Map<string,string[]>>(new Map());
