@@ -13,6 +13,8 @@ export type CardInvoiceItem = {
   commitment_state: string;
   description: string;
   purchase_date: string | null;
+  installment_number: number | null;
+  total_installments: number | null;
 };
 
 export async function listCardInvoiceItems(client: SupabaseClient, householdId: string, invoiceId: string): Promise<CardInvoiceItem[]> {
@@ -24,15 +26,30 @@ export async function listCardInvoiceItems(client: SupabaseClient, householdId: 
     .order('financial_date', { ascending: true })
     .order('commitment_key', { ascending: true });
   if (response.error) throw response.error;
-  const rows=(response.data??[]) as Omit<CardInvoiceItem,'purchase_date'>[];
+  const rows=(response.data??[]) as Omit<CardInvoiceItem,'purchase_date'|'installment_number'|'total_installments'>[];
   const transactionIds=[...new Set(rows.map(row=>row.source_transaction_id).filter((id):id is string=>Boolean(id)))];
   const purchaseDates=new Map<string,string>();
+  const installmentIds=[...new Set(rows.map(row=>row.source_installment_id).filter((id):id is string=>Boolean(id)))];
+  const installmentNumbers=new Map<string,number>();
+  const installmentTotals=new Map<string,number>();
   if(transactionIds.length>0){
     const transactions=await client.from('transactions').select('id,transaction_date').eq('household_id',householdId).in('id',transactionIds);
     if(transactions.error)throw transactions.error;
     for(const row of transactions.data??[])purchaseDates.set(String(row.id),String(row.transaction_date));
   }
-  return rows.map(row=>({...row,purchase_date:row.source_transaction_id?purchaseDates.get(row.source_transaction_id)??null:null}));
+  if(installmentIds.length>0){
+    const installments=await client.from('installments').select('id,number,installment_plan_id').eq('household_id',householdId).in('id',installmentIds);
+    if(installments.error)throw installments.error;
+    const planIds=[...new Set((installments.data??[]).map(row=>row.installment_plan_id).filter((id):id is string=>Boolean(id)))];
+    for(const row of installments.data??[])installmentNumbers.set(String(row.id),Number(row.number));
+    if(planIds.length>0){
+      const plans=await client.from('installment_plans').select('id,installment_count').eq('household_id',householdId).in('id',planIds);
+      if(plans.error)throw plans.error;
+      const totalsByPlan=new Map((plans.data??[]).map(row=>[String(row.id),Number(row.installment_count)]));
+      for(const row of installments.data??[])if(row.installment_plan_id)installmentTotals.set(String(row.id),totalsByPlan.get(String(row.installment_plan_id))??null);
+    }
+  }
+  return rows.map(row=>({...row,purchase_date:row.source_transaction_id?purchaseDates.get(row.source_transaction_id)??null:null,installment_number:row.source_installment_id?installmentNumbers.get(row.source_installment_id)??null:null,total_installments:row.source_installment_id?installmentTotals.get(row.source_installment_id)??null:null}));
 }
 
 
