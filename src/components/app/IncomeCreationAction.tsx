@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Banknote, CalendarClock, CircleDollarSign, Landmark, LoaderCircle, PiggyBank, WalletCards } from 'lucide-react';
+import { Banknote, CalendarClock, CircleDollarSign, Landmark, LoaderCircle, PiggyBank, Utensils, WalletCards } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdCategories, type HouseholdCategory } from '../../finance/householdCategories.js';
@@ -14,7 +14,7 @@ import { FinancialResourceChoice } from './FinancialResourceChoice.js';
 
 const normalizeAmount=(value:string)=>value.trim().replace(/\./g,'').replace(',','.');
 type IncomeDestination=InvestmentReserveResource&{institution:string|null;ownerMemberIds:string[]};
-function DestinationIcon({type}:{type:string}){const Icon=type==='cash'?Banknote:type==='savings'?PiggyBank:type==='checking'?Landmark:WalletCards;return <Icon className="h-5 w-5"/>;}
+function DestinationIcon({type}:{type:string}){const Icon=type==='cash'?Banknote:type==='savings'?PiggyBank:type==='checking'?Landmark:type==='meal_benefit'?Utensils:WalletCards;return <Icon className="h-5 w-5"/>;}
 
 export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=>void;openRequestId?:number}){
  const{household,householdMembers}=useSupabaseAuth();
@@ -47,7 +47,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   ]);
   const accountById=new Map(financial.map(account=>[account.id,account]));
   setCategories(categoryRows.filter(category=>category.type==='income'));
-  setResources(balanceRows.filter(isTransactionalResource).flatMap(resource=>{
+  setResources(balanceRows.filter(resource=>isTransactionalResource(resource)||resource.type==='meal_benefit').flatMap(resource=>{
    const account=accountById.get(resource.account_id);
    if(!account)return[];
    const ownerMemberIds=account.owner_member_ids?.length?account.owner_member_ids:account.owner_member_id?[account.owner_member_id]:[];
@@ -67,7 +67,10 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   setBeneficiaryMemberId(memberId);
   if(!resources.some(resource=>resource.account_id===plannedDestinationAccountId&&resource.ownerMemberIds.includes(memberId)))setPlannedDestinationAccountId('');
  };
+ const selectedDestination=resources.find(resource=>resource.account_id===plannedDestinationAccountId)??null;
+ const benefitDestination=selectedDestination?.type==='meal_benefit';
  const inferredIncomeNature:IncomeNature=(()=>{
+  if(benefitDestination)return 'benefit_credit';
   const label=(categories.find(category=>category.id===categoryId)?.name??description).trim().toLocaleLowerCase('pt-BR');
   if(/sal[aá]rio|remunera[cç][aã]o/.test(label))return 'salary';
   if(/aluguel|loca[cç][aã]o/.test(label))return 'rent';
@@ -93,6 +96,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
   if(!beneficiaryMemberId){setError('Informe de quem é esta entrada.');return;}
   if(!plannedDestinationAccountId||!compatibleResources.some(resource=>resource.account_id===plannedDestinationAccountId)){setError('Escolha uma conta compatível com a pessoa que recebe esta entrada.');return;}
   if(!description.trim()){setError('Conte ao Casa de onde vem esta entrada.');return;}
+  if(benefitDestination&&recurring){setError('Crédito de benefício não é recorrente. Registre o crédito que realmente entrou em cada competência.');return;}
   if(!expectedDate){setError('Informe quando esta entrada é esperada.');return;}
   if(!Number.isFinite(numericAmount)||numericAmount<=0){setError('Informe um valor maior que zero.');return;}
   setSaving(true);setError(null);
@@ -106,7 +110,7 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
      await settleHouseholdIncome(supabase,{householdId:household.id,transactionId:String(occurrence.data.transaction_id),destinationAccountId:plannedDestinationAccountId,beneficiaryMemberId,amount:normalized,receivedAt:new Date(`${expectedDate}T12:00:00`).toISOString()});
     }
    }else{
-    const transactionId=await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:categoryId||null,beneficiaryMemberId,plannedDestinationAccountId,incomeNature:inferredIncomeNature,economicState,notes});
+    const transactionId=await createIncomeFact(supabase,{householdId:household.id,description,amount:normalized,expectedDate,categoryId:benefitDestination?null:(categoryId||null),beneficiaryMemberId,plannedDestinationAccountId,incomeNature:inferredIncomeNature,economicState,notes});
     if(!isFuture)await settleHouseholdIncome(supabase,{householdId:household.id,transactionId,destinationAccountId:plannedDestinationAccountId,beneficiaryMemberId,amount:normalized,receivedAt:new Date(`${expectedDate}T12:00:00`).toISOString()});
    }
    setDescription('');setAmount('');setCategoryId('');setPlannedDestinationAccountId('');setRecurring(false);setOpen(false);onCreated?.();
@@ -125,7 +129,8 @@ export function IncomeCreationAction({onCreated,openRequestId=0}:{onCreated?:()=
      <label className="text-sm font-semibold">De onde vem?<input value={description} onChange={e=>setDescription(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-base" placeholder="Ex.: Salário Itaú"/></label>
      <label className="text-sm font-semibold">Valor<input value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal" className="mt-1 min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 text-2xl font-black" placeholder="R$ 0,00"/></label>
      <label className="text-sm font-semibold">Quando?<input type="date" value={expectedDate} onChange={e=>setExpectedDate(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"/></label>
-     <label className="text-sm font-semibold">Categoria <span className="font-normal text-slate-500">(opcional)</span><select value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Sem categoria</option>{categories.map(category=><option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+     {!benefitDestination&&<label className="text-sm font-semibold">Categoria <span className="font-normal text-slate-500">(opcional)</span><select value={categoryId} onChange={e=>setCategoryId(e.target.value)} className="mt-1 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-3"><option value="">Sem categoria</option>{categories.map(category=><option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
+     {benefitDestination&&<p className="rounded-xl border border-orange-900/60 bg-orange-950/20 p-3 text-xs text-orange-200">Crédito de benefício: entra no saldo deste benefício e não aumenta o dinheiro disponível da Casa. O valor pode variar de mês para mês.</p>}
      <p className={`rounded-xl px-3 py-2 text-xs ${isFuture?'bg-amber-950/25 text-amber-200':'bg-emerald-950/25 text-emerald-200'}`}>{isFuture?'Como a data é futura, esta entrada será registrada como prevista.':'Como a data é hoje ou anterior, o Casa registrará esta entrada como recebida no recurso escolhido.'}</p>
      <section className="rounded-2xl border border-slate-800 bg-slate-950/45 p-4" aria-label="Recorrência opcional da entrada"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300"><CalendarClock className="h-5 w-5"/></span><div className="min-w-0 flex-1"><p className="font-semibold text-slate-200">Repetir esta entrada</p><p className="mt-0.5 text-xs text-slate-500">Opcional · cada recebimento continua sendo uma ocorrência separada.</p></div><button type="button" aria-pressed={recurring} onClick={()=>setRecurring(value=>!value)} className={`min-h-10 shrink-0 rounded-xl px-3 text-sm font-bold ${recurring?'bg-slate-800 text-slate-200':'bg-emerald-500/10 text-emerald-300'}`}>{recurring?'Remover':'Adicionar'}</button></div>{recurring&&<div className="mt-4 space-y-4 border-t border-slate-800 pt-4"><fieldset><legend className="text-sm font-semibold text-slate-200">Como ela se repete?</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" aria-pressed={recurringFrequency==='monthly'} onClick={()=>chooseRecurringFrequency('monthly')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringFrequency==='monthly'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Todo mês</button><button type="button" aria-pressed={recurringFrequency==='yearly'} onClick={()=>chooseRecurringFrequency('yearly')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringFrequency==='yearly'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Todo ano</button></div></fieldset><fieldset><legend className="text-sm font-semibold text-slate-200">Por quanto tempo?</legend><div className="mt-2 grid grid-cols-2 gap-2">{(recurringFrequency==='monthly'?(['3','6','12'] as const):(['1','2','3'] as const)).map(value=><button key={value} type="button" aria-pressed={recurringDuration===value} onClick={()=>setRecurringDuration(value)} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringDuration===value?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>{value} {recurringFrequency==='monthly'?(value==='1'?'mês':'meses'):(value==='1'?'ano':'anos')}</button>)}<button type="button" aria-pressed={recurringDuration==='ongoing'} onClick={()=>setRecurringDuration('ongoing')} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${recurringDuration==='ongoing'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Até eu parar</button></div><button type="button" onClick={()=>setRecurringDuration('custom')} className={`mt-2 min-h-10 rounded-xl border px-3 text-xs font-semibold ${recurringDuration==='custom'?'border-emerald-500 bg-emerald-950/40 text-emerald-200':'border-slate-700 text-slate-400'}`}>Outro período</button>{recurringDuration==='custom'&&<label className="mt-2 block text-sm text-slate-300">Quantas ocorrências?<input type="number" min="1" max="120" value={customRecurringCount} onChange={e=>setCustomRecurringCount(Math.max(1,Math.min(120,Number(e.target.value)||1)))} className="mt-1 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3"/><span className="mt-1 block text-[11px] text-slate-500">Conta a partir da primeira entrada informada.</span></label>}<p className="mt-2 text-[11px] text-slate-500">{recurringDuration==='ongoing'?'A série continua até você encerrar.':`${recurrenceCount} ocorrências na série · término calculado automaticamente.`}</p></fieldset><p className="rounded-xl bg-slate-900/70 p-3 text-xs text-slate-400">A primeira ocorrência é esta entrada de {expectedDate}. As próximas ficam projetadas e nenhuma altera o saldo até o recebimento real.</p></div>}</section>
      {error&&<p role="alert" className="text-sm text-rose-300">{error}</p>}
