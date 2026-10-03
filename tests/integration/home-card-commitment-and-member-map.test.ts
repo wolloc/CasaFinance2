@@ -11,8 +11,8 @@ test('Home mostra mapa de dinheiro também na perspectiva individual e cartão s
 
   assert.match(home, /Onde está nosso dinheiro\?/);
   assert.match(home, /perspective!==['"]household['"]/);
-  assert.match(home, /bg-rose-400/);
-  assert.match(home, /bg-amber-400/);
+  assert.match(home, /bg-sky-300\/60/);
+  assert.match(home, /bg-violet-300\/50/);
   assert.match(home, /current\/Number\(card\.credit_limit\|\|1\)/);
   assert.match(home, /future\/Number\(card\.credit_limit\|\|1\)/);
 
