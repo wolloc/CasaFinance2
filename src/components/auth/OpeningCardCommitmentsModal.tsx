@@ -89,16 +89,13 @@ export function OpeningCardCommitmentsModal({
     return () => { active = false; };
   }, [householdId]);
 
+  // Mantém o contexto do último lançamento para facilitar o cadastro de várias compras
+  // semelhantes. Limpamos apenas os dados que normalmente mudam a cada compra.
   const resetDraftForNext = () => setDraft((current) => ({
     ...current,
     description: '',
+    originalPurchaseDate: '',
     amount: '',
-    categoryId: '',
-    responsibilityMode: 'single',
-    responsibleMemberId: current.buyerMemberId,
-    customAmounts: {},
-    installmentCount: '1',
-    paidInstallmentCount: '0',
   }));
 
   const buildAllocations = (): EconomicAllocation[] => {
