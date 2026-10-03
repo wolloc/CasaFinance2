@@ -93,12 +93,12 @@ export function HomeFinancialMap({
             <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-200">{card.card_name}</p><p className="mt-0.5 text-[11px] text-slate-500">{card.next_due_date?`Próxima fatura · ${new Date(`${card.next_due_date}T12:00:00`).toLocaleDateString('pt-BR')}`:'Sem vencimento confirmado'}</p></div><div className="text-right"><strong className="text-sm text-slate-100">{money(card.credit_limit)}</strong><p className="text-[10px] text-slate-600">limite total</p></div></div>
             <div className="mt-3" aria-label={`Comprometido: ${money(committed)} de ${money(card.credit_limit)}`}>
               <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-800">
-                {current>0&&<div className="h-full shrink-0 bg-rose-400" style={{width:`${Math.round(Math.min(1,current/Number(card.credit_limit||1))*100)}%`}}/>}
-                {future>0&&<div className="h-full shrink-0 bg-amber-400" style={{width:`${Math.round(Math.max(0,Math.min(1-current/Number(card.credit_limit||1),future/Number(card.credit_limit||1)))*100)}%`}}/>}
+                {current>0&&<div className="h-full shrink-0 bg-sky-300/60" style={{width:`${Math.round(Math.min(1,current/Number(card.credit_limit||1))*100)}%`}}/>}
+                {future>0&&<div className="h-full shrink-0 bg-violet-300/50" style={{width:`${Math.round(Math.max(0,Math.min(1-current/Number(card.credit_limit||1),future/Number(card.credit_limit||1)))*100)}%`}}/>}
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[10px]">
-                <span className="inline-flex items-center gap-1.5 text-rose-300"><span className="h-1.5 w-1.5 rounded-full bg-rose-400"/>Neste mês · {money(current)}</span>
-                <span className="inline-flex items-center gap-1.5 text-amber-300"><span className="h-1.5 w-1.5 rounded-full bg-amber-400"/>Próximos meses · {money(future)}</span>
+                <span className="inline-flex items-center gap-1.5 text-sky-200"><span className="h-1.5 w-1.5 rounded-full bg-sky-300/70"/>Neste mês · {money(current)}</span>
+                <span className="inline-flex items-center gap-1.5 text-violet-200"><span className="h-1.5 w-1.5 rounded-full bg-violet-300/60"/>Próximos meses · {money(future)}</span>
               </div>
             </div>
           </button>})}
