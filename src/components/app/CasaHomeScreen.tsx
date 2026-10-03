@@ -203,6 +203,11 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      investmentBalance={resources?.investments??0}
      subjectLabel="Casa"
     />}
+    {resources&&<div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Caixa</p><strong className="mt-1 block text-sm text-slate-100">{money(currentCash)}</strong></div>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Benefícios</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.benefits)}</strong></div>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Investimentos</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.investments)}</strong></div>
+    </div>}
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}
    {guidance&&(guidance.guidance_state==='needs_resource_reallocation'||guidance.guidance_state==='needs_funding_plan')&&<article className="mt-3 rounded-2xl border border-slate-800 bg-slate-900/45 p-4"><p className="text-sm font-bold text-slate-200">Quer ajustar esse mês?</p><p className="mt-1 text-xs text-slate-400">Essas ações mudam a forma de cobertura; nenhuma é aplicada automaticamente.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={()=>onCoverageAction?.('transfer',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Mover dinheiro de outra conta</button>{Number(guidance.reserve_balance)+Number(guidance.investment_balance)>0&&<button onClick={()=>onCoverageAction?.('reserve',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Usar reserva ou investimento</button>}<button onClick={()=>onCoverageAction?.('loan',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Ver opção de empréstimo</button></div></article>}
