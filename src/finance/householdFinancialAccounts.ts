@@ -230,6 +230,39 @@ export async function recordOpeningCardPurchase(client: SupabaseClient, househol
   });
 }
 
+export type OpeningCardPurchaseInput = {
+  cardId: string;
+  description: string;
+  originalPurchaseDate: string;
+  amount: string;
+  categoryId: string;
+  buyerMemberId: string;
+  splits: Array<{ member_id: string; amount: string; percentage: string }>;
+  installmentCount: number;
+  paidInstallmentCount: number;
+};
+
+export async function recordOpeningCardPurchasesBatch(client: SupabaseClient, householdId: string, input: { cardId: string; purchases: OpeningCardPurchaseInput[] }) {
+  if (input.purchases.length === 0) throw new Error('Adicione pelo menos uma compra anterior ao início do controle.');
+  const normalized = input.purchases.map((purchase) => ({
+    cardId: purchase.cardId,
+    description: purchase.description.trim(),
+    originalPurchaseDate: purchase.originalPurchaseDate,
+    amount: purchase.amount,
+    categoryId: purchase.categoryId,
+    buyerMemberId: purchase.buyerMemberId,
+    splits: purchase.splits,
+    installmentCount: purchase.installmentCount,
+    paidInstallmentCount: purchase.paidInstallmentCount,
+  }));
+  const identity = [householdId, input.cardId, normalized] as const;
+  return runRetryStableRpc(client, 'opening-card-purchases-batch', identity, 'record_opening_card_purchases_batch_idempotent', {
+    p_household_id: householdId,
+    p_card_id: input.cardId,
+    p_purchases: normalized,
+  });
+}
+
 export async function recordOpeningCardBalance(client: SupabaseClient, householdId: string, input: { cardId: string; amount: string; description: string; requestKey?: string; }) {
   const identity=[householdId,input.cardId,input.amount,input.description.trim()] as const;
   return runRetryStableRpc(client,'opening-card-balance',identity,'record_opening_card_balance_adjustment_idempotent',{
