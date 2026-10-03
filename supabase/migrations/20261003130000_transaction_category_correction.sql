@@ -16,8 +16,24 @@ declare
   actor public.household_members;
   old_category uuid;
   result_id uuid;
+  v_request_key text;
 begin
   actor:=public.require_active_member(p_household_id);
+  if length(trim(coalesce(p_request_key,'')))=0 then
+    raise exception 'invalid transaction category correction command' using errcode='22023';
+  end if;
+  v_request_key:=trim(p_request_key);
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(p_household_id::text||':transaction-category-correction:'||v_request_key,0)
+  );
+  if exists(
+    select 1 from public.transaction_adjustment_events e
+    where e.household_id=p_household_id and e.request_key=v_request_key
+  ) then
+    return p_transaction_id;
+  end if;
+
   select * into tx from public.transactions
   where id=p_transaction_id and household_id=p_household_id and deleted_at is null
   for update;
@@ -28,7 +44,7 @@ begin
   if p_category_id is not null and not exists(
     select 1 from public.categories c
     where c.id=p_category_id and c.household_id=p_household_id and c.archived_at is null
-      and c.type=tx.type
+      and c.type::text=tx.type::text
   ) then
     raise exception 'category does not belong to transaction type' using errcode='23514';
   end if;
@@ -40,14 +56,14 @@ begin
   where id=tx.id;
 
   insert into public.transaction_adjustment_events(
-    household_id,source_transaction_id,kind,created_by_member_id,reason,before_payload,after_payload,amount
+    household_id,source_transaction_id,kind,created_by_member_id,reason,before_payload,after_payload,amount,request_key
   )
   values(
     p_household_id,tx.id,'correction',actor.id,
     coalesce(nullif(trim(p_reason),''),'Categoria ajustada pelo usuário'),
     jsonb_build_object('category_id',old_category),
     jsonb_build_object('category_id',p_category_id),
-    null
+    null,v_request_key
   )
   returning id into result_id;
 
