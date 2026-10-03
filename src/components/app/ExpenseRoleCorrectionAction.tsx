@@ -59,7 +59,6 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
   },[selected?.transaction_id]);
 
   const secondOptions=householdMembers.filter(member=>member.id!==firstMember);
-  const firstName=householdMembers.find(member=>member.id===firstMember)?.display_name??'';
   const secondName=householdMembers.find(member=>member.id===secondMember)?.display_name??'';
 
   const setSingle=(memberId:string)=>{
