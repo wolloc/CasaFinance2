@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Repeat2, X } from 'lucide-react';
+import { Plus, Repeat2, X } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listHouseholdIncomeTransactions, type HouseholdTransaction } from '../../finance/householdTransactions.js';
@@ -31,7 +31,7 @@ const monthEnd=(value:string)=>{const[year,month]=value.split('-').map(Number);c
 const formatDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`)).replace('.','');
 const compactDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
 
-export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoneyMovementId,initialReviewMoneyMovementId,createRequestId=0,refreshKey:globalRefreshKey=0,onFinancialChange}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;initialMoneyMovementId?:string;initialReviewMoneyMovementId?:string;createRequestId?:number;refreshKey?:number;onFinancialChange?:()=>void}){
+export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoneyMovementId,initialReviewMoneyMovementId,createRequestId=0,refreshKey:globalRefreshKey=0,onFinancialChange,onCreate}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;initialMoneyMovementId?:string;initialReviewMoneyMovementId?:string;createRequestId?:number;refreshKey?:number;onFinancialChange?:()=>void;onCreate?:()=>void}){
  const{household,householdMembers}=useSupabaseAuth();
  const[rows,setRows]=useState<HouseholdTransaction[]>([]);
  const[beneficiariesByTransaction,setBeneficiariesByTransaction]=useState<Map<string,string[]>>(new Map());
@@ -92,7 +92,7 @@ export function IncomeLedgerScreen({perspective,onPerspectiveChange,initialMoney
  const periodLabel=customRange?`${compactDate(rangeStart)} – ${compactDate(rangeEnd)}`:monthName(month);
 
  return <div className="space-y-5">
-  <FinancialPageHeader title="Entradas"/>
+  <FinancialPageHeader title="Entradas" action={<button type="button" onClick={onCreate} aria-label="Nova entrada" className="flex min-h-9 items-center gap-1.5 rounded-xl border border-emerald-900/70 bg-emerald-950/30 px-2.5 text-xs font-bold text-emerald-200"><Plus className="h-3.5 w-3.5"/>Entrada</button>}/>
 
   <FinancialPeriodNavigator
    label={periodLabel}

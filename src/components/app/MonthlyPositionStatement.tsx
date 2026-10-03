@@ -1,4 +1,4 @@
-import { CircleCheck, CircleDollarSign, Landmark, ShieldAlert, WalletCards } from 'lucide-react';
+import { CircleCheck, CircleDollarSign, ShieldAlert } from 'lucide-react';
 
 const money=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
 
@@ -6,17 +6,17 @@ export type MonthlyCoverageState='covered'|'covered_by_expected_income'|'needs_r
 
 export function MonthlyPositionStatement({
   opening,
-  realizedIncome,
+  realizedIncome: _realizedIncome,
   expectedIncome,
-  realizedOutflow,
+  realizedOutflow: _realizedOutflow,
   remainingOutflow,
   ending,
   currentAvailable,
   coverageState,
   coverageGap=0,
   reserveAndInvestments=0,
-  benefitBalance=0,
-  investmentBalance=0,
+  benefitBalance: _benefitBalance=0,
+  investmentBalance: _investmentBalance=0,
   subjectLabel='Casa',
   periodMode='current',
 }:{
@@ -35,82 +35,53 @@ export function MonthlyPositionStatement({
   subjectLabel?:string;
   periodMode?:'current'|'future';
 }){
-  const effectiveAvailable=currentAvailable??opening;
-  const usableToday=effectiveAvailable+benefitBalance;
+  const available=currentAvailable??opening;
   const futurePeriod=periodMode==='future';
   const coverageCopy=futurePeriod
     ?(ending<0
-      ?{title:'Este mês projetado pede atenção',detail:'Com o que já sabemos hoje, a projeção termina negativa.',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
-      :{title:'Este mês projetado está no caminho certo',detail:'Com o que já sabemos hoje, a projeção termina positiva.',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck})
+      ?{title:'Este mês pede atenção',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
+      :{title:'Este mês está no caminho certo',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck})
     :coverageState==='covered'
-    ?{title:'Estamos tranquilos neste mês',detail:'Com o que já temos hoje, os compromissos conhecidos ficam cobertos.',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck}
-    :coverageState==='covered_by_expected_income'
-      ?{title:'O mês fecha, contando com o que ainda entra',detail:'O dinheiro de hoje não cobre tudo sozinho, mas as entradas previstas completam o mês.',tone:'text-blue-300',panel:'border-blue-900/50 bg-blue-950/15',Icon:CircleDollarSign}
-      :coverageState==='needs_resource_reallocation'
-        ?{title:'Vamos precisar mexer em outros recursos',detail:'O caixa e as entradas previstas não cobrem tudo sozinhos. Reserva ou investimento podem ajudar, mas continuam separados do dinheiro do dia a dia.',tone:'text-amber-300',panel:'border-amber-900/50 bg-amber-950/15',Icon:Landmark}
-        :coverageState==='needs_funding_plan'
-          ?{title:'Precisamos nos organizar neste mês',detail:`Mesmo contando com o que ainda entra, faltam ${money(Math.max(0,coverageGap))} para cobrir o que já conhecemos.`,tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
-          :ending<0
-            ?{title:'Precisamos nos organizar neste mês',detail:'A projeção termina negativa com o que já sabemos hoje.',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
-            :{title:'O mês está no caminho certo',detail:'Com o que já sabemos hoje, a projeção termina positiva.',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck};
+      ?{title:'Estamos tranquilos neste mês',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck}
+      :coverageState==='covered_by_expected_income'
+        ?{title:'O mês fecha contando com o que ainda entra',tone:'text-blue-300',panel:'border-blue-900/50 bg-blue-950/15',Icon:CircleDollarSign}
+        :coverageState==='needs_resource_reallocation'
+          ?{title:'Vamos precisar mexer em outros recursos',tone:'text-amber-300',panel:'border-amber-900/50 bg-amber-950/15',Icon:ShieldAlert}
+          :coverageState==='needs_funding_plan'
+            ?{title:'Precisamos nos organizar neste mês',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
+            :ending<0
+              ?{title:'Precisamos nos organizar neste mês',tone:'text-rose-300',panel:'border-rose-900/50 bg-rose-950/15',Icon:ShieldAlert}
+              :{title:'O mês está no caminho certo',tone:'text-emerald-300',panel:'border-emerald-900/50 bg-emerald-950/15',Icon:CircleCheck};
   const CoverageIcon=coverageCopy.Icon;
 
-  return <div className="space-y-3">
-    <article className={`rounded-[1.6rem] border p-4 ${coverageCopy.panel}`}>
-      <div className="flex items-start gap-3">
-        <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950/45 ${coverageCopy.tone}`}><CoverageIcon className="h-4 w-4"/></span>
-        <div><p className={`font-black ${coverageCopy.tone}`}>{coverageCopy.title}</p></div>
-      </div>
+  return <article className={`rounded-[2rem] border p-5 ${coverageCopy.panel}`}>
+    <div className="flex items-center gap-2">
+      <span className={`flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950/45 ${coverageCopy.tone}`}><CoverageIcon className="h-4 w-4"/></span>
+      <p className={`font-black ${coverageCopy.tone}`}>{coverageCopy.title}</p>
+    </div>
 
-      <div className="mt-5">
-        <p className="text-xs text-slate-500">{futurePeriod?`${subjectLabel} pode terminar este mês com`:`${subjectLabel} pode terminar o mês com`}</p>
-        <strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
-      </div>
+    <div className="mt-5">
+      <p className="text-xs text-slate-500">{futurePeriod?`${subjectLabel} pode terminar este mês com`:`Se nada mudar, ${subjectLabel.toLowerCase()} pode terminar o mês com`}</p>
+      <strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong>
+    </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-slate-950/45 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Saldo projetado na abertura':'Recursos para usar hoje'}</p>
-          <strong className="mt-1 block text-lg text-slate-100">{money(usableToday)}</strong>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'Projeção acumulada dos meses anteriores':<>Caixa {money(effectiveAvailable)}{benefitBalance>0?` · Benefícios ${money(benefitBalance)}`:''}</>}</p>
-        </div>
-        <div className="rounded-2xl bg-slate-950/45 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Patrimônio por recurso':'Investimentos'}</p>
-          <strong className="mt-1 block text-lg text-slate-100">{futurePeriod?'Não projetado':money(investmentBalance)}</strong>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">{futurePeriod?'O Casa não inventa em qual conta ou investimento o saldo futuro estará.':'Patrimônio separado do caixa do mês'}</p>
-        </div>
+    <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="rounded-xl bg-slate-950/45 p-3">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Abertura':'Hoje'}</p>
+        <strong className="mt-1 block text-sm text-slate-100">{money(available)}</strong>
       </div>
-
-      <div className="mt-5 overflow-x-auto pb-1">
-        <div className="flex min-w-[520px] items-center">
-          <div className="min-w-[118px]"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Abertura projetada':'Caixa hoje'}</p><strong className="mt-1 block text-sm text-slate-100">{money(effectiveAvailable)}</strong></div>
-          <div className="mx-2 h-px flex-1 bg-slate-700"/>
-          <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Ainda entra</p><strong className="mt-1 block text-sm text-emerald-200">+ {money(expectedIncome)}</strong></div>
-          <div className="mx-2 h-px flex-1 bg-slate-700"/>
-          <div className="min-w-[118px] text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-rose-400/80">Ainda sai</p><strong className="mt-1 block text-sm text-rose-200">− {money(remainingOutflow)}</strong></div>
-          <div className="mx-2 h-px flex-1 bg-slate-700"/>
-          <div className="min-w-[118px] text-right"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Fim do mês</p><strong className={`mt-1 block text-sm ${ending<0?'text-rose-300':'text-slate-100'}`}>{money(ending)}</strong></div>
-        </div>
+      <div className="rounded-xl bg-slate-950/45 p-3">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Ainda entra</p>
+        <strong className="mt-1 block text-sm text-emerald-200">+ {money(expectedIncome)}</strong>
       </div>
-
-      {coverageState==='needs_resource_reallocation'&&reserveAndInvestments>0&&<p className="mt-3 text-xs text-amber-100/80">Temos {money(reserveAndInvestments)} em reserva + investimentos, mas esse valor não entra automaticamente no caixa do mês.</p>}
-    </article>
-
-    <details className="group rounded-2xl border border-slate-800 bg-slate-900/30">
-      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <WalletCards className="h-4 w-4 text-blue-300"/>
-          <div><p className="font-bold text-slate-200">Entender essa previsão</p><p className="text-[11px] text-slate-500">Ver como chegamos a esse valor</p></div>
-        </div>
-        <strong className={ending<0?'text-rose-300':'text-slate-100'}>{money(ending)}</strong>
-      </summary>
-      <div className="space-y-2 border-t border-slate-800 px-4 py-3 text-sm">
-        <div className="flex justify-between gap-3"><span className="text-slate-500">Saldo na abertura do mês</span><strong>{money(opening)}</strong></div>
-        <div className="flex justify-between gap-3"><span className="text-emerald-300">+ Entradas já realizadas</span><strong className="text-emerald-200">{money(realizedIncome)}</strong></div>
-        <div className="flex justify-between gap-3"><span className="text-blue-300">+ Entradas previstas ainda esperadas</span><strong className="text-blue-200">{money(expectedIncome)}</strong></div>
-        <div className="flex justify-between gap-3"><span className="text-rose-300">− Saídas/compromissos já realizados</span><strong className="text-rose-200">{money(realizedOutflow)}</strong></div>
-        <div className="flex justify-between gap-3"><span className="text-amber-300">− O que ainda deve sair</span><strong className="text-amber-200">{money(remainingOutflow)}</strong></div>
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-800 pt-3"><div><p className="text-xs text-slate-500">Posição projetada no fim do mês</p><p className="mt-1 text-[11px] text-slate-600">Previsto não é realizado; o valor muda conforme novos fatos são confirmados.</p></div><strong className={`whitespace-nowrap text-xl ${ending<0?'text-rose-300':'text-slate-100'}`}>{money(ending)}</strong></div>
+      <div className="rounded-xl bg-slate-950/45 p-3">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-rose-400/80">Ainda sai</p>
+        <strong className="mt-1 block text-sm text-rose-200">− {money(remainingOutflow)}</strong>
       </div>
-    </details>
-  </div>;
+    </div>
+
+    <p className="mt-4 text-xs text-slate-500">A projeção combina o que já aconteceu com os compromissos ainda previstos. Novos lançamentos podem mudar esse valor.</p>
+    {coverageState==='needs_funding_plan'&&coverageGap>0&&<p className="mt-3 rounded-xl bg-rose-950/30 p-3 text-xs text-rose-200">Ainda faltam {money(coverageGap)} para cobrir os compromissos conhecidos.</p>}
+    {coverageState==='needs_resource_reallocation'&&reserveAndInvestments>0&&<p className="mt-3 rounded-xl bg-amber-950/25 p-3 text-xs text-amber-100">Existem {money(reserveAndInvestments)} em reserva e investimentos que podem ser considerados na cobertura, sem entrar automaticamente no caixa.</p>}
+  </article>;
 }

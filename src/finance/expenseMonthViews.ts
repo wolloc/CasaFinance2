@@ -118,9 +118,26 @@ async function loadInstallmentVisuals(client:SupabaseClient,householdId:string,t
   const planById=new Map(planRows.map(row=>[String(row.id),{transactionId:String(row.purchase_transaction_id),total:Number(row.installment_count)}]));
   for(const row of installments.data??[]){
     const plan=planById.get(String(row.installment_plan_id));
-    if(plan)byTransaction.set(plan.transactionId,{installment_number:Number(row.number),total_installments:plan.total});
+    // The purchase transaction represents the first installment. Do not overwrite it
+    // with the last installment just because all plan rows share the same transaction id.
+    if(plan&&!byTransaction.has(plan.transactionId))byTransaction.set(plan.transactionId,{installment_number:Number(row.number),total_installments:plan.total});
   }
   return byTransaction;
+}
+
+async function loadInstallmentVisualsForCommitments(client:SupabaseClient,householdId:string,installmentIds:string[]){
+  const result=new Map<string,{installment_number:number;total_installments:number}>();
+  if(installmentIds.length===0)return result;
+  const installmentsResponse=await client.from('installments').select('id,installment_plan_id,number').eq('household_id',householdId).in('id',installmentIds);
+  if(installmentsResponse.error)throw installmentsResponse.error;
+  const rows=installmentsResponse.data??[];
+  if(rows.length===0)return result;
+  const planIds=[...new Set(rows.map(row=>String(row.installment_plan_id)))];
+  const plansResponse=await client.from('installment_plans').select('id,installment_count').eq('household_id',householdId).in('id',planIds);
+  if(plansResponse.error)throw plansResponse.error;
+  const totals=new Map((plansResponse.data??[]).map(row=>[String(row.id),Number(row.installment_count)]));
+  for(const row of rows){const total=totals.get(String(row.installment_plan_id));if(total)result.set(String(row.id),{installment_number:Number(row.number),total_installments:total});}
+  return result;
 }
 
 async function loadTransactionVisuals(client:SupabaseClient,householdId:string,transactionIds:string[]){
@@ -189,7 +206,8 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
 
   const baseRows=(response.data??[]) as Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'>[];
   const sourceTransactionIds=[...new Set(baseRows.map(row=>row.source_transaction_id).filter((value):value is string=>Boolean(value)))];
-  const visuals=await loadTransactionVisuals(client,householdId,sourceTransactionIds);
+  const installmentIds=[...new Set(baseRows.map(row=>row.source_installment_id).filter((value):value is string=>Boolean(value)))];
+  const [visuals,commitmentInstallments]=await Promise.all([loadTransactionVisuals(client,householdId,sourceTransactionIds),loadInstallmentVisualsForCommitments(client,householdId,installmentIds)]);
 
   const enrichedRows=baseRows.map(row=>({
     ...row,
@@ -201,8 +219,8 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
     buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
     instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
     instrument_label:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentLabel??null:null,
-    installment_number:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.installment_number??null:null,
-    total_installments:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.total_installments??null:null,
+    installment_number:row.source_installment_id?commitmentInstallments.get(row.source_installment_id)?.installment_number??null:null,
+    total_installments:row.source_installment_id?commitmentInstallments.get(row.source_installment_id)?.total_installments??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;
@@ -365,7 +383,8 @@ export async function listFinancialPeriodExpenses(client:SupabaseClient,househol
   );
 
   const sourceTransactionIds=[...new Set(baseRows.map(row=>row.source_transaction_id).filter((value):value is string=>Boolean(value)))];
-  const visuals=await loadTransactionVisualsBatched(client,householdId,sourceTransactionIds);
+  const installmentIds=[...new Set(baseRows.map(row=>row.source_installment_id).filter((value):value is string=>Boolean(value)))];
+  const [visuals,commitmentInstallments]=await Promise.all([loadTransactionVisualsBatched(client,householdId,sourceTransactionIds),loadInstallmentVisualsForCommitments(client,householdId,installmentIds)]);
 
   const enrichedRows=baseRows.map(row=>({
     ...row,
@@ -377,8 +396,8 @@ export async function listFinancialPeriodExpenses(client:SupabaseClient,househol
     buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
     instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
     instrument_label:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentLabel??null:null,
-    installment_number:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.installment_number??null:null,
-    total_installments:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.total_installments??null:null,
+    installment_number:row.source_installment_id?commitmentInstallments.get(row.source_installment_id)?.installment_number??null:null,
+    total_installments:row.source_installment_id?commitmentInstallments.get(row.source_installment_id)?.total_installments??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;
