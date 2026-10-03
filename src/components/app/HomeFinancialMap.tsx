@@ -47,6 +47,12 @@ export function HomeFinancialMap({
   },{current:0,future:0,limit:0});
 
   return <section className="space-y-3">
+    <div className="flex items-center justify-between gap-3 px-1">
+      <div>
+        <h2 className="text-lg font-black tracking-tight text-slate-100">Onde está nosso dinheiro?</h2>
+        {perspective!=='household'&&<p className="mt-0.5 text-[11px] text-slate-500">Recursos e cartões nesta perspectiva</p>}
+      </div>
+    </div>
     <details open className="group rounded-[1.6rem] border border-slate-800 bg-slate-900/45">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300"><WalletCards className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Contas</p><p className="text-[11px] text-slate-500">{resources.length} {resources.length===1?'recurso acompanhado':'recursos acompanhados'}</p></div></div>
@@ -85,8 +91,16 @@ export function HomeFinancialMap({
           </div>
           {visibleCards.map(card=>{const responsibility=perspective==='household'?null:card.member_responsibilities.find(row=>row.member_id===perspective);const current=perspective==='household'?Number(card.current_invoice_remaining):Number(responsibility?.member_current_invoice_responsibility??0);const future=perspective==='household'?Number(card.future_known_commitments):Number(responsibility?.member_future_responsibility??0);const committed=current+future;const ratio=card.credit_limit>0?Math.min(1,committed/Number(card.credit_limit)):0;return <button type="button" key={card.card_id} onClick={()=>onOpenCard?.(card.card_id)} className="block w-full rounded-xl bg-slate-950/35 px-3 py-3 text-left">
             <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-200">{card.card_name}</p><p className="mt-0.5 text-[11px] text-slate-500">{card.next_due_date?`Próxima fatura · ${new Date(`${card.next_due_date}T12:00:00`).toLocaleDateString('pt-BR')}`:'Sem vencimento confirmado'}</p></div><div className="text-right"><strong className="text-sm text-slate-100">{money(card.credit_limit)}</strong><p className="text-[10px] text-slate-600">limite total</p></div></div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-violet-400" style={{width:`${Math.round(ratio*100)}%`}}/></div>
-            <div className="mt-2 flex items-center justify-between gap-3 text-[11px]"><span className="text-rose-300">{money(current)} neste mês</span><span className="text-amber-300">{money(future)} próximos meses</span></div>
+            <div className="mt-3" aria-label={`Comprometido: ${money(committed)} de ${money(card.credit_limit)}`}>
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-800">
+                {current>0&&<div className="h-full shrink-0 bg-rose-400" style={{width:`${Math.round(Math.min(1,current/Number(card.credit_limit||1))*100)}%`}}/>}
+                {future>0&&<div className="h-full shrink-0 bg-amber-400" style={{width:`${Math.round(Math.max(0,Math.min(1-current/Number(card.credit_limit||1),future/Number(card.credit_limit||1)))*100)}%`}}/>}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[10px]">
+                <span className="inline-flex items-center gap-1.5 text-rose-300"><span className="h-1.5 w-1.5 rounded-full bg-rose-400"/>Neste mês · {money(current)}</span>
+                <span className="inline-flex items-center gap-1.5 text-amber-300"><span className="h-1.5 w-1.5 rounded-full bg-amber-400"/>Próximos meses · {money(future)}</span>
+              </div>
+            </div>
           </button>})}
         </>}
       </div>
