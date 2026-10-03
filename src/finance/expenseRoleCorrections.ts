@@ -23,7 +23,7 @@ export async function listExpenseRoleCorrectionPositions(client:SupabaseClient,h
 }
 
 export async function correctExpenseRoles(client:SupabaseClient,input:{householdId:string;transactionId:string;buyerMemberId:string;responsibility:Array<{member_id:string;percentage:number}>;reason:string}){
-  const identity=[input.householdId,input.transactionId,input.buyerMemberId,input.responsibility,input.reason.trim()] as const;
+  const identity=[input.householdId,input.transactionId,input.responsibility,input.reason.trim()] as const;
   const requestKey=getRetryStableRequestKey('expense-role-correction',identity);
   const response=await client.rpc('correct_expense_roles',{
     p_household_id:input.householdId,
