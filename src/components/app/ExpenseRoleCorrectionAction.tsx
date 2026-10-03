@@ -110,17 +110,17 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><Users className="h-4 w-4"/></span>
       <div className="min-w-0">
         <h2 className="font-bold text-slate-100">Quem fica com este compromisso?</h2>
-        <p className="mt-1 text-xs leading-4 text-slate-500">Aqui você só ajusta a responsabilidade financeira. Quem comprou e quem pagou continuam iguais.</p>
+        <p className="mt-1 text-xs leading-4 text-slate-500">Altere somente quem assume este valor. Quem comprou e quem pagou permanecem iguais.</p>
       </div>
     </div>
 
     <div className="mt-4 rounded-xl bg-slate-950/60 p-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Hoje</p>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Compromisso atual</p>
       <div className="mt-1 flex items-end justify-between gap-3"><strong className="text-sm text-slate-200">{current}</strong><span className="text-xs text-slate-500">{money(amount||selected.responsibility[0]?.amount)}</span></div>
     </div>
 
     <div className="mt-4 grid gap-2">
-      {householdMembers.map(member=><button key={member.id} type="button" onClick={()=>setSingle(member.id)} className={`flex min-h-11 items-center justify-between rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${mode==='single'&&firstMember===member.id?'border-cyan-500 bg-cyan-500/10 text-cyan-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}><span>{member.display_name}</span>{mode==='single'&&firstMember===member.id?<Check className="h-4 w-4 text-cyan-300"/>:<span className="text-[11px] text-slate-600">100%</span>}</button>)}
+      {householdMembers.map(member=><button aria-label={`Responsabilidade ${member.display_name} 100%`} key={member.id} type="button" onClick={()=>setSingle(member.id)} className={`flex min-h-11 items-center justify-between rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${mode==='single'&&firstMember===member.id?'border-cyan-500 bg-cyan-500/10 text-cyan-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}><span>{member.display_name}</span>{mode==='single'&&firstMember===member.id?<Check className="h-4 w-4 text-cyan-300"/>:<span className="text-[11px] text-slate-600">100%</span>}</button>)}
       {householdMembers.length>=2&&<button type="button" onClick={setSplit} className={`flex min-h-11 items-center justify-between rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${mode==='split'?'border-cyan-500 bg-cyan-500/10 text-cyan-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}><span>Dividir entre vocês</span>{mode==='split'?<Check className="h-4 w-4 text-cyan-300"/>:<span className="text-[11px] text-slate-600">Personalizar</span>}</button>}
     </div>
 
@@ -134,6 +134,6 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-800 bg-rose-950/30 p-3 text-xs text-rose-200">{error}</p>}
     {success&&<p role="status" className="mt-3 rounded-xl border border-emerald-800 bg-emerald-950/30 p-3 text-xs text-emerald-200">Responsabilidade atualizada. O comprador e o pagamento histórico permaneceram iguais.</p>}
 
-    <button type="button" onClick={()=>void submit()} disabled={saving|| (mode==='split'&&(Number(firstPct)<=0||Number(firstPct)>=100))} className="mt-4 min-h-11 w-full rounded-xl bg-cyan-700 px-3 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando…':'Salvar responsabilidade'}</button>
+    <button type="button" onClick={()=>void submit()} disabled={saving|| (mode==='split'&&(Number(firstPct)<=0||Number(firstPct)>=100||!secondMember))} className="mt-4 min-h-11 w-full rounded-xl bg-cyan-700 px-3 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando…':'Salvar responsabilidade'}</button>
   </section>;
 }
