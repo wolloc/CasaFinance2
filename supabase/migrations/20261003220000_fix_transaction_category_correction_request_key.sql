@@ -43,7 +43,7 @@ begin
   end if;
   if p_category_id is not null and not exists(
     select 1 from public.categories c
-    where c.id=p_category_id and c.household_id=p_household_id and c.archived_at is null
+    where c.id=p_category_id and c.household_id=p_household_id and c.deactivated_at is null
       and c.type::text=tx.type::text
   ) then
     raise exception 'category does not belong to transaction type' using errcode='23514';
