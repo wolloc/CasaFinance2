@@ -18,6 +18,6 @@ test('pagamento iniciado pela fatura não volta para ajustes',()=>{
 
 test('pagamento usa conta planejada como sugestão editável e permite outra conta',()=>{
   assert.match(invoice,/setSourceAccountId\(current\.planned_payment_account_id\?\?''\)/);
-  assert.match(invoice,/Pagar com<select/);
+  assert.match(invoice,/De qual conta o dinheiro saiu\?/);
   assert.match(invoice,/accounts\.map\(account=>/);
 });
