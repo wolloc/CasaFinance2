@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CreditCard, Landmark } from 'lucide-react';
+import { CreditCard, Landmark, Minus } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
 import { supabase } from '../../lib/supabase.js';
@@ -28,7 +28,7 @@ const barWidth=(value:number,total:number)=>Math.min(100,percentage(value,total)
 type ViewMode='financial'|'economic';
 type CategorySummary={name:string;amount:number};
 
-export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=0,onOpenTransaction}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;refreshKey?:number;onOpenTransaction?:(transactionId:string,recurringRuleId?:string|null)=>void}){
+export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=0,onOpenTransaction,onCreate}:{perspective:FinancialPerspective;onPerspectiveChange:(value:FinancialPerspective)=>void;refreshKey?:number;onOpenTransaction?:(transactionId:string,recurringRuleId?:string|null)=>void;onCreate?:()=>void}){
   const{household,householdMembers}=useSupabaseAuth();
   const[month,setMonth]=useState(currentMonth());
   const[mode,setMode]=useState<ViewMode>('financial');
@@ -69,7 +69,7 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   const periodNoun=customRange?'período':'mês';
 
   return <section className="text-slate-100">
-    <div className="space-y-3"><FinancialPageHeader title="Gastos"/><FinancialPeriodNavigator
+    <div className="space-y-3"><FinancialPageHeader title="Gastos" action={<button type="button" onClick={onCreate} aria-label="Novo gasto" className="flex min-h-9 items-center gap-1.5 rounded-xl border border-rose-900/70 bg-rose-950/30 px-2.5 text-xs font-bold text-rose-200"><Minus className="h-3.5 w-3.5"/>Gasto</button>}/><FinancialPeriodNavigator
       label={periodLabel}
       open={periodPickerOpen}
       onToggle={()=>setPeriodPickerOpen(value=>!value)}
