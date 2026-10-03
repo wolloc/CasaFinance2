@@ -1,11 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getRetryStableRequestKey, releaseRetryStableRequestKey, runRetryStableRpc } from './retryIdempotency.js';
 
-export type IncomeNature = 'salary' | 'rent' | 'freelance' | 'bonus' | 'gift' | 'interest_yield' | 'other_true_income';
+export type IncomeNature = 'salary' | 'rent' | 'freelance' | 'bonus' | 'gift' | 'interest_yield' | 'other_true_income' | 'benefit_credit';
 export type IncomeConfidence = 'forecast' | 'confirmed';
 
 export const incomeNatureLabels: Record<IncomeNature, string> = {
-  salary: 'Salário', rent: 'Aluguel recebido', freelance: 'Freelance', bonus: 'Bônus', gift: 'Presente recebido', interest_yield: 'Juros / rendimento', other_true_income: 'Outra renda verdadeira',
+  salary: 'Salário', rent: 'Aluguel recebido', freelance: 'Freelance', bonus: 'Bônus', gift: 'Presente recebido', interest_yield: 'Juros / rendimento', other_true_income: 'Outra renda verdadeira', benefit_credit: 'Crédito de benefício',
 };
 
 export async function createIncomeFact(client: SupabaseClient, input: { householdId:string;description:string;amount:string;expectedDate:string;categoryId:string|null;beneficiaryMemberId:string;plannedDestinationAccountId:string;incomeNature:IncomeNature;economicState:IncomeConfidence;notes?:string; }) {

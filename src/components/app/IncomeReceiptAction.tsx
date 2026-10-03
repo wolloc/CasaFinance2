@@ -48,7 +48,7 @@ export function IncomeReceiptAction({ onCompleted, initialMoneyMovementId, initi
       ]);
       const pending = transactions.filter((row) => row.type === 'income' && !['cancelled', 'reversed'].includes(row.economic_state) && Number(row.realized_amount) < Number(row.amount));
       setIncomes(pending);
-      setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet'].includes(account.type)));
+      setAccounts(resources.accounts.filter((account) => ['cash', 'checking', 'savings', 'digital_wallet', 'meal_benefit'].includes(account.type)));
       if ((initialMoneyMovementId || initialTransactionId) && !handledIntent.current) {
         handledIntent.current = true;
         let targetId = initialTransactionId ?? null;

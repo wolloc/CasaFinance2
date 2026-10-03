@@ -1,10 +1,12 @@
-import { ChevronRight, CreditCard, HandCoins, WalletCards } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowDownToLine, ArrowUpFromLine, ChevronRight, CreditCard, HandCoins, Utensils, WalletCards } from 'lucide-react';
 import type { CardOverview } from '../../finance/cardOverview.js';
 import type { HouseholdResourcePosition, MemberResourcePosition } from '../../finance/memberResources.js';
 import type { ResourceNavigationAction } from './ResourceActionRow.js';
 import { ResourceActionRow } from './ResourceActionRow.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { SettlementHub } from './SettlementHub.js';
+import { supabase } from '../../lib/supabase.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 type ResourceRow=HouseholdResourcePosition|MemberResourcePosition;
@@ -100,4 +102,47 @@ export function HomeFinancialMap({
       <div className="border-t border-cyan-900/30 p-3"><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeMembers={false}/></div>
     </details>
   </section>;
+}
+
+
+type BenefitMiniStatementRow={id:string;accountId:string;accountName:string;kind:string;amount:number;movementDate:string;description:string;direction:'in'|'out'};
+
+function BenefitMiniStatement({accounts}:{accounts:Array<{id:string;name:string}>}){
+ const[rows,setRows]=useState<BenefitMiniStatementRow[]>([]);
+ const[loading,setLoading]=useState(true);
+ const[failed,setFailed]=useState(false);
+ useEffect(()=>{
+  let active=true;
+  const load=async()=>{
+   if(!supabase||accounts.length===0){if(active){setRows([]);setLoading(false);}return;}
+   setLoading(true);setFailed(false);
+   try{
+    const ids=accounts.map(account=>account.id);
+    const[dest,source]=await Promise.all([
+      supabase.from('money_movements').select('id,destination_account_id,kind,amount,movement_date,description').eq('state','realized').in('destination_account_id',ids).order('movement_date',{ascending:false}).limit(20),
+      supabase.from('money_movements').select('id,source_account_id,kind,amount,movement_date,description').eq('state','realized').in('source_account_id',ids).order('movement_date',{ascending:false}).limit(20),
+    ]);
+    if(dest.error)throw dest.error;if(source.error)throw source.error;
+    const names=new Map(accounts.map(account=>[account.id,account.name]));
+    const incoming=(dest.data??[]).map(row=>({id:String(row.id),accountId:String(row.destination_account_id),accountName:names.get(String(row.destination_account_id))??'Benefício',kind:String(row.kind),amount:Number(row.amount),movementDate:String(row.movement_date),description:String(row.description),direction:'in' as const}));
+    const outgoing=(source.data??[]).map(row=>({id:String(row.id),accountId:String(row.source_account_id),accountName:names.get(String(row.source_account_id))??'Benefício',kind:String(row.kind),amount:Number(row.amount),movementDate:String(row.movement_date),description:String(row.description),direction:'out' as const}));
+    const merged=[...incoming,...outgoing].sort((a,b)=>b.movementDate.localeCompare(a.movementDate)||b.id.localeCompare(a.id)).slice(0,6);
+    if(active)setRows(merged);
+   }catch{if(active){setRows([]);setFailed(true);}}
+   finally{if(active)setLoading(false);}
+  };
+  void load();
+  return()=>{active=false;};
+ },[accounts.map(account=>account.id).join(',')]);
+ if(loading)return <p className="px-3 pb-3 text-[11px] text-slate-500">Carregando extrato…</p>;
+ if(failed)return <p className="px-3 pb-3 text-[11px] text-amber-300">Não foi possível carregar o extrato dos benefícios agora.</p>;
+ if(rows.length===0)return <p className="px-3 pb-3 text-[11px] text-slate-500">Nenhuma movimentação de benefício realizada ainda.</p>;
+ return <div className="border-t border-slate-800/70 p-2">
+   <div className="mb-2 flex items-center gap-2 px-1"><Utensils className="h-3.5 w-3.5 text-orange-300"/><p className="text-[11px] font-bold text-slate-300">Últimas movimentações</p></div>
+   <div className="space-y-1.5">{rows.map(row=><div key={`${row.id}:${row.direction}`} className="flex items-center gap-2 rounded-xl bg-slate-950/55 px-2.5 py-2">
+     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${row.direction==='in'?'bg-emerald-500/10 text-emerald-300':'bg-rose-500/10 text-rose-300'}`}>{row.direction==='in'?<ArrowDownToLine className="h-3.5 w-3.5"/>:<ArrowUpFromLine className="h-3.5 w-3.5"/>}</span>
+     <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-semibold text-slate-300">{row.description}</p><p className="text-[10px] text-slate-600">{row.accountName} · {new Date(`${row.movementDate}T12:00:00Z`).toLocaleDateString('pt-BR')}</p></div>
+     <strong className={`shrink-0 text-[11px] ${row.direction==='in'?'text-emerald-300':'text-rose-300'}`}>{row.direction==='in'?'+':'−'} {money(row.amount)}</strong>
+   </div>)}</div>
+ </div>;
 }

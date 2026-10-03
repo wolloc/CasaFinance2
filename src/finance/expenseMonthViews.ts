@@ -37,6 +37,8 @@ export type FinancialMonthExpense = {
   buyer_member_id:string|null;
   instrument_kind:string|null;
   instrument_label:string|null;
+  installment_number:number|null;
+  total_installments:number|null;
 };
 
 export type EconomicMonthExpense = {
@@ -54,6 +56,8 @@ export type EconomicMonthExpense = {
   buyer_member_id:string|null;
   instrument_kind:string|null;
   instrument_label:string|null;
+  installment_number:number|null;
+  total_installments:number|null;
 };
 
 type PaymentInstrumentVisual={kind:string|null;account?:{name:string|null;institution:string|null}|Array<{name:string|null;institution:string|null}>|null;card?:{name:string|null;institution:string|null;last_four:string|null}|Array<{name:string|null;institution:string|null;last_four:string|null}>|null};
@@ -101,14 +105,33 @@ function buildResponsibilityMap(rows:AllocationRow[]){
   return map;
 }
 
+async function loadInstallmentVisuals(client:SupabaseClient,householdId:string,transactionIds:string[]){
+  const byTransaction=new Map<string,{installment_number:number;total_installments:number}>();
+  if(transactionIds.length===0)return byTransaction;
+  const plans=await client.from('installment_plans').select('id,purchase_transaction_id,installment_count').eq('household_id',householdId).in('purchase_transaction_id',transactionIds);
+  if(plans.error)throw plans.error;
+  const planRows=plans.data??[];
+  if(planRows.length===0)return byTransaction;
+  const planIds=planRows.map(row=>String(row.id));
+  const installments=await client.from('installments').select('installment_plan_id,number').eq('household_id',householdId).in('installment_plan_id',planIds);
+  if(installments.error)throw installments.error;
+  const planById=new Map(planRows.map(row=>[String(row.id),{transactionId:String(row.purchase_transaction_id),total:Number(row.installment_count)}]));
+  for(const row of installments.data??[]){
+    const plan=planById.get(String(row.installment_plan_id));
+    if(plan)byTransaction.set(plan.transactionId,{installment_number:Number(row.number),total_installments:plan.total});
+  }
+  return byTransaction;
+}
+
 async function loadTransactionVisuals(client:SupabaseClient,householdId:string,transactionIds:string[]){
   if(transactionIds.length===0)return{
     transactionMeta:new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null;instrumentLabel:string|null}>(),
     responsibility:new Map<string,ResponsibilityVisual>(),
     recurringRuleByTransaction:new Map<string,string>(),
+    installmentByTransaction:new Map<string,{installment_number:number;total_installments:number}>(),
   };
 
-  const[transactionsResponse,recurringResponse]=await Promise.all([
+  const[transactionsResponse,recurringResponse,installmentByTransaction]=await Promise.all([
     client.from('transactions')
       .select('id,amount,buyer_member_id,category:categories(name,type,icon,color),payment_instrument:transaction_payment_instruments(kind,account:accounts(name,institution),card:cards(name,institution,last_four))')
       .eq('household_id',householdId)
@@ -117,6 +140,7 @@ async function loadTransactionVisuals(client:SupabaseClient,householdId:string,t
       .select('transaction_id,recurring_rule_id')
       .eq('household_id',householdId)
       .in('transaction_id',transactionIds),
+    loadInstallmentVisuals(client,householdId,transactionIds),
   ]);
   if(transactionsResponse.error)throw transactionsResponse.error;
   if(recurringResponse.error)throw recurringResponse.error;
@@ -148,6 +172,7 @@ async function loadTransactionVisuals(client:SupabaseClient,householdId:string,t
     transactionMeta,
     responsibility:buildResponsibilityMap(allocationRows),
     recurringRuleByTransaction,
+    installmentByTransaction,
   };
 }
 
@@ -176,6 +201,8 @@ export async function listFinancialMonthExpenses(client:SupabaseClient,household
     buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
     instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
     instrument_label:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentLabel??null:null,
+    installment_number:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.installment_number??null:null,
+    total_installments:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.total_installments??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;
@@ -244,6 +271,7 @@ export async function listEconomicMonthExpenses(client:SupabaseClient,householdI
   const recurringResponse=await client.from('recurring_occurrences').select('transaction_id,recurring_rule_id').eq('household_id',householdId).in('transaction_id',transactionIds);
   if(recurringResponse.error)throw recurringResponse.error;
   const recurringRuleByTransaction=new Map<string,string>(((recurringResponse.data??[]) as RecurringOccurrenceRow[]).map(row=>[row.transaction_id,row.recurring_rule_id]));
+  const installmentByTransaction=await loadInstallmentVisuals(client,householdId,transactionIds);
   const memberAmounts=new Map<string,number>();
 
   if(memberId){
@@ -272,6 +300,8 @@ export async function listEconomicMonthExpenses(client:SupabaseClient,householdI
       buyer_member_id:row.buyer_member_id,
       instrument_kind:normalizeInstrument(row.payment_instrument).kind,
       instrument_label:normalizeInstrument(row.payment_instrument).label,
+      installment_number:installmentByTransaction.get(row.id)?.installment_number??null,
+      total_installments:installmentByTransaction.get(row.id)?.total_installments??null,
     }];
   }) as EconomicMonthExpense[];
 }
@@ -302,13 +332,15 @@ async function loadTransactionVisualsBatched(client:SupabaseClient,householdId:s
   const transactionMeta=new Map<string,{amount:number;category:ExpenseCategory|null;buyerMemberId:string|null;instrumentKind:string|null;instrumentLabel:string|null}>();
   const responsibility=new Map<string,ResponsibilityVisual>();
   const recurringRuleByTransaction=new Map<string,string>();
+  const installmentByTransaction=new Map<string,{installment_number:number;total_installments:number}>();
   for(const ids of chunkValues(transactionIds)){
     const batch=await loadTransactionVisuals(client,householdId,ids);
     for(const [id,value] of batch.transactionMeta)transactionMeta.set(id,value);
     for(const [id,value] of batch.responsibility)responsibility.set(id,value);
     for(const [id,value] of batch.recurringRuleByTransaction)recurringRuleByTransaction.set(id,value);
+    for(const [id,value] of batch.installmentByTransaction)installmentByTransaction.set(id,value);
   }
-  return{transactionMeta,responsibility,recurringRuleByTransaction};
+  return{transactionMeta,responsibility,recurringRuleByTransaction,installmentByTransaction};
 }
 
 function assertExpensePeriod(startDate:string,endDate:string){
@@ -345,6 +377,8 @@ export async function listFinancialPeriodExpenses(client:SupabaseClient,househol
     buyer_member_id:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.buyerMemberId??null:null,
     instrument_kind:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentKind??null:null,
     instrument_label:row.source_transaction_id?visuals.transactionMeta.get(row.source_transaction_id)?.instrumentLabel??null:null,
+    installment_number:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.installment_number??null:null,
+    total_installments:row.source_transaction_id?visuals.installmentByTransaction.get(row.source_transaction_id)?.total_installments??null:null,
   })) as FinancialMonthExpense[];
 
   if(!memberId||enrichedRows.length===0)return enrichedRows;
@@ -428,6 +462,7 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
   }
 
   const responsibility=buildResponsibilityMap(allocationRows);
+  const installmentByTransaction=await loadInstallmentVisuals(client,householdId,transactions.map(row=>row.id));
   return transactions.flatMap(row=>{
     const householdAmount=positions.get(row.id)??Number(row.amount);
     const perspectiveAmount=memberId?(memberAmounts.get(row.id)??0):householdAmount;
@@ -447,6 +482,8 @@ export async function listEconomicPeriodExpenses(client:SupabaseClient,household
       buyer_member_id:row.buyer_member_id,
       instrument_kind:normalizeInstrument(row.payment_instrument).kind,
       instrument_label:normalizeInstrument(row.payment_instrument).label,
+      installment_number:installmentByTransaction.get(row.id)?.installment_number??null,
+      total_installments:installmentByTransaction.get(row.id)?.total_installments??null,
     }];
   }) as EconomicMonthExpense[];
 }
