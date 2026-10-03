@@ -6,17 +6,17 @@ export type MonthlyCoverageState='covered'|'covered_by_expected_income'|'needs_r
 
 export function MonthlyPositionStatement({
   opening,
-  realizedIncome,
+  realizedIncome: _realizedIncome,
   expectedIncome,
-  realizedOutflow,
+  realizedOutflow: _realizedOutflow,
   remainingOutflow,
   ending,
   currentAvailable,
   coverageState,
   coverageGap=0,
   reserveAndInvestments=0,
-  benefitBalance=0,
-  investmentBalance=0,
+  benefitBalance: _benefitBalance=0,
+  investmentBalance: _investmentBalance=0,
   subjectLabel='Casa',
   periodMode='current',
 }:{
