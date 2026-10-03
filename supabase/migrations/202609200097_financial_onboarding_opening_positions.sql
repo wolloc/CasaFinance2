@@ -177,7 +177,7 @@ begin
      or p_amount is null or p_amount<=0 or nullif(trim(p_description),'') is null
      or p_installment_count is null or p_installment_count<1
      or p_paid_installment_count is null or p_paid_installment_count<0 or p_paid_installment_count>p_installment_count
-     or (p_installment_count=1 and p_paid_installment_count<>0) then
+     or (p_installment_count=1 and p_paid_installment_count not in (0,1)) then
     raise exception 'invalid historical card purchase opening' using errcode='22023';
   end if;
   if not exists(select 1 from public.cards where id=p_card_id and household_id=p_household_id and deactivated_at is null) then
@@ -191,7 +191,7 @@ begin
 
   if p_installment_count=1 then
     if p_paid_installment_count=1 then
-      select invoice_id into invoice_id from public.transactions where id=tx_id;
+      select t.invoice_id into invoice_id from public.transactions as t where t.id=tx_id;
       update public.card_invoices
          set opening_settled_amount=opening_settled_amount+p_amount,
              status=case when settled_amount+opening_settled_amount+p_amount>=total_amount then 'paid' else status end,

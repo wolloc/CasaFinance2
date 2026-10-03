@@ -123,7 +123,7 @@ export function OpeningCardCommitmentsModal({
     const installmentCount = Number(draft.installmentCount);
     const paidInstallmentCount = Number(draft.paidInstallmentCount);
     if (!Number.isInteger(installmentCount) || installmentCount < 1) return setError('Informe quantas parcelas existem no total.');
-    if (!Number.isInteger(paidInstallmentCount) || paidInstallmentCount < 0 || paidInstallmentCount >= installmentCount) return setError('Informe quantas parcelas já foram pagas, mantendo pelo menos uma parcela em aberto.');
+    if (!Number.isInteger(paidInstallmentCount) || paidInstallmentCount < 0 || paidInstallmentCount > installmentCount) return setError('Informe quantas parcelas já foram pagas, sem ultrapassar o total de parcelas.');
     let allocations: EconomicAllocation[];
     try { allocations = buildAllocations(); } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Revise a divisão da responsabilidade.');
