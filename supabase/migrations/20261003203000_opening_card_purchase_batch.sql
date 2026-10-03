@@ -86,8 +86,8 @@ begin
     if installment_count is null or installment_count<1 or paid_installment_count is null or paid_installment_count<0 or paid_installment_count>installment_count then
       raise exception 'each opening card purchase has an invalid installment count' using errcode='22023';
     end if;
-    if installment_count=1 and paid_installment_count<>0 then
-      raise exception 'a one-time opening card purchase cannot already have a paid installment' using errcode='22023';
+    if installment_count=1 and paid_installment_count not in (0,1) then
+      raise exception 'a one-time opening card purchase can have zero or one paid installment' using errcode='22023';
     end if;
 
     tx_id:=public.record_opening_card_purchase(
