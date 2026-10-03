@@ -1,4 +1,4 @@
--- Category-only corrections are classification changes, not new financial facts.
+-- Harden category-only transaction correction with the mandatory audit request key.
 create or replace function public.correct_transaction_category(
   p_household_id uuid,
   p_transaction_id uuid,
@@ -72,5 +72,3 @@ end $$;
 
 revoke all on function public.correct_transaction_category(uuid,uuid,uuid,text,text) from public,anon;
 grant execute on function public.correct_transaction_category(uuid,uuid,uuid,text,text) to authenticated;
-comment on function public.correct_transaction_category(uuid,uuid,uuid,text,text) is
-  'Changes only the classification category of an existing non-cancelled transaction. It does not alter amount, date, funding, invoice, responsibility or cash.';
