@@ -99,6 +99,11 @@ test('Gastos mantém total da visão compacto e categorias sob demanda sem virar
  assert.match(browser,/count===1\?'lançamento':'lançamentos'/);
 });
 
+test('busca de Gastos usa apenas valores textuais definidos e não referencia helper inexistente',()=>{
+ assert.doesNotMatch(browser,/sourceLabel\(row\)/);
+ assert.match(browser,/row\.instrument_label\?\?instrumentLabel\(row\.instrument_kind\)\?\?''/);
+});
+
 test('extrato mensal permite buscar descrição categoria ou pessoa sem recalcular motor financeiro',()=>{
  assert.match(browser,/Buscar gastos deste período/);
  assert.match(browser,/Buscar compromisso/);
