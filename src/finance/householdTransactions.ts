@@ -167,6 +167,20 @@ export async function cancelHouseholdTransaction(client: SupabaseClient, househo
   if(response.error)throw response.error;releaseRetryStableRequestKey('transaction-cancel',identity);
 }
 
+export async function deleteOpeningCardPurchase(client: SupabaseClient, householdId: string, transactionId: string) {
+  const reason='Excluído da posição inicial do cartão pelo usuário';
+  const identity=[householdId,transactionId,reason] as const;
+  const requestKey=getRetryStableRequestKey('opening-card-delete',identity);
+  const response=await client.rpc('delete_opening_card_purchase',{
+    p_household_id:householdId,
+    p_transaction_id:transactionId,
+    p_reason:reason,
+    p_request_key:requestKey,
+  });
+  if(response.error)throw response.error;
+  releaseRetryStableRequestKey('opening-card-delete',identity);
+}
+
 export async function refundHouseholdDirectExpense(client: SupabaseClient, householdId: string, transaction: HouseholdTransaction) {
   const refunds = await client.from('transaction_adjustment_events').select('amount').eq('household_id', householdId).eq('source_transaction_id', transaction.id).eq('kind', 'refund');
   if (refunds.error) throw refunds.error;
