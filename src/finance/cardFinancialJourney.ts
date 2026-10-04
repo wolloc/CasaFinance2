@@ -36,6 +36,42 @@ export async function listCardFinancialJourney(client: SupabaseClient, household
     .eq('household_id', householdId)
     .eq('card_id', cardId)
     .order('invoice_month', { ascending: false });
-  if (response.error) throw response.error;
-  return (response.data ?? []) as CardFinancialJourney[];
+
+  if (!response.error) return (response.data ?? []) as CardFinancialJourney[];
+
+  // Fallback seguro: a abertura da fatura não pode depender dos agregados
+  // opcionais da jornada. Reconsultamos somente a posição financeira
+  // materializada da própria fatura, sem presumir valores.
+  const fallback = await client.from('financial_card_invoice_positions')
+    .select('household_id,card_id,invoice_id,invoice_month,due_date,known_invoice_amount,paid_amount,remaining_amount,state,is_current_invoice,is_future_invoice')
+    .eq('household_id', householdId)
+    .eq('card_id', cardId)
+    .neq('state', 'cancelled')
+    .order('invoice_month', { ascending: false });
+
+  if (fallback.error) throw response.error;
+
+  const card = await client.from('cards')
+    .select('id,name')
+    .eq('household_id', householdId)
+    .eq('id', cardId)
+    .is('deactivated_at', null)
+    .maybeSingle();
+
+  if (card.error) throw response.error;
+
+  return (fallback.data ?? []).map(row => ({
+    ...row,
+    card_name: card.data?.name ?? 'Cartão',
+    purchase_commitment_count: 0,
+    installment_count: 0,
+    commitment_amount: row.known_invoice_amount,
+    payment_amount: row.paid_amount,
+    last_paid_at: null,
+    payment_events: [],
+    credit_amount: 0,
+    credit_events: [],
+    funding_events: [],
+    settlement_events: [],
+  })) as CardFinancialJourney[];
 }
