@@ -76,7 +76,8 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
 
   const addThirdParty=()=>{
     if(!canAdd||parties.length===0)return;
-    const next=[...participants,{kind:'party' as const,id:parties[0].id,percentage:'0'}];
+    const available=parties.find(party=>!participants.some(item=>item.kind==='party'&&item.id===party.id))??parties[0];
+    const next=[...participants,{kind:'party' as const,id:available.id,percentage:'0'}];
     const equal=(100/next.length).toFixed(2);
     setParticipants(next.map(item=>({...item,percentage:equal})));
     setError(null);setSuccess(false);
@@ -92,10 +93,14 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
     setError(null);setSuccess(false);
   };
 
-  const setPreset=(mode:'single'|'equal')=>{
+  const setPreset=(mode:'single'|'equal'|'thirdParty')=>{
     if(!selected)return;
     if(mode==='single'){
       setParticipants([{kind:'member',id:selected.buyer_member_id??householdMembers[0]?.id??'',percentage:'100'}]);
+    }else if(mode==='thirdParty'){
+      const firstParty=parties[0]?.id??'';
+      if(!firstParty)return;
+      setParticipants([{kind:'party',id:firstParty,percentage:'100'}]);
     }else{
       const first=householdMembers[0]?.id??'';
       const second=householdMembers.find(member=>member.id!==first)?.id??'';
@@ -125,9 +130,10 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
         reason:defaultReason,
       });
       setSuccess(true);
+      onCompleted?.();
       await load();
     }catch(cause){
-      setError(cause instanceof Error?cause.message:'Não foi possível atualizar a responsabilidade.');
+      setError('Não foi possível atualizar a responsabilidade. Confira os participantes e tente novamente.');
     }finally{setSaving(false);}
   };
 
@@ -162,7 +168,7 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
 
     <div className="mt-3 flex flex-wrap gap-2">
       <button type="button" onClick={()=>setPreset('single')} className="min-h-9 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300">100% de um morador</button>
-      {householdMembers.length>=2&&<button type="button" onClick={()=>setPreset('equal')} className="min-h-9 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300">Dividir entre vocês</button>}
+      {parties.length>0&&<button type="button" onClick={()=>setPreset('thirdParty')} className="min-h-9 rounded-xl border border-violet-800/70 bg-violet-950/20 px-3 text-xs font-bold text-violet-200">100% de um terceiro</button>}{householdMembers.length>=2&&<button type="button" onClick={()=>setPreset('equal')} className="min-h-9 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300">Dividir entre vocês</button>}
       {canAdd&&parties.length>0&&<button type="button" onClick={addThirdParty} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-violet-800/70 bg-violet-950/20 px-3 text-xs font-bold text-violet-200"><Plus className="h-3.5 w-3.5"/>Adicionar terceiro</button>}
       {canAdd&&householdMembers.length>participants.filter(item=>item.kind==='member').length&&<button type="button" onClick={addMember} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300"><Plus className="h-3.5 w-3.5"/>Adicionar morador</button>}
     </div>
