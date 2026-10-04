@@ -220,7 +220,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}
 
-  {!availability.resources||!resources?unavailable('Não foi possível confirmar os saldos dos recursos da Casa.'):<HomeFinancialMap resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction}/>}
+  {!availability.resources||!resources?unavailable('Não foi possível confirmar os saldos dos recursos da Casa.'):<HomeFinancialMap householdId={household?.id ?? ''} resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>}
 
   <section>
    <FinancialSectionHeading title="Olhando pra frente" icon={<Landmark className="h-5 w-5 text-emerald-400"/>}/>
