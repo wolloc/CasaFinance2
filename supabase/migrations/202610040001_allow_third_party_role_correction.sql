@@ -141,8 +141,8 @@ begin
       select count(*)
       from jsonb_array_elements(p_responsibility) x
       where coalesce(
-        case when nullif(x->>'member_id','') is not null then 'member:'||x->>'member_id' end,
-        case when nullif(x->>'party_id','') is not null then 'party:'||x->>'party_id' end
+        case when nullif(x->>'member_id','') is not null then 'member:'||(x->>'member_id') end,
+        case when nullif(x->>'party_id','') is not null then 'party:'||(x->>'party_id') end
       )=participant_key
     )>1 then
       raise exception 'responsibility participants must be distinct' using errcode='23514';
