@@ -8,7 +8,7 @@ import { ensureRecurringIncomeHorizon } from '../../finance/recurringIncome.js';
 import type { CoverageActionKind } from '../../finance/coverageActionIntent.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialPriorityCenter, type AttentionNavigationAction } from './FinancialPriorityCenter.js';
-import { HomeFinancialMap } from './HomeFinancialMap.js';
+import { SafeHomeFinancialMap } from './HomeFinancialMap.js';
 import { SettlementHub } from './SettlementHub.js';
 import { dateInTimeZone } from '../../finance/householdClock.js';
 import { FinancialPerspectiveSelector, type FinancialPerspective } from './FinancialPerspectiveSelector.js';
