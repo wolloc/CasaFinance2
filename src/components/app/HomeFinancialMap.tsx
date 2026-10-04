@@ -72,7 +72,7 @@ export function HomeFinancialMap({
   onResourceAction,
   onSettlementAction,
 }:{
-  householdId:string;
+  householdId?:string;
   resources:ResourceRow[];
   cards:CardOverview[];
   perspective:'household'|string;
@@ -158,7 +158,7 @@ export function HomeFinancialMap({
       </div>
     </details>
 
-    <ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>
+    {perspective==='household'&&householdId&&<ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>}
 
     <details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
