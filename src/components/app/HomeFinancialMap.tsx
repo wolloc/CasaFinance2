@@ -31,7 +31,7 @@ export function HomeFinancialMap({
   onSettlementAction?:(intent:SettlementActionIntent)=>void;
 }){
   const groups=[
-    {key:'accounts',label:'Contas',rows:resources.filter(item=>Boolean(item.institution)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
+    {key:'accounts',label:'Contas',rows:resources.filter(item=>['checking','savings'].includes(item.type)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
     {key:'cash',label:'Dinheiro',rows:resources.filter(item=>!item.institution&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
     {key:'benefits',label:'Benefícios',rows:resources.filter(item=>!item.is_investment&&item.type==='meal_benefit')},
     {key:'investments',label:'Investimentos e reservas',rows:resources.filter(item=>item.is_investment||item.resource_restriction==='reserve')},
