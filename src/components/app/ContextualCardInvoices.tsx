@@ -4,7 +4,7 @@ import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { listCardFinancialJourney, type CardFinancialJourney } from '../../finance/cardFinancialJourney.js';
 import { getCardInvoiceExposure, listCardInvoiceItems, type CardInvoiceExposure, type CardInvoiceItem } from '../../finance/cardInvoiceItems.js';
-import { listFinancialInvoices, type FinancialInvoice } from '../../finance/financialInvoices.js';
+import { getFinancialInvoice, type FinancialInvoice } from '../../finance/financialInvoices.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
@@ -16,7 +16,7 @@ const itemDisplayDate=(item:CardInvoiceItem)=>item.purchase_date??item.financial
 export function ContextualCardInvoices({cardId,onPay}:{cardId:string;onPay?:(invoice:FinancialInvoice)=>void}){
  const{household}=useSupabaseAuth();
  const[rows,setRows]=useState<CardFinancialJourney[]>([]);
- const[invoices,setInvoices]=useState<FinancialInvoice[]>([]);
+ const[paymentInvoice,setPaymentInvoice]=useState<FinancialInvoice|null>(null);
  const[selectedInvoiceId,setSelectedInvoiceId]=useState('');
  const[exposure,setExposure]=useState<CardInvoiceExposure|null>(null);
  const[items,setItems]=useState<CardInvoiceItem[]>([]);
@@ -26,14 +26,16 @@ export function ContextualCardInvoices({cardId,onPay}:{cardId:string;onPay?:(inv
  const[itemsError,setItemsError]=useState(false);
  const[refreshKey,setRefreshKey]=useState(0);
 
- useEffect(()=>{let active=true;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listCardFinancialJourney(supabase,household.id,cardId),listFinancialInvoices(supabase,household.id),getCardInvoiceExposure(supabase,household.id,cardId).catch(()=>null)]).then(([journey,invoiceRows,cardExposure])=>{if(!active)return;const ordered=[...journey].sort((a,b)=>a.invoice_month.localeCompare(b.invoice_month));setRows(ordered);setInvoices(invoiceRows.filter(row=>row.card_id===cardId));setExposure(cardExposure);const current=ordered.find(row=>row.is_current_invoice)??[...ordered].reverse().find(row=>!row.is_future_invoice)??ordered[0];setSelectedInvoiceId(current?.invoice_id??'');}).catch(()=>{if(active){setRows([]);setInvoices([]);setExposure(null);setSelectedInvoiceId('');setError(true);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[household?.id,cardId,refreshKey]);
+ useEffect(()=>{let active=true;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listCardFinancialJourney(supabase,household.id,cardId),getCardInvoiceExposure(supabase,household.id,cardId).catch(()=>null)]).then(([journey,cardExposure])=>{if(!active)return;const ordered=[...journey].sort((a,b)=>a.invoice_month.localeCompare(b.invoice_month));setRows(ordered);setExposure(cardExposure);const current=ordered.find(row=>row.is_current_invoice)??[...ordered].reverse().find(row=>!row.is_future_invoice)??ordered[0];setSelectedInvoiceId(current?.invoice_id??'');}).catch(()=>{if(active){setRows([]);setExposure(null);setSelectedInvoiceId('');setPaymentInvoice(null);setError(true);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[household?.id,cardId,refreshKey]);
+
+ useEffect(()=>{let active=true;if(!supabase||!household||!selectedInvoiceId){setPaymentInvoice(null);return()=>{active=false;};}getFinancialInvoice(supabase,household.id,selectedInvoiceId).then(next=>{if(active)setPaymentInvoice(next);}).catch(()=>{if(active)setPaymentInvoice(null);});return()=>{active=false;};},[household?.id,selectedInvoiceId]);
 
  useEffect(()=>{let active=true;if(!supabase||!household||!selectedInvoiceId){setItems([]);return()=>{active=false;};}setItemsLoading(true);setItemsError(false);listCardInvoiceItems(supabase,household.id,selectedInvoiceId).then(next=>{if(active)setItems(next);}).catch(()=>{if(active){setItems([]);setItemsError(true);}}).finally(()=>{if(active)setItemsLoading(false);});return()=>{active=false;};},[household?.id,selectedInvoiceId]);
 
  const selectedIndex=useMemo(()=>rows.findIndex(row=>row.invoice_id===selectedInvoiceId),[rows,selectedInvoiceId]);
  const sortedItems=useMemo(()=>[...items].sort((a,b)=>itemDisplayDate(b).localeCompare(itemDisplayDate(a))),[items]);
  const activeInvoice=selectedIndex>=0?rows[selectedIndex]:null;
- const paymentInvoice=activeInvoice?invoices.find(row=>row.invoice_id===activeInvoice.invoice_id)??null:null;
+
  const cardName=activeInvoice?.card_name??rows[0]?.card_name??'Cartão';
  const move=(direction:-1|1)=>{const next=selectedIndex+direction;if(next>=0&&next<rows.length)setSelectedInvoiceId(rows[next].invoice_id);};
 
