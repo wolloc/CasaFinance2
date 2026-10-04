@@ -13,7 +13,7 @@ type ResourceRow=HouseholdResourcePosition|MemberResourcePosition;
 
 const amountOf=(row:ResourceRow)=>'attributed_amount' in row?Number(row.attributed_amount):Number(row.current_balance);
 
-function ThirdPartyResponsibilitySummary({householdId}:{householdId:string}){
+function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId:string;refreshKey?:number}){
  const[rows,setRows]=useState<Array<{partyId:string;name:string;amount:number;count:number}>>([]);
  const[loading,setLoading]=useState(true);
  const[failed,setFailed]=useState(false);
@@ -45,18 +45,18 @@ function ThirdPartyResponsibilitySummary({householdId}:{householdId:string}){
   };
   void load();
   return()=>{active=false;};
- },[householdId]);
+ },[householdId,refreshKey]);
  if(loading)return <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3"><p className="text-[11px] text-slate-500">Carregando responsabilidades de terceiros…</p></div>;
  if(failed||rows.length===0)return null;
  const total=rows.reduce((sum,row)=>sum+row.amount,0);
  return <div className="rounded-2xl border border-cyan-900/45 bg-cyan-950/10">
    <div className="flex items-center justify-between gap-3 px-4 py-3">
-     <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><UsersRound className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Responsabilidades de terceiros</p><p className="text-[11px] text-slate-500">Valores atribuídos a pessoas fora da Casa</p></div></div>
+     <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><UsersRound className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Responsabilidades de terceiros</p><p className="text-[11px] text-slate-500">Terceiros que assumem parte ou todo o compromisso</p></div></div>
      <strong className="text-sm text-cyan-200">{money(total)}</strong>
    </div>
    <div className="border-t border-cyan-900/30 p-2 space-y-1.5">
     {rows.map(row=><div key={row.partyId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/40 px-3 py-2.5">
-      <div><p className="text-sm font-semibold text-slate-300">{row.name}</p><p className="text-[10px] text-slate-600">{row.count} {row.count===1?'lançamento':'lançamentos'} · responsabilidade atribuída</p></div>
+      <div><p className="text-sm font-semibold text-slate-300">{row.name}</p><p className="text-[10px] text-slate-600">{row.count} {row.count===1?'lançamento':'lançamentos'} · parte ou total do compromisso</p></div>
       <strong className="text-sm text-slate-100">{money(row.amount)}</strong>
     </div>)}
    </div>
@@ -80,6 +80,7 @@ export function HomeFinancialMap({
   onOpenCard?:(cardId:string)=>void;
   onResourceAction?:(action:ResourceNavigationAction)=>void;
   onSettlementAction?:(intent:SettlementActionIntent)=>void;
+  refreshKey?:number;
 }){
   const groups=[
     {key:'accounts',label:'Contas',rows:resources.filter(item=>['checking','savings'].includes(item.type)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
@@ -157,7 +158,7 @@ export function HomeFinancialMap({
       </div>
     </details>
 
-    <ThirdPartyResponsibilitySummary householdId={householdId}/>
+    <ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>
 
     <details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
