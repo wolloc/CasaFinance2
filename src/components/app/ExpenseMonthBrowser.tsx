@@ -58,7 +58,7 @@ export function ExpenseMonthBrowser({perspective,onPerspectiveChange,refreshKey=
   };
 
   const normalizedQuery=query.trim().toLocaleLowerCase('pt-BR');
-  const filteredFinancialRows=useMemo(()=>normalizedQuery?financialRows.filter(row=>[row.description,sourceLabel(row),row.economic_date,row.instrument_label??'',row.category?.name??'',responsibilityLabel(row.responsibility)??''].some(value=>value.toLocaleLowerCase('pt-BR').includes(normalizedQuery))):financialRows,[financialRows,normalizedQuery,householdMembers]);
+  const filteredFinancialRows=useMemo(()=>normalizedQuery?financialRows.filter(row=>[row.description,row.instrument_label??instrumentLabel(row.instrument_kind)??'',row.economic_date,row.instrument_label??'',row.category?.name??'',responsibilityLabel(row.responsibility)??''].some(value=>value.toLocaleLowerCase('pt-BR').includes(normalizedQuery))):financialRows,[financialRows,normalizedQuery,householdMembers]);
   const filteredEconomicRows=useMemo(()=>normalizedQuery?economicRows.filter(row=>[row.description,row.category?.name??'Sem categoria',row.transaction_date,responsibilityLabel(row.responsibility)??''].some(value=>value.toLocaleLowerCase('pt-BR').includes(normalizedQuery))):economicRows,[economicRows,normalizedQuery,householdMembers]);
   const sortedFinancialRows=useMemo(()=>[...filteredFinancialRows].sort((a,b)=>b.economic_date.localeCompare(a.economic_date)),[filteredFinancialRows]);
   const sortedEconomicRows=useMemo(()=>[...filteredEconomicRows].sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)),[filteredEconomicRows]);
