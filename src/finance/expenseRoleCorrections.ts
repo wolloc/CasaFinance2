@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getRetryStableRequestKey, releaseRetryStableRequestKey } from './retryIdempotency.js';
 
-export type ExpenseResponsibility = { member_id: string; percentage: number; amount: number|string };
+export type ExpenseResponsibility = { member_id: string|null; party_id: string|null; percentage: number; amount: number|string };
 export type ExpenseRoleCorrectionPosition = {
   household_id: string;
   transaction_id: string;
@@ -22,7 +22,7 @@ export async function listExpenseRoleCorrectionPositions(client:SupabaseClient,h
   return(response.data??[])as ExpenseRoleCorrectionPosition[];
 }
 
-export async function correctExpenseRoles(client:SupabaseClient,input:{householdId:string;transactionId:string;buyerMemberId:string;responsibility:Array<{member_id:string;percentage:number}>;reason:string}){
+export async function correctExpenseRoles(client:SupabaseClient,input:{householdId:string;transactionId:string;buyerMemberId:string;responsibility:Array<{member_id:string|null;party_id:string|null;percentage:number}>;reason:string}){
   const identity=[input.householdId,input.transactionId,input.responsibility,input.reason.trim()] as const;
   const requestKey=getRetryStableRequestKey('expense-role-correction',identity);
   const response=await client.rpc('correct_expense_roles',{
