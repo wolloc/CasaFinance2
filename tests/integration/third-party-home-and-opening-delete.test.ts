@@ -22,6 +22,7 @@ test('Casa apresenta responsabilidades atribuídas a terceiros',()=>{
 });
 
 test('ação de exclusão histórica é explícita',()=>{
-  assert.match(setup,/Excluir lançamento histórico/);
+  assert.match(setup,/Excluir da posição inicial/);
   assert.match(setup,/Compra anterior ao início do controle/);
+  assert.match(setup,/Nenhum estorno será criado/);
 });
