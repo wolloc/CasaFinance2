@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, LoaderCircle, Users } from 'lucide-react';
+import { Check, LoaderCircle, Plus, Users, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase.js';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
+import { listFinancialParties, type FinancialParty } from '../../finance/financialParties.js';
 import { correctExpenseRoles, listExpenseRoleCorrectionPositions, type ExpenseRoleCorrectionPosition } from '../../finance/expenseRoleCorrections.js';
 
 const money=(value:number|string|null|undefined)=>Number(value??0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const defaultReason='Ajuste de responsabilidade do compromisso';
 
+type Participant={kind:'member'|'party';id:string;percentage:string};
+
 export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTransactionId?:string}={}){
   const{household,householdMembers}=useSupabaseAuth();
   const[rows,setRows]=useState<ExpenseRoleCorrectionPosition[]>([]);
+  const[parties,setParties]=useState<FinancialParty[]>([]);
   const[selectedId,setSelectedId]=useState('');
-  const[firstMember,setFirstMember]=useState('');
-  const[firstPct,setFirstPct]=useState('50');
-  const[secondMember,setSecondMember]=useState('');
-  const[mode,setMode]=useState<'single'|'split'>('single');
+  const[participants,setParticipants]=useState<Participant[]>([]);
   const[loading,setLoading]=useState(true);
   const[saving,setSaving]=useState(false);
   const[loadError,setLoadError]=useState<string|null>(null);
@@ -25,13 +26,16 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
     if(!supabase||!household)return;
     setLoading(true);setLoadError(null);setError(null);
     try{
-      const nextRows=await listExpenseRoleCorrectionPositions(supabase,household.id);
+      const [nextRows,nextParties]=await Promise.all([
+        listExpenseRoleCorrectionPositions(supabase,household.id),
+        listFinancialParties(supabase,household.id),
+      ]);
       const eligible=initialTransactionId?nextRows.filter(row=>row.transaction_id===initialTransactionId):nextRows;
       setRows(eligible);
+      setParties(nextParties);
       if(initialTransactionId&&eligible.length===0)setSelectedId('');
     }catch{
-      setRows([]);
-      setSelectedId('');
+      setRows([]);setParties([]);setSelectedId('');
       setLoadError('Não foi possível conferir este compromisso agora.');
     }finally{setLoading(false);}
   };
@@ -43,51 +47,81 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
   useEffect(()=>{
     if(!selected)return;
     setSelectedId(selected.transaction_id);
-    const responsibility=selected.responsibility.filter(item=>item.member_id);
-    if(responsibility.length>=2){
-      setMode('split');
-      setFirstMember(responsibility[0]?.member_id??'');
-      setFirstPct(String(Number(responsibility[0]?.percentage??50)));
-      setSecondMember(responsibility[1]?.member_id??'');
-    }else{
-      setMode('single');
-      setFirstMember(responsibility[0]?.member_id??selected.buyer_member_id??householdMembers[0]?.id??'');
-      setFirstPct('100');
-      setSecondMember('');
-    }
+    const current=selected.responsibility.map(item=>item.party_id
+      ? {kind:'party' as const,id:item.party_id,percentage:String(Number(item.percentage))}
+      : item.member_id
+        ? {kind:'member' as const,id:item.member_id,percentage:String(Number(item.percentage))}
+        : null
+    ).filter((item):item is Participant=>Boolean(item));
+    setParticipants(current.length?current:[{kind:'member',id:selected.buyer_member_id??householdMembers[0]?.id??'',percentage:'100'}]);
     setSuccess(false);setError(null);
   },[selected?.transaction_id]);
 
-  const secondOptions=householdMembers.filter(member=>member.id!==firstMember);
-  const secondName=householdMembers.find(member=>member.id===secondMember)?.display_name??'';
+  const amount=selected?.responsibility.reduce((sum,item)=>sum+Number(item.amount??0),0)||0;
+  const totalPercentage=participants.reduce((sum,item)=>sum+(Number(item.percentage)||0),0);
+  const canAdd=participants.length<3;
+  const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Morador';
+  const partyName=(id:string)=>parties.find(party=>party.id===id)?.name??'Terceiro';
 
-  const setSingle=(memberId:string)=>{
-    setMode('single');setFirstMember(memberId);setFirstPct('100');setSecondMember('');setError(null);setSuccess(false);
+  const updateParticipant=(index:number,patch:Partial<Participant>)=>{
+    setParticipants(current=>current.map((item,itemIndex)=>itemIndex===index?{...item,...patch}:item));
+    setError(null);setSuccess(false);
   };
 
-  const setSplit=()=>{
-    const first=firstMember||householdMembers[0]?.id||'';
-    const second=secondMember||householdMembers.find(member=>member.id!==first)?.id||'';
-    setMode('split');setFirstMember(first);setSecondMember(second);setFirstPct('50');setError(null);setSuccess(false);
+  const removeParticipant=(index:number)=>{
+    if(participants.length<=1)return;
+    setParticipants(current=>current.filter((_,itemIndex)=>itemIndex!==index));
+    setError(null);setSuccess(false);
+  };
+
+  const addThirdParty=()=>{
+    if(!canAdd||parties.length===0)return;
+    const next=[...participants,{kind:'party' as const,id:parties[0].id,percentage:'0'}];
+    const equal=(100/next.length).toFixed(2);
+    setParticipants(next.map(item=>({...item,percentage:equal})));
+    setError(null);setSuccess(false);
+  };
+
+  const addMember=()=>{
+    if(!canAdd)return;
+    const available=householdMembers.find(member=>!participants.some(item=>item.kind==='member'&&item.id===member.id));
+    if(!available)return;
+    const next=[...participants,{kind:'member' as const,id:available.id,percentage:'0'}];
+    const equal=(100/next.length).toFixed(2);
+    setParticipants(next.map(item=>({...item,percentage:equal})));
+    setError(null);setSuccess(false);
+  };
+
+  const setPreset=(mode:'single'|'equal')=>{
+    if(!selected)return;
+    if(mode==='single'){
+      setParticipants([{kind:'member',id:selected.buyer_member_id??householdMembers[0]?.id??'',percentage:'100'}]);
+    }else{
+      const first=householdMembers[0]?.id??'';
+      const second=householdMembers.find(member=>member.id!==first)?.id??'';
+      if(!first||!second)return;
+      setParticipants([{kind:'member',id:first,percentage:'50'},{kind:'member',id:second,percentage:'50'}]);
+    }
+    setError(null);setSuccess(false);
   };
 
   const submit=async()=>{
     if(!supabase||!household||!selected)return;
-    const pct=Number(firstPct);
-    if(!firstMember||!Number.isFinite(pct)||pct<=0||pct>=100||!secondMember||secondMember===firstMember){
-      setError('Escolha duas pessoas e um percentual entre 1% e 99%.');
+    const pctValues=participants.map(item=>Number(item.percentage));
+    const duplicate=participants.some((item,index)=>participants.findIndex(candidate=>candidate.kind===item.kind&&candidate.id===item.id)!==index);
+    if(participants.length<1||participants.length>3||participants.some(item=>!item.id)||pctValues.some(value=>!Number.isFinite(value)||value<=0)||Math.abs(totalPercentage-100)>0.001||duplicate){
+      setError('Defina participantes diferentes e uma divisão que totalize 100%.');
       return;
     }
-    const responsibility=mode==='single'
-      ?[{member_id:firstMember,percentage:100}]
-      :[{member_id:firstMember,percentage:pct},{member_id:secondMember,percentage:100-pct}];
     setSaving(true);setError(null);setSuccess(false);
     try{
       await correctExpenseRoles(supabase,{
         householdId:household.id,
         transactionId:selected.transaction_id,
         buyerMemberId:selected.buyer_member_id,
-        responsibility,
+        responsibility:participants.map(item=>item.kind==='member'
+          ?{member_id:item.id,party_id:null,percentage:Number(item.percentage)}
+          :{member_id:null,party_id:item.id,percentage:Number(item.percentage)}),
         reason:defaultReason,
       });
       setSuccess(true);
@@ -101,9 +135,7 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
   if(loadError)return <section className="rounded-2xl border border-rose-900/70 bg-rose-950/20 p-4"><p role="alert" className="text-sm text-rose-200">{loadError}</p><button type="button" onClick={()=>void load()} className="mt-3 min-h-10 rounded-xl border border-rose-800 px-3 text-xs font-bold text-rose-200">Tentar novamente</button></section>;
   if(!selected)return null;
 
-  const current=selected.responsibility.filter(item=>item.member_id).map(item=>`${householdMembers.find(member=>member.id===item.member_id)?.display_name??'Morador'} ${Number(item.percentage)}%`).join(' + ')||'Sem responsável definido';
-  const amount=selected.responsibility.reduce((sum,item)=>sum+Number(item.amount??0),0)||0;
-  const remaining=100-Number(firstPct||0);
+  const current=selected.responsibility.map(item=>item.party_id?partyName(item.party_id):item.member_id?memberName(item.member_id):'Participante').map((name,index)=>`${name} ${Number(selected.responsibility[index]?.percentage??0)}%`).join(' + ')||'Sem responsável definido';
 
   return <section className="rounded-2xl border border-cyan-900/45 bg-cyan-950/10 p-4">
     <div className="flex items-start gap-3">
@@ -116,24 +148,29 @@ export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTrans
 
     <div className="mt-4 rounded-xl bg-slate-950/60 p-3">
       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Compromisso atual</p>
-      <div className="mt-1 flex items-end justify-between gap-3"><strong className="text-sm text-slate-200">{current}</strong><span className="text-xs text-slate-500">{money(amount||selected.responsibility[0]?.amount)}</span></div>
+      <div className="mt-1 flex items-end justify-between gap-3"><strong className="text-sm text-slate-200">{current}</strong><span className="text-xs text-slate-500">{money(amount)}</span></div>
     </div>
 
     <div className="mt-4 grid gap-2">
-      {householdMembers.map(member=><button aria-label={`Responsabilidade ${member.display_name} 100%`} key={member.id} type="button" onClick={()=>setSingle(member.id)} className={`flex min-h-11 items-center justify-between rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${mode==='single'&&firstMember===member.id?'border-cyan-500 bg-cyan-500/10 text-cyan-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}><span>{member.display_name}</span>{mode==='single'&&firstMember===member.id?<Check className="h-4 w-4 text-cyan-300"/>:<span className="text-[11px] text-slate-600">100%</span>}</button>)}
-      {householdMembers.length>=2&&<button type="button" onClick={setSplit} className={`flex min-h-11 items-center justify-between rounded-xl border px-3 text-left text-sm font-semibold transition-colors ${mode==='split'?'border-cyan-500 bg-cyan-500/10 text-cyan-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}><span>Dividir entre vocês</span>{mode==='split'?<Check className="h-4 w-4 text-cyan-300"/>:<span className="text-[11px] text-slate-600">Personalizar</span>}</button>}
+      {participants.map((item,index)=><div key={`${item.kind}-${item.id}-${index}`} className="grid grid-cols-[92px_1fr_72px_36px] items-end gap-2 rounded-xl border border-slate-700 bg-slate-950/40 p-2.5">
+        <label className="text-[10px] font-semibold text-slate-500">Tipo<select value={item.kind} onChange={event=>updateParticipant(index,{kind:event.target.value as Participant['kind'],id:event.target.value==='party'?(parties[0]?.id??''):(householdMembers[0]?.id??'')})} className="mt-1 min-h-9 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-xs text-slate-200"><option value="member">Morador</option><option value="party" disabled={parties.length===0}>Terceiro</option></select></label>
+        <label className="text-[10px] font-semibold text-slate-500">Pessoa<select value={item.id} onChange={event=>updateParticipant(index,{id:event.target.value})} className="mt-1 min-h-9 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-xs text-slate-200">{item.kind==='member'?householdMembers.map(member=><option key={member.id} value={member.id}>{member.display_name}</option>):parties.map(party=><option key={party.id} value={party.id}>{party.name}</option>)}</select></label>
+        <label className="text-[10px] font-semibold text-slate-500">%<input inputMode="decimal" value={item.percentage} onChange={event=>updateParticipant(index,{percentage:event.target.value})} className="mt-1 min-h-9 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-center text-xs text-slate-200"/></label>
+        <button type="button" disabled={participants.length<=1} onClick={()=>removeParticipant(index)} aria-label="Remover participante" className="flex min-h-9 min-w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-900 hover:text-slate-200 disabled:opacity-30"><X className="h-4 w-4"/></button>
+      </div>)}
     </div>
 
-    {mode==='split'&&<div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2 rounded-xl bg-slate-950/45 p-3">
-      <label className="text-[11px] font-semibold text-slate-400">Pessoa<select value={firstMember} onChange={event=>setFirstMember(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-sm text-slate-200">{householdMembers.map(member=><option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
-      <label className="text-[11px] font-semibold text-slate-400">Parte<input inputMode="decimal" value={firstPct} onChange={event=>setFirstPct(event.target.value)} className="mt-1 min-h-10 w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 text-center text-sm text-slate-200"/></label>
-      <div className="text-right text-[11px] font-semibold text-slate-500"><p>{secondName||'Outra pessoa'}</p><strong className="mt-2 block text-sm text-slate-300">{Number.isFinite(remaining)?Math.max(0,remaining):0}%</strong></div>
-      <label className="col-span-3 text-[11px] font-semibold text-slate-400">Outra pessoa<select value={secondMember} onChange={event=>setSecondMember(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-sm text-slate-200">{secondOptions.map(member=><option key={member.id} value={member.id}>{member.display_name}</option>)}</select></label>
-    </div>}
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button type="button" onClick={()=>setPreset('single')} className="min-h-9 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300">100% de um morador</button>
+      {householdMembers.length>=2&&<button type="button" onClick={()=>setPreset('equal')} className="min-h-9 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300">Dividir entre vocês</button>}
+      {canAdd&&parties.length>0&&<button type="button" onClick={addThirdParty} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-violet-800/70 bg-violet-950/20 px-3 text-xs font-bold text-violet-200"><Plus className="h-3.5 w-3.5"/>Adicionar terceiro</button>}
+      {canAdd&&householdMembers.length>participants.filter(item=>item.kind==='member').length&&<button type="button" onClick={addMember} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-slate-700 px-3 text-xs font-bold text-slate-300"><Plus className="h-3.5 w-3.5"/>Adicionar morador</button>}
+    </div>
 
+    <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-950/50 px-3 py-2 text-xs"><span className="text-slate-500">Total da responsabilidade</span><strong className={Math.abs(totalPercentage-100)<0.001?'text-emerald-300':'text-amber-300'}>{totalPercentage.toFixed(2)}%</strong></div>
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-800 bg-rose-950/30 p-3 text-xs text-rose-200">{error}</p>}
     {success&&<p role="status" className="mt-3 rounded-xl border border-emerald-800 bg-emerald-950/30 p-3 text-xs text-emerald-200">Responsabilidade atualizada. O comprador e o pagamento histórico permaneceram iguais.</p>}
 
-    <button type="button" onClick={()=>void submit()} disabled={saving|| (mode==='split'&&(Number(firstPct)<=0||Number(firstPct)>=100||!secondMember))} className="mt-4 min-h-11 w-full rounded-xl bg-cyan-700 px-3 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando…':'Salvar responsabilidade'}</button>
+    <button type="button" onClick={()=>void submit()} disabled={saving||Math.abs(totalPercentage-100)>0.001} className="mt-4 min-h-11 w-full rounded-xl bg-cyan-700 px-3 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando…':'Salvar responsabilidade'}</button>
   </section>;
 }
