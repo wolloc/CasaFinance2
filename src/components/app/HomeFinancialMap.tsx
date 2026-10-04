@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Component, useEffect, useState, type ReactNode } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ChevronRight, CreditCard, HandCoins, UsersRound, Utensils, WalletCards } from 'lucide-react';
 import type { CardOverview } from '../../finance/cardOverview.js';
 import type { HouseholdResourcePosition, MemberResourcePosition } from '../../finance/memberResources.js';
@@ -61,6 +61,15 @@ function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId
     </div>)}
    </div>
  </div>;
+}
+
+class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:boolean}>{
+ state={hasError:false};
+ static getDerivedStateFromError(){return {hasError:true};}
+ componentDidCatch(error:unknown){console.error('Casa Finance: falha na visualização Onde está nosso dinheiro?',error);}
+ render(){return this.state.hasError
+  ? <div role="status" className="rounded-2xl border border-amber-900/70 bg-amber-950/20 p-4"><p className="text-sm font-bold text-amber-100">Não foi possível carregar este painel agora.</p><p className="mt-1 text-[11px] text-amber-200/70">Os demais dados da Casa continuam disponíveis.</p></div>
+  : this.props.children;}
 }
 
 export function HomeFinancialMap({
@@ -169,6 +178,8 @@ export function HomeFinancialMap({
     </details>
   </section>;
 }
+
+export function SafeHomeFinancialMap(props:Parameters<typeof HomeFinancialMap>[0]){return <HomeFinancialMapBoundary><HomeFinancialMap {...props}/></HomeFinancialMapBoundary>;}
 
 
 type BenefitMiniStatementRow={id:string;accountId:string;accountName:string;kind:string;amount:number;movementDate:string;description:string;direction:'in'|'out'};
