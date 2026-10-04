@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, ChevronRight, CreditCard, HandCoins, Utensils, WalletCards } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, ChevronRight, CreditCard, HandCoins, UsersRound, Utensils, WalletCards } from 'lucide-react';
 import type { CardOverview } from '../../finance/cardOverview.js';
 import type { HouseholdResourcePosition, MemberResourcePosition } from '../../finance/memberResources.js';
 import type { ResourceNavigationAction } from './ResourceActionRow.js';
@@ -13,6 +13,56 @@ type ResourceRow=HouseholdResourcePosition|MemberResourcePosition;
 
 const amountOf=(row:ResourceRow)=>'attributed_amount' in row?Number(row.attributed_amount):Number(row.current_balance);
 
+function ThirdPartyResponsibilitySummary({householdId}:{householdId:string}){
+ const[rows,setRows]=useState<Array<{partyId:string;name:string;amount:number;count:number}>>([]);
+ const[loading,setLoading]=useState(true);
+ const[failed,setFailed]=useState(false);
+ useEffect(()=>{
+  let active=true;
+  const load=async()=>{
+   if(!supabase||!householdId){if(active)setLoading(false);return;}
+   setLoading(true);setFailed(false);
+   try{
+    const tx=await supabase.from('transactions').select('id').eq('household_id',householdId).is('deleted_at',null).not('economic_state','in','(cancelled,reversed)');
+    if(tx.error)throw tx.error;
+    const ids=(tx.data??[]).map(row=>String(row.id));
+    if(ids.length===0){if(active)setRows([]);return;}
+    const response=await supabase.from('economic_allocations').select('responsible_party_id,amount,transaction_id,financial_parties!inner(id,name)').eq('household_id',householdId).not('responsible_party_id','is',null).in('transaction_id',ids);
+    if(response.error)throw response.error;
+    const grouped=new Map<string,{partyId:string;name:string;amount:number;transactions:Set<string>}>();
+    for(const row of response.data??[]){
+      const party=Array.isArray(row.financial_parties)?row.financial_parties[0]:row.financial_parties;
+      if(!party?.id)continue;
+      const partyId=String(party.id);
+      const current=grouped.get(partyId)??{partyId,name:String(party.name??'Terceiro'),amount:0,transactions:new Set<string>()};
+      current.amount+=Number(row.amount??0);
+      current.transactions.add(String(row.transaction_id));
+      grouped.set(partyId,current);
+    }
+    if(active)setRows(Array.from(grouped.values()).map(item=>({partyId:item.partyId,name:item.name,amount:item.amount,count:item.transactions.size})).sort((a,b)=>b.amount-a.amount));
+   }catch{if(active){setRows([]);setFailed(true);}}
+   finally{if(active)setLoading(false);}
+  };
+  void load();
+  return()=>{active=false;};
+ },[householdId]);
+ if(loading)return <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3"><p className="text-[11px] text-slate-500">Carregando responsabilidades de terceiros…</p></div>;
+ if(failed||rows.length===0)return null;
+ const total=rows.reduce((sum,row)=>sum+row.amount,0);
+ return <div className="rounded-2xl border border-cyan-900/45 bg-cyan-950/10">
+   <div className="flex items-center justify-between gap-3 px-4 py-3">
+     <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><UsersRound className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Responsabilidades de terceiros</p><p className="text-[11px] text-slate-500">Valores atribuídos a pessoas fora da Casa</p></div></div>
+     <strong className="text-sm text-cyan-200">{money(total)}</strong>
+   </div>
+   <div className="border-t border-cyan-900/30 p-2 space-y-1.5">
+    {rows.map(row=><div key={row.partyId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/40 px-3 py-2.5">
+      <div><p className="text-sm font-semibold text-slate-300">{row.name}</p><p className="text-[10px] text-slate-600">{row.count} {row.count===1?'lançamento':'lançamentos'} · responsabilidade atribuída</p></div>
+      <strong className="text-sm text-slate-100">{money(row.amount)}</strong>
+    </div>)}
+   </div>
+ </div>;
+}
+
 export function HomeFinancialMap({
   resources,
   cards,
@@ -22,6 +72,7 @@ export function HomeFinancialMap({
   onResourceAction,
   onSettlementAction,
 }:{
+  householdId:string;
   resources:ResourceRow[];
   cards:CardOverview[];
   perspective:'household'|string;
@@ -105,6 +156,8 @@ export function HomeFinancialMap({
         </>}
       </div>
     </details>
+
+    <ThirdPartyResponsibilitySummary householdId={householdId}/>
 
     <details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
