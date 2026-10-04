@@ -10,7 +10,7 @@ const defaultReason='Ajuste de responsabilidade do compromisso';
 
 type Participant={kind:'member'|'party';id:string;percentage:string};
 
-export function ExpenseRoleCorrectionAction({initialTransactionId}:{initialTransactionId?:string}={}){
+export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{initialTransactionId?:string;onCompleted?:()=>void}={}){
   const{household,householdMembers}=useSupabaseAuth();
   const[rows,setRows]=useState<ExpenseRoleCorrectionPosition[]>([]);
   const[parties,setParties]=useState<FinancialParty[]>([]);
