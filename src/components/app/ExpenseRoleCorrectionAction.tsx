@@ -10,7 +10,7 @@ const defaultReason='Ajuste de responsabilidade do compromisso';
 
 type Participant={kind:'member'|'party';id:string;percentage:string};
 
-export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{initialTransactionId?:string;onCompleted?:()=>void}={}){
+export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted,defaultOpen=false}:{initialTransactionId?:string;onCompleted?:()=>void;defaultOpen?:boolean}={}){
   const{household,householdMembers}=useSupabaseAuth();
   const[rows,setRows]=useState<ExpenseRoleCorrectionPosition[]>([]);
   const[parties,setParties]=useState<FinancialParty[]>([]);
@@ -143,7 +143,12 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
 
   const current=selected.responsibility.map(item=>item.party_id?partyName(item.party_id):item.member_id?memberName(item.member_id):'Participante').map((name,index)=>`${name} ${Number(selected.responsibility[index]?.percentage??0)}%`).join(' + ')||'Sem responsável definido';
 
-  return <section className="rounded-2xl border border-cyan-900/45 bg-cyan-950/10 p-4">
+  return <details className="rounded-2xl border border-slate-800 bg-slate-950/35" open={defaultOpen}>
+    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 py-3">
+      <div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsabilidade</p><p className="mt-1 text-sm font-semibold text-slate-200">Quem fica com este compromisso?</p></div>
+      <span className="text-xs text-slate-500">Alterar</span>
+    </summary>
+    <section className="border-t border-slate-800 bg-cyan-950/10 p-4">
     <div className="flex items-start gap-3">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><Users className="h-4 w-4"/></span>
       <div className="min-w-0">
@@ -178,5 +183,6 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted}:{
     {success&&<p role="status" className="mt-3 rounded-xl border border-emerald-800 bg-emerald-950/30 p-3 text-xs text-emerald-200">Responsabilidade atualizada. O comprador e o pagamento histórico permaneceram iguais.</p>}
 
     <button type="button" onClick={()=>void submit()} disabled={saving||Math.abs(totalPercentage-100)>0.001} className="mt-4 min-h-11 w-full rounded-xl bg-cyan-700 px-3 text-sm font-bold text-white disabled:opacity-50">{saving?'Salvando…':'Salvar responsabilidade'}</button>
-  </section>;
+    </section>
+  </details>;
 }
