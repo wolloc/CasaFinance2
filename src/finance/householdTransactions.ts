@@ -181,6 +181,37 @@ export async function deleteOpeningCardPurchase(client: SupabaseClient, househol
   releaseRetryStableRequestKey('opening-card-delete',identity);
 }
 
+export async function correctUnrealizedCardPurchase(client: SupabaseClient, householdId: string, transactionId: string, input: Pick<TransactionInput,'description'|'amount'|'categoryId'>) {
+  const reason='Editado pelo usuário';
+  const identity=[householdId,transactionId,input.description.trim(),input.amount,input.categoryId,reason] as const;
+  const requestKey=getRetryStableRequestKey('card-purchase-correction',identity);
+  const response=await client.rpc('correct_unrealized_card_purchase',{
+    p_household_id:householdId,
+    p_transaction_id:transactionId,
+    p_description:input.description.trim(),
+    p_amount:input.amount,
+    p_category_id:input.categoryId||null,
+    p_reason:reason,
+    p_request_key:requestKey,
+  });
+  if(response.error)throw response.error;
+  releaseRetryStableRequestKey('card-purchase-correction',identity);
+}
+
+export async function deleteCardPurchase(client: SupabaseClient, householdId: string, transactionId: string) {
+  const reason='Excluído pelo usuário';
+  const identity=[householdId,transactionId,reason] as const;
+  const requestKey=getRetryStableRequestKey('card-purchase-delete',identity);
+  const response=await client.rpc('delete_card_purchase',{
+    p_household_id:householdId,
+    p_transaction_id:transactionId,
+    p_reason:reason,
+    p_request_key:requestKey,
+  });
+  if(response.error)throw response.error;
+  releaseRetryStableRequestKey('card-purchase-delete',identity);
+}
+
 export async function refundHouseholdDirectExpense(client: SupabaseClient, householdId: string, transaction: HouseholdTransaction) {
   const refunds = await client.from('transaction_adjustment_events').select('amount').eq('household_id', householdId).eq('source_transaction_id', transaction.id).eq('kind', 'refund');
   if (refunds.error) throw refunds.error;
@@ -199,8 +230,10 @@ export function transactionAvailableActions(transaction: HouseholdTransaction) {
   const dependencies = transaction.mutation_dependencies;
   const hasLinkedFinancialFacts = transaction.invoice_id !== null || dependencies.has_recurring_occurrence || dependencies.has_financial_obligation || dependencies.has_external_payment_event || dependencies.has_installment_plan || dependencies.has_funding_event;
   const unrealized = (transaction.economic_state === 'forecast' || transaction.economic_state === 'confirmed') && Number(transaction.realized_amount) === 0 && !hasLinkedFinancialFacts;
+  const isCardPurchase = transaction.type === 'expense' && transaction.payment_instrument?.kind === 'card' && (transaction.invoice_id !== null || dependencies.has_installment_plan);
+  const cardPurchaseEditable = isCardPurchase && (transaction.economic_state === 'forecast' || transaction.economic_state === 'confirmed') && Number(transaction.realized_amount) === 0 && !dependencies.has_funding_event && !dependencies.has_external_payment_event && !dependencies.has_financial_obligation;
   const directPaidExpense = transaction.type === 'expense' && transaction.economic_state === 'realized' && transaction.status === 'paid' && transaction.payment_instrument?.kind === 'account' && transaction.invoice_id === null && !dependencies.has_financial_obligation && !dependencies.has_external_payment_event && !dependencies.has_installment_plan && Math.abs(dependencies.direct_funding_total - Number(transaction.realized_amount)) < 0.005 && dependencies.direct_funding_account_count === 1;
-  const canEditCategory=transaction.economic_state!=='cancelled'&&transaction.economic_state!=='reversed'&&transaction.status!=='cancelled'&&transaction.status!=='refunded'; return { canEdit: unrealized, canEditCategory, canCancel: unrealized, canRefund: directPaidExpense, closed: transaction.economic_state === 'cancelled' || transaction.economic_state === 'reversed' || transaction.status === 'cancelled' || transaction.status === 'refunded' };
+  const canEditCategory=transaction.economic_state!=='cancelled'&&transaction.economic_state!=='reversed'&&transaction.status!=='cancelled'&&transaction.status!=='refunded'; return { canEdit: unrealized || cardPurchaseEditable, canEditCategory, canCancel: unrealized, canRefund: directPaidExpense, canEditCardPurchase: cardPurchaseEditable, canDeleteCardPurchase: cardPurchaseEditable, closed: transaction.economic_state === 'cancelled' || transaction.economic_state === 'reversed' || transaction.status === 'cancelled' || transaction.status === 'refunded' };
 }
 
 export async function createAndSettleSharedExpense(client: SupabaseClient, householdId: string, input: TransactionInput, funderMemberId: string, partyDueDate: string | null) {
