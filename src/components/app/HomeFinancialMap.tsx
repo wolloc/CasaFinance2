@@ -77,6 +77,8 @@ export function HomeFinancialMap({
   cards,
   perspective,
   memberName,
+  householdId,
+  refreshKey,
   onOpenCard,
   onResourceAction,
   onSettlementAction,
