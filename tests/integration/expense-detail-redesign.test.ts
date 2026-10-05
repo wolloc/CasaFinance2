@@ -33,3 +33,7 @@ test('sync de produção contém a estrutura mínima da devolução no cartão',
   assert.match(migration,/create or replace function public\.record_card_invoice_credit_refund/);
   assert.match(migration,/create or replace view public\.financial_card_refund_positions/);
 });
+
+test('devolução no cartão só aparece quando existe uma fatura ou parcelamento para receber o crédito',()=>{
+  assert.match(screen,/Boolean\(detailTransaction\.invoice_id\) \|\| detailTransaction\.mutation_dependencies\.has_installment_plan/);
+});
