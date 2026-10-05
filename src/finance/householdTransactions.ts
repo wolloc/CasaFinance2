@@ -167,6 +167,17 @@ export async function cancelHouseholdTransaction(client: SupabaseClient, househo
   if(response.error)throw response.error;releaseRetryStableRequestKey('transaction-cancel',identity);
 }
 
+export async function deleteCardPurchase(client: SupabaseClient, householdId: string, transactionId: string) {
+  const reason='Excluído pelo usuário para corrigir um lançamento de cartão';
+  const identity=[householdId,transactionId,reason] as const;
+  const requestKey=getRetryStableRequestKey('card-purchase-delete',identity);
+  const response=await client.rpc('delete_card_purchase',{
+    p_household_id:householdId,p_transaction_id:transactionId,p_reason:reason,p_request_key:requestKey,
+  });
+  if(response.error)throw response.error;
+  releaseRetryStableRequestKey('card-purchase-delete',identity);
+}
+
 export async function deleteOpeningCardPurchase(client: SupabaseClient, householdId: string, transactionId: string) {
   const reason='Excluído da posição inicial do cartão pelo usuário';
   const identity=[householdId,transactionId,reason] as const;
