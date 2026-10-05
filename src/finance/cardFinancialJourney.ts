@@ -69,7 +69,7 @@ export async function listCardFinancialJourney(client: SupabaseClient, household
     payment_amount: row.paid_amount,
     last_paid_at: null,
     payment_events: [],
-    credit_amount: 0,
+    credit_amount: '0',
     credit_events: [],
     funding_events: [],
     settlement_events: [],
