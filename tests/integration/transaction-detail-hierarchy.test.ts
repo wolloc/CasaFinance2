@@ -27,5 +27,5 @@ test('everyday actions remain immediately available',()=>{
  assert.match(income,/>Histórico</);
  assert.match(expenseSetup,/>Editar lançamento</);
  assert.match(expenseSetup,/>Histórico</);
- assert.match(transactions,/Gerenciar esta recorrência/);
+ assert.match(transactions,/\{detailRecurringOpen\?'Fechar':'Gerenciar'\}/);
 });
