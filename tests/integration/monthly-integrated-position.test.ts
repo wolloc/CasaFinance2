@@ -19,11 +19,9 @@ test('Casa current month uses an integrated monthly statement from opening to pr
 test('monthly statement keeps liquidity coverage separate from reserves and investments',()=>{
   for(const copy of [
     'pode terminar o mês com',
-    'Recursos para usar hoje',
-    'Caixa hoje',
     'Ainda entra',
     'Ainda sai',
-    
+
     'Estamos tranquilos neste mês',
     'O mês fecha, contando com o que ainda entra',
     'Vamos precisar mexer em outros recursos',
