@@ -5,7 +5,7 @@ import test from 'node:test';
 test('expense detail exposes responsibility correction outside special actions',async()=>{
  const screen=await readFile(new URL('../../src/components/app/TransactionsScreen.tsx',import.meta.url),'utf8');
  const action=await readFile(new URL('../../src/components/app/ExpenseRoleCorrectionAction.tsx',import.meta.url),'utf8');
- assert.match(screen,/ExpenseRoleCorrectionAction initialTransactionId=\{detailTransactionId\} compact/);
+ assert.match(screen,/ExpenseRoleCorrectionAction initialTransactionId=\{detailTransactionId\} onCompleted=/);
  assert.match(action,/compact=false/);
  assert.match(action,/Quem assume o gasto/);
  assert.match(action,/correctExpenseRoles/);
