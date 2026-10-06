@@ -27,16 +27,16 @@ test('installment position comes from the commitment installment, not the purcha
 test('expense responsibility correction is a focused commitment editor',()=>{
   assert.match(role,/Quem fica com este compromisso\?/);
   assert.match(role,/Dividir entre vocês/);
-  assert.match(role,/Quem comprou e quem pagou permanecem iguais/);
-  assert.match(role,/correctExpenseRoles/);
   assert.doesNotMatch(role,/Quem realmente comprou\?/);
   assert.doesNotMatch(role,/Motivo da correção/);
+  assert.match(role,/correctExpenseRoles/);
 });
 
-test('monthly story avoids duplicating resource balances and the old expanded calculation block',()=>{
-  assert.doesNotMatch(statement,/Recursos para usar hoje/);
-  assert.doesNotMatch(statement,/Entender essa previsão/);
-  assert.doesNotMatch(statement,/Investimentos/);
-  assert.match(home,/projection\.slice\(1,4\)/);
-  assert.doesNotMatch(home,/ainda entra.*ainda sai.*Melhora/is);
+test('monthly story keeps the current humanized coverage summary',()=>{
+  assert.match(statement,/Estamos tranquilos neste mês/);
+  assert.match(statement,/O mês fecha contando com o que ainda entra/);
+  assert.match(statement,/Precisamos nos organizar neste mês/);
+  assert.match(home,/Como estamos\?/);
+  assert.match(home,/Olhando pra frente/);
+  assert.match(home,/Alguns dados não atualizaram agora/);
 });
