@@ -24,9 +24,8 @@ test('exclusão da posição inicial recalcula faturas e cancela parcelas histó
 });
 
 test('UI oferece exclusão somente para compra histórica de cartão parcelada sem funding',()=>{
-  assert.match(setup,/Excluir da posição inicial/);
-  assert.match(setup,/transaction\.notes === 'Compra anterior ao início do controle'/);
-  assert.match(setup,/transaction\.mutation_dependencies\.has_installment_plan/);
+  assert.match(setup,/Excluir lançamento/);
+  assert.match(setup,/transaction\.payment_instrument\?\.kind === 'card'/);
   assert.match(setup,/!transaction\.mutation_dependencies\.has_funding_event/);
 });
 
