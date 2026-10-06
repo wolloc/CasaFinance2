@@ -73,6 +73,16 @@ class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:
   : this.props.children;}
 }
 
+class HomeFinancialMapSectionBoundary extends Component<{children:ReactNode;label:string},{hasError:boolean}>{
+ declare readonly props: Readonly<{children:ReactNode;label:string}>;
+ state={hasError:false};
+ static getDerivedStateFromError(){return {hasError:true};}
+ componentDidCatch(error:unknown){console.error(`Casa Finance: falha no bloco ${this.props.label} do mapa financeiro`,error);}
+ render(){return this.state.hasError
+  ? <div role="status" className="rounded-2xl border border-amber-900/60 bg-amber-950/15 p-4"><p className="text-sm font-bold text-amber-100">{this.props.label} indisponível agora.</p><p className="mt-1 text-[11px] text-amber-200/70">O restante do mapa financeiro continua disponível.</p></div>
+  : this.props.children;}
+}
+
 export function HomeFinancialMap({
   resources,
   cards,
@@ -94,14 +104,16 @@ export function HomeFinancialMap({
   onSettlementAction?:(intent:SettlementActionIntent)=>void;
   refreshKey?:number;
 }){
+  const safeResources=Array.isArray(resources)?resources:[];
+  const safeCards=Array.isArray(cards)?cards:[];
   const groups=[
-    {key:'accounts',label:'Contas',rows:resources.filter(item=>['checking','savings'].includes(item.type)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
-    {key:'cash',label:'Dinheiro',rows:resources.filter(item=>!item.institution&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
-    {key:'benefits',label:'Benefícios',rows:resources.filter(item=>!item.is_investment&&item.type==='meal_benefit')},
-    {key:'investments',label:'Investimentos e reservas',rows:resources.filter(item=>item.is_investment||item.resource_restriction==='reserve')},
+    {key:'accounts',label:'Contas',rows:safeResources.filter(item=>['checking','savings'].includes(item.type)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
+    {key:'cash',label:'Dinheiro',rows:safeResources.filter(item=>!item.institution&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
+    {key:'benefits',label:'Benefícios',rows:safeResources.filter(item=>!item.is_investment&&item.type==='meal_benefit')},
+    {key:'investments',label:'Investimentos e reservas',rows:safeResources.filter(item=>item.is_investment||item.resource_restriction==='reserve')},
   ].filter(group=>group.rows.length>0);
-  const resourceTotal=resources.reduce((sum,item)=>sum+amountOf(item),0);
-  const visibleCards=cards.filter(item=>perspective==='household'||item.member_responsibilities.some(row=>row.member_id===perspective&&row.member_responsibility_exposure>0));
+  const resourceTotal=safeResources.reduce((sum,item)=>sum+amountOf(item),0);
+  const visibleCards=safeCards.filter(item=>perspective==='household'||item.member_responsibilities.some(row=>row.member_id===perspective&&row.member_responsibility_exposure>0));
   const cardTotals=visibleCards.reduce((totals,card)=>{
     const responsibility=perspective==='household'?null:card.member_responsibilities.find(row=>row.member_id===perspective);
     totals.current+=perspective==='household'?Number(card.current_invoice_remaining):Number(responsibility?.member_current_invoice_responsibility??0);
@@ -117,7 +129,7 @@ export function HomeFinancialMap({
         {perspective!=='household'&&<p className="mt-0.5 text-[11px] text-slate-500">Recursos e cartões nesta perspectiva</p>}
       </div>
     </div>
-    <details open className="group rounded-[1.6rem] border border-slate-800 bg-slate-900/45">
+    <HomeFinancialMapSectionBoundary label="Contas"><details open className="group rounded-[1.6rem] border border-slate-800 bg-slate-900/45">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300"><WalletCards className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Contas</p><p className="text-[11px] text-slate-500">{resources.length} {resources.length===1?'recurso acompanhado':'recursos acompanhados'}</p></div></div>
         <div className="flex items-center gap-2"><strong className="text-sm">{money(resourceTotal)}</strong><ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/></div>
@@ -125,7 +137,7 @@ export function HomeFinancialMap({
       <div className="space-y-2 border-t border-slate-800/80 p-3">
         {groups.map(group=>{const total=group.rows.reduce((sum,item)=>sum+amountOf(item),0);return <details key={group.key} className="group/sub rounded-2xl bg-slate-950/35">
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5"><div><p className="text-sm font-bold text-slate-300">{group.label}</p><p className="text-[10px] text-slate-600">{group.rows.length} {group.rows.length===1?'item':'itens'}</p></div><div className="flex items-center gap-2"><strong className="text-sm text-slate-200">{money(total)}</strong><ChevronRight className="h-3.5 w-3.5 text-slate-600 transition-transform group-open/sub:rotate-90"/></div></summary>
-          <div className="grid grid-cols-2 gap-2 border-t border-slate-800/70 p-2 sm:grid-cols-3">{group.rows.sort((a,b)=>amountOf(b)-amountOf(a)).map(item=><ResourceActionRow key={item.account_id} resource={{
+          <div className="grid grid-cols-2 gap-2 border-t border-slate-800/70 p-2 sm:grid-cols-3">{[...group.rows].sort((a,b)=>amountOf(b)-amountOf(a)).map(item=><ResourceActionRow key={item.account_id} resource={{
             accountId:item.account_id,
             name:item.name,
             type:item.type,
@@ -139,9 +151,9 @@ export function HomeFinancialMap({
           }} onAction={onResourceAction}/>)}</div>
         </details>})}
       </div>
-    </details>
+    </details></HomeFinancialMapSectionBoundary>
 
-    <details className="group rounded-[1.6rem] border border-violet-900/45 bg-violet-950/10">
+    <HomeFinancialMapSectionBoundary label="Cartões"><details className="group rounded-[1.6rem] border border-violet-900/45 bg-violet-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300"><CreditCard className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Cartões</p><p className="text-[11px] text-slate-500">{visibleCards.length} {visibleCards.length===1?'cartão acompanhado':'cartões acompanhados'}</p></div></div>
         <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/>
@@ -168,17 +180,17 @@ export function HomeFinancialMap({
           </button>})}
         </>}
       </div>
-    </details>
+    </details></HomeFinancialMapSectionBoundary>
 
-    {perspective==='household'&&householdId&&<ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>}
+    {perspective==='household'&&householdId&&<HomeFinancialMapSectionBoundary label="Responsabilidades de terceiros"><ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/></HomeFinancialMapSectionBoundary>}
 
-    <details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
+    <HomeFinancialMapSectionBoundary label="Outras pessoas"><details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Outras pessoas</p><p className="text-[11px] text-slate-500">Valores a receber ou pagar fora da Casa</p></div></div>
         <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/>
       </summary>
       <div className="border-t border-cyan-900/30 p-3"><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeMembers={false}/></div>
-    </details>
+    </details></HomeFinancialMapSectionBoundary>
   </section>;
 }
 
