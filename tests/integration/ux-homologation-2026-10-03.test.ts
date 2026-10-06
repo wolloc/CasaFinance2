@@ -27,7 +27,7 @@ test('installment position comes from the commitment installment, not the purcha
 test('expense responsibility correction is a focused commitment editor',()=>{
   assert.match(role,/Quem fica com este compromisso\?/);
   assert.match(role,/Dividir entre vocês/);
-  assert.match(role,/Quem comprou e quem pagou continuam iguais/);
+  assert.match(role,/Quem comprou e quem pagou permanecem iguais/);
   assert.match(role,/correctExpenseRoles/);
   assert.doesNotMatch(role,/Quem realmente comprou\?/);
   assert.doesNotMatch(role,/Motivo da correção/);
