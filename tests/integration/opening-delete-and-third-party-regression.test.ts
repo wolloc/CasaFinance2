@@ -12,7 +12,8 @@ test('responsabilidade de terceiro é validada pelas alocações econômicas',()
   assert.match(migration,/economic_allocations/);
   assert.match(migration,/transaction % economic allocations must total 100%/);
   assert.match(migration,/member_allocation_total/);
-  assert.match(migration,/responsible_party_id/);
+  assert.match(migration,/economic_allocations/);
+  assert.match(migration,/responsible_member_id/);
 });
 
 test('exclusão da posição inicial recalcula faturas e cancela parcelas históricas',()=>{
