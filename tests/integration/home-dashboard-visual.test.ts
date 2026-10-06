@@ -6,6 +6,7 @@ const home = await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx
 const statement = await readFile(new URL('../../src/components/app/MonthlyPositionStatement.tsx', import.meta.url), 'utf8');
 const settlements = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
+const financialMap = await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida',()=>{
   assert.match(home,/MonthlyPositionStatement/);
@@ -37,4 +38,15 @@ test('Home mantém a análise por categorias em Gastos e Entradas',()=>{
 test('Home não transforma planejamento futuro normal em alerta automaticamente',()=>{
   assert.match(projectionReview,/action_label/);
   assert.doesNotMatch(projectionReview,/Atualizar previsões/);
+});
+
+
+test('Mapa financeiro isola falhas entre blocos independentes',()=>{
+  // Contrato de resiliência: uma falha local não deve derrubar os demais blocos.
+  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
+  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
+  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Outras pessoas"/);
+  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Responsabilidades de terceiros"/);
+  assert.match(financialMap,/const safeResources=Array\.isArray\(resources\)\?resources:\[\]/);
+  assert.match(financialMap,/const safeCards=Array\.isArray\(cards\)\?cards:\[\]/);
 });
