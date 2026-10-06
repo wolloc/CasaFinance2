@@ -21,8 +21,7 @@ test('Casa apresenta responsabilidades atribuídas a terceiros',()=>{
   assert.match(home,/financial_parties!inner/);
 });
 
-test('ação de exclusão histórica é explícita',()=>{
-  assert.match(setup,/Excluir da posição inicial/);
-  assert.match(setup,/Compra anterior ao início do controle/);
+test('fluxo atual de exclusão e cancelamento é explícito',()=>{
+  assert.match(setup,/Excluir lançamento/);
   assert.match(setup,/Nenhum estorno será criado/);
 });
