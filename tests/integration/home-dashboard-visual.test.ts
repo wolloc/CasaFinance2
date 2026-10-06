@@ -42,6 +42,7 @@ test('Home não transforma planejamento futuro normal em alerta automaticamente'
 
 
 test('Mapa financeiro isola falhas entre blocos independentes',()=>{
+  // Contrato de resiliência: uma falha local não deve derrubar os demais blocos.
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Outras pessoas"/);
