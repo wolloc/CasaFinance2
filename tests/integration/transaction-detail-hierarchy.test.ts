@@ -19,13 +19,13 @@ test('destructive or exceptional actions stay secondary in contextual details',(
  assert.match(expenseSetup,/Cancelar gasto/);
  assert.match(expenseSetup,/Registrar estorno/);
  assert.match(transactions,/Ações especiais/);
- assert.match(transactions,/Pagamento por terceiro, devoluções e correção de comprador\/responsabilidade/);
+ assert.match(transactions,/Devolução no cartão|Devolução após pagamento|Outra pessoa pagou/);
 });
 
 test('everyday actions remain immediately available',()=>{
  assert.match(income,/>Corrigir</);
  assert.match(income,/>Histórico</);
- assert.match(expenseSetup,/>Corrigir</);
+ assert.match(expenseSetup,/>Editar lançamento</);
  assert.match(expenseSetup,/>Histórico</);
- assert.match(transactions,/Gerenciar esta recorrência/);
+ assert.match(transactions,/\{detailRecurringOpen\?'Fechar':'Gerenciar'\}/);
 });

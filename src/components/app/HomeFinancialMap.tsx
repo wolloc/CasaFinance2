@@ -64,6 +64,7 @@ function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId
 }
 
 class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:boolean}>{
+ declare readonly props: Readonly<{children:ReactNode}>;
  state={hasError:false};
  static getDerivedStateFromError(){return {hasError:true};}
  componentDidCatch(error:unknown){console.error('Casa Finance: falha na visualização Onde está nosso dinheiro?',error);}

@@ -369,7 +369,7 @@ function assertExpensePeriod(startDate:string,endDate:string){
 
 export async function listFinancialPeriodExpenses(client:SupabaseClient,householdId:string,startDate:string,endDate:string,memberId?:string){
   assertExpensePeriod(startDate,endDate);
-  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'|'buyer_member_id'|'instrument_kind'|'instrument_label'>>((from,to)=>
+  const baseRows=await collectPages<Omit<FinancialMonthExpense,'household_effective_amount'|'original_amount'|'recurring_rule_id'|'category'|'responsibility'|'buyer_member_id'|'instrument_kind'|'instrument_label'|'installment_number'|'total_installments'>>((from,to)=>
     client.from('financial_commitment_positions')
       .select('commitment_key,source_type,source_transaction_id,source_installment_id,source_invoice_id,financial_date,financial_month,due_date,economic_date,effective_amount,realized_amount,remaining_amount,economic_state,commitment_state,description,category_id')
       .eq('household_id',householdId)
