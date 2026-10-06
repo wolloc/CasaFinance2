@@ -17,7 +17,7 @@ test('posição inicial de cartão permite categoria, divisão e lote atômico',
   assert.match(modal, /Adicionar lançamento/);
   assert.match(modal, /Mantém o contexto do último lançamento/);
   assert.match(modal, /originalPurchaseDate: ''/);
-  assert.match(modal, /Salvar \\{queued\\.length\\}/);
+  assert.match(modal, /Salvar \$\{queued\\.length\\}/);
   assert.match(modal, /recordOpeningCardPurchasesBatch/);
 
   assert.match(service, /recordOpeningCardPurchasesBatch/);
