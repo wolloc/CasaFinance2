@@ -6,6 +6,7 @@ const home = await readFile(new URL('../../src/components/app/CasaHomeScreen.tsx
 const statement = await readFile(new URL('../../src/components/app/MonthlyPositionStatement.tsx', import.meta.url), 'utf8');
 const settlements = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
+const financialMap = await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx', import.meta.url), 'utf8');
 
 test('Home traduz a posição financeira em leitura rápida',()=>{
   assert.match(home,/MonthlyPositionStatement/);
