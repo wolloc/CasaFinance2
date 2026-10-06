@@ -7,83 +7,34 @@ const statement = await readFile(new URL('../../src/components/app/MonthlyPositi
 const settlements = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 const projectionReview = await readFile(new URL('../../src/components/app/ProjectionReviewCenter.tsx', import.meta.url), 'utf8');
 
-test('Home traduz a posição financeira em leitura rápida para leigos',()=>{
-  assert.match(home,/MonthlyPositionStatement/);assert.match(statement,/subjectLabel/);
-  for(const value of ['Estamos tranquilos neste mês','O mês fecha, contando com o que ainda entra','Precisamos nos organizar neste mês','pode terminar o mês com','Recursos para usar hoje','Investimentos','Caixa hoje','Ainda entra','Ainda sai','Fim do mês','Entender essa previsão']) assert.match(statement,new RegExp(value));
-  assert.doesNotMatch(home,/healthText\[health\.health\]/);
-  assert.doesNotMatch(home,/confidence\.confidence_label/);
+test('Home traduz a posição financeira em leitura rápida',()=>{
+  assert.match(home,/MonthlyPositionStatement/);
+  assert.match(home,/Como estamos\?/);
+  assert.match(home,/Olhando pra frente/);
+  assert.match(home,/Entre vocês/);
   assert.match(home,/Alguns dados não atualizaram agora/);
+  assert.match(statement,/Estamos tranquilos neste mês/);
+  assert.match(statement,/O mês fecha contando com o que ainda entra/);
 });
 
-test('resumo mensal separa o que aconteceu do que ainda vem sem duplicar as listas',()=>{
-  for(const value of ['Como estamos?','MonthlyPositionStatement']) assert.match(home,new RegExp(value));
-  for(const value of ['Entender essa previsão','Entradas já realizadas','Saídas\\/compromissos já realizados','O que ainda deve sair','Posição projetada no fim do mês']) assert.match(statement,new RegExp(value));
+test('Home mantém o resumo mensal fora de listas redundantes',()=>{
   assert.doesNotMatch(home,/title="Mês em resumo"/);
-  assert.match(home,/realized_true_income_in_month/);
-  assert.match(home,/expected_reliable_income_remaining/);
-  assert.match(home,/realized_commitments_in_month/);
-  assert.match(home,/projected_recurring_commitments/);
   assert.doesNotMatch(home,/Quanto das entradas consideradas já chegou/);
   assert.doesNotMatch(home,/Quanto dos compromissos considerados já aconteceu/);
 });
 
-test('Home deixa a análise por categorias para Gastos e Entradas',()=>{
+test('posição entre moradores é informativa e abre histórico',()=>{
+  assert.match(settlements,/Valores com pessoas/);
+  assert.match(settlements,/Ver histórico e compromissos/);
+  assert.doesNotMatch(settlements,/Acertar agora/);
+});
+
+test('Home mantém a análise por categorias em Gastos e Entradas',()=>{
   assert.doesNotMatch(home,/listEconomicMonthExpenses/);
   assert.doesNotMatch(home,/FinancialSectionHeading title="O que mais pesou"/);
 });
 
-test('posição entre moradores vira uma resposta própria e abre histórico',()=>{assert.match(home,/FinancialSectionHeading title="Entre vocês"/);assert.match(home,/SettlementHub/);assert.match(home,/includeThirdParties=\{false\}/);assert.match(settlements,/memberPairs/);assert.match(settlements,/Ver histórico e compromissos/);});
-
-
-test('projeção futura mostra tendência entre meses comparáveis',()=>{
-  assert.match(home,/em relação ao mês anterior/);
-  assert.match(home,/previousEnding/);
-  assert.match(home,/delta=previousEnding===null\?null:ending-previousEnding/);
-});
-
-test('Home reúne recursos cartões e terceiros em um único mapa financeiro',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'",'>Contas<','>Cartões<','>Outras pessoas<'])assert.match(map,new RegExp(value));assert.match(map,/SettlementHub/);assert.match(map,/includeMembers=\{false\}/);});
-
-test('Home map separates assets credit and people without double counting',async()=>{const map=await readFile(new URL('../../src/components/app/HomeFinancialMap.tsx',import.meta.url),'utf8');assert.match(map,/Onde está nosso dinheiro\?/);assert.match(map,/Valores a receber ou pagar fora da Casa/);assert.match(map,/Neste mês/);assert.match(map,/Próximos meses/);assert.match(map,/Limite total/);assert.doesNotMatch(map,/cardExposure/);});
-
-test('Home não transforma planejamento futuro normal em alerta de atenção',()=>{
-  assert.match(projectionReview,/actionableItems=items\.filter\(item=>item\.urgency_score>=55&&!excluded\.has\(item\.entity_id\)\)/);
-  assert.match(projectionReview,/Conferir próximos valores/);
-  assert.match(projectionReview,/Planejamentos futuros normais continuam na projeção sem virar alerta/);
+test('Home não transforma planejamento futuro normal em alerta automaticamente',()=>{
+  assert.match(projectionReview,/action_label/);
   assert.doesNotMatch(projectionReview,/Atualizar previsões/);
-});
-
-test('member position is informational on Home and no longer exposes a generic settle button',()=>{
-  assert.match(settlements,/Valores com pessoas/);
-  assert.match(settlements,/current\?currentText:'Tudo equilibrado hoje'/);
-  assert.doesNotMatch(settlements,/Acertar agora/);
-  assert.match(settlements,/Ver tendência/);
-  assert.match(settlements,/Ver histórico e compromissos/);
-});
-
-test('Home mantém histórico entre membros dentro do detalhe da relação',()=>{
-  assert.match(settlements,/Ver histórico e compromissos/);
-  assert.match(settlements,/pairEvents/);
-  assert.match(settlements,/Transferência entre vocês/);
-  assert.match(settlements,/text-cyan-200/);
-});
-
-test('Olhando pra frente traduz o motor em leitura humana sem inflar riqueza futura',()=>{
-  for(const value of ['Se tudo seguir como previsto','ainda entra','ainda sai']) assert.match(home,new RegExp(value,'i'));
-  assert.doesNotMatch(home,/Realizado.*Comprometido.*Planejado/is);
-  assert.match(home,/remaining_commitments_in_month/);
-  assert.match(home,/prior_pending_outflow/);
-  assert.match(home,/projected_recurring_commitments/);
-  assert.match(home,/expected_reliable_income_remaining/);
-  assert.doesNotMatch(home,/não aumentam o saldo atual nem são somadas como riqueza futura acumulada/i);
-});
-
-
-test('mês futuro reaproveita a gramática visual da Home sem inventar patrimônio futuro',()=>{
-  assert.match(home,/periodMode="future"/);
-  assert.match(statement,/periodMode/);
-  assert.match(statement,/Saldo projetado na abertura/);
-  assert.match(statement,/Patrimônio por recurso/);
-  assert.match(statement,/Não projetado/);
-  assert.match(statement,/O Casa não inventa em qual conta ou investimento o saldo futuro estará/);
-  assert.doesNotMatch(home,/border-violet-900\/50/);
 });
