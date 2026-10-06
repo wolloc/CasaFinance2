@@ -43,7 +43,7 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 
 test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
  assert.match(home,/MonthlyPositionStatement/);
- assert.match(statement,/Entender essa previsão/);
+ assert.match(statement,/Fim do mês/);
  assert.match(statement,/Recursos para usar hoje/);
  assert.match(statement,/Benefícios/);
  assert.match(statement,/Investimentos/);
