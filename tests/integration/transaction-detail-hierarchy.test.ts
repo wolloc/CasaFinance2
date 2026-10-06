@@ -19,7 +19,7 @@ test('destructive or exceptional actions stay secondary in contextual details',(
  assert.match(expenseSetup,/Cancelar gasto/);
  assert.match(expenseSetup,/Registrar estorno/);
  assert.match(transactions,/Ações especiais/);
- assert.match(transactions,/Pagamento por terceiro, devoluções e correção de comprador\/responsabilidade/);
+ assert.match(transactions,/Devolução no cartão|Devolução após pagamento|Outra pessoa pagou/);
 });
 
 test('everyday actions remain immediately available',()=>{
