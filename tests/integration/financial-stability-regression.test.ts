@@ -10,7 +10,7 @@ const invoice=fs.readFileSync(path.join(root,'src/finance/financialInvoices.ts')
 
 test('fatura tem fallback seguro para a posição materializada',()=>{
   assert.match(journey,/financial_card_invoice_positions/);
-  assert.match(journey,/.neq('state', 'cancelled')/);
+  assert.match(journey,/\.neq\(['"]state['"], ['"]cancelled['"]\)/);
   assert.match(journey,/card_name/);
 });
 
