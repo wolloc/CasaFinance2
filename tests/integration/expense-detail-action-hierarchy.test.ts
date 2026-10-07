@@ -6,8 +6,8 @@ const screen=await readFile(new URL('../../src/components/app/TransactionsScreen
 const role=await readFile(new URL('../../src/components/app/ExpenseRoleCorrectionAction.tsx',import.meta.url),'utf8');
 
 test('detalhe do gasto prioriza lançamento e ações antes da responsabilidade',()=>{
-  assert.match(screen,/Lançamento e ações/);
-  assert.match(screen,/Editar · categoria · histórico · exclusão/);
+  assert.match(screen,/Detalhe do gasto/);
+  assert.match(screen,/HouseholdTransactionsSetup embedded mode="expense"/);
   assert.match(screen,/ExpenseRoleCorrectionAction initialTransactionId=\{detailTransactionId\} onCompleted=/);
   assert.match(role,/defaultOpen=false/);
   assert.match(role,/Quem fica com este compromisso\?/);
