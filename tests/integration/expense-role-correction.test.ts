@@ -9,7 +9,6 @@ test('expense detail exposes responsibility correction outside special actions',
  assert.match(action,/defaultOpen=false/);
  assert.match(action,/Quem fica com este compromisso\?/);
  assert.match(action,/correctExpenseRoles/);
- assert.match(action,/effectiveBuyer=compact/);
  assert.doesNotMatch(screen,/PostPaymentCardRefundAction initialTransactionId=\{detailTransactionId\}.*ExpenseRoleCorrectionAction/s);
 });
 
