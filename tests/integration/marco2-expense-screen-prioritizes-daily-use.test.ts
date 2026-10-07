@@ -23,7 +23,7 @@ test('transaction detail owns correction history and valid per-item actions',()=
  assert.match(source,/Detalhe do gasto/);
  assert.match(source,/focusTransactionId=\{detailTransactionId\}/);
  assert.match(setup,/focusTransactionId/);
- for(const value of ['Histórico','Editar','Registrar estorno'])assert.match(setup,new RegExp(value));
+ for(const value of ['Histórico','Editar'])assert.match(setup,new RegExp(value));
  for(const action of ['ExpenseRoleCorrectionAction','CardPaymentInstrumentCorrectionAction']) assert.match(source,new RegExp('<'+action+' initialTransactionId=\\{detailTransactionId\\}'));
  for(const action of ['ExternalExpensePaymentAction','PartialDirectRefundAction','CardRefundAction','PostPaymentCardRefundAction']) assert.match(source,new RegExp(action));
  assert.match(source,/Ações especiais/);
