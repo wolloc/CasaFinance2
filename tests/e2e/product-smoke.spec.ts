@@ -157,6 +157,8 @@ test('Golden Journey visual abre Nova Entrada e preserva linguagem humana e reso
   await installSupabaseMock(page);
   await login(page);
 
+  await page.getByRole('button', { name: 'Entradas' }).click();
+  await expect(page.getByRole('heading', { name: 'Entradas' })).toBeVisible();
   await page.getByRole('button', { name: 'Nova entrada' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nova entrada' });
   await expect(dialog).toBeVisible();
@@ -179,7 +181,9 @@ test('Golden Journey visual abre Nova Despesa em duas etapas e mostra recursos r
   await installSupabaseMock(page);
   await login(page);
 
-  await page.getByRole('button', { name: 'Nova despesa' }).click();
+  await page.getByRole('button', { name: 'Gastos' }).click();
+  await expect(page.getByRole('heading', { name: 'Gastos' })).toBeVisible();
+  await page.getByRole('button', { name: 'Novo gasto' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nova despesa' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('Quem fez esse gasto?')).toBeVisible();
