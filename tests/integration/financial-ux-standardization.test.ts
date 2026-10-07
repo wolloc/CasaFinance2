@@ -10,7 +10,7 @@ const transactions=fs.readFileSync(path.join(root,'src/components/app/Transactio
 
 test('Casa classifica contas pela natureza do recurso',()=>{
   assert.match(home,/\['checking','savings'\]\.includes\(item\.type\)/);
-  assert.match(home,/\['cash','digital_wallet'\]\.includes\(item\.type\)/);
+  assert.match(home,/!item\.institution/);
 });
 
 test('Gastos prioriza a parte do membro e mantém o valor original discreto',()=>{
