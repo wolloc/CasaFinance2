@@ -43,7 +43,7 @@ declare
   caller public.household_members;
   tx public.transactions;
   inv public.card_invoices;
-  card_id uuid;
+  v_card_id uuid;
   plan_id uuid;
   target_installment public.installments;
   existing public.card_refund_events;
@@ -76,16 +76,16 @@ begin
   if tx.id is null or tx.economic_state not in ('realized','reversed') or tx.status in ('cancelled')
   then raise exception 'realized card expense required' using errcode='23514'; end if;
 
-  select pi.card_id into card_id
+  select pi.card_id into v_card_id
   from public.transaction_payment_instruments pi
   where pi.household_id=p_household_id and pi.transaction_id=tx.id and pi.kind='card';
-  if card_id is null then raise exception 'card expense required' using errcode='0A000'; end if;
+  if v_card_id is null then raise exception 'card expense required' using errcode='0A000'; end if;
   if exists(select 1 from public.external_payment_events e where e.household_id=p_household_id and e.source_transaction_id=tx.id)
      or exists(select 1 from public.financial_obligations o where o.household_id=p_household_id and o.source_transaction_id=tx.id)
   then raise exception 'external payer or obligation refund requires a dedicated route' using errcode='0A000'; end if;
 
   select ci.* into inv from public.card_invoices ci
-  where ci.id=p_target_invoice_id and ci.household_id=p_household_id and ci.card_id=card_id and ci.deleted_at is null
+  where ci.id=p_target_invoice_id and ci.household_id=p_household_id and ci.card_id=v_card_id and ci.deleted_at is null
   for update;
   if inv.id is null or inv.status in ('paid','cancelled') then raise exception 'active target invoice required' using errcode='23514'; end if;
   invoice_outstanding:=greatest(inv.total_amount-inv.settled_amount-inv.financed_balance,0);
