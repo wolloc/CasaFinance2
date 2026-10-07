@@ -31,5 +31,5 @@ test('money map has one heading and monthly summary surfaces resource categories
   assert.match(home,/HomeFinancialMap/);
   assert.match(casa,/>Benefícios</);
   assert.match(home,/label:'Investimentos e reservas'/);
-  assert.match(casa,/>Contas</);
+  assert.match(home,/label:'Contas'/);
 });
