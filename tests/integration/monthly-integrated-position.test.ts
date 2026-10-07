@@ -27,7 +27,7 @@ test('monthly statement keeps liquidity coverage separate from reserves and inve
     'Precisamos nos organizar neste mês',
     'A projeção combina o que já aconteceu com os compromissos ainda previstos',
   ]) assert.match(statement,new RegExp(copy.replace(/[?]/g,'\\?')));
-  assert.match(statement,/reserva \+ investimentos/i);
+  assert.match(statement,/reserva e investimentos/i);
   assert.match(engine,/Investimentos e reservas[\s\S]*classes patrimoniais separadas do caixa transacional/);
 });
 
