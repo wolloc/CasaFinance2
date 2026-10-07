@@ -84,8 +84,8 @@ begin
      or exists(select 1 from public.financial_obligations o where o.household_id=p_household_id and o.source_transaction_id=tx.id)
   then raise exception 'external payer or obligation refund requires a dedicated route' using errcode='0A000'; end if;
 
-  select * into inv from public.card_invoices
-  where id=p_target_invoice_id and household_id=p_household_id and card_id=card_id and deleted_at is null
+  select ci.* into inv from public.card_invoices ci
+  where ci.id=p_target_invoice_id and ci.household_id=p_household_id and ci.card_id=card_id and ci.deleted_at is null
   for update;
   if inv.id is null or inv.status in ('paid','cancelled') then raise exception 'active target invoice required' using errcode='23514'; end if;
   invoice_outstanding:=greatest(inv.total_amount-inv.settled_amount-inv.financed_balance,0);
