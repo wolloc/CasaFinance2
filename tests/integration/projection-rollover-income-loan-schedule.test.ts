@@ -14,7 +14,7 @@ test('explicit forecast income participates in projection without becoming reali
   assert.match(migration,/coalesce\(t\.confirmed_amount,t\.estimated_amount,t\.amount\)-t\.realized_amount/);
   assert.doesNotMatch(migration,/update public\.money_movements[\s\S]*state='realized'/);
   assert.match(home,/ensureRecurringIncomeHorizon/);
-  assert.match(statement,/Entradas previstas ainda esperadas/);
+  assert.match(statement,/Ainda entra/);
 });
 
 test('canonical loan schedule replaces whole-loan payable in monthly commitments',()=>{
