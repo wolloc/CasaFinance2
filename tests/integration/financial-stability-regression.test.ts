@@ -15,7 +15,7 @@ test('fatura tem fallback seguro para a posição materializada',()=>{
 });
 
 test('responsabilidade oferece terceiro como opção explícita',()=>{
-  assert.match(role,/setPreset\(mode:'single'\|'equal'\|'thirdParty'/);
+  assert.match(role,/setPreset\(mode:'single'\|['"]equal['"]\|['"]thirdParty['"]/);
   assert.match(role,/100% de um terceiro/);
   assert.match(role,/Adicionar terceiro/);
 });
