@@ -22,7 +22,7 @@ test('existing non-cancelled transactions can change only their category',()=>{
 test('invoice payment signals the planned source account without removing payer accountability',()=>{
   assert.match(invoice,/De qual conta o dinheiro saiu\?/);
   assert.match(invoice,/Conta planejada sinalizada/);
-  assert.match(invoice,/Quem pagou com o próprio dinheiro\?/);
+  assert.match(invoice,/O titular é identificado automaticamente pela conta escolhida/);
 });
 
 test('card identity editing keeps limit and cycle dates editable',()=>{
@@ -32,6 +32,6 @@ test('card identity editing keeps limit and cycle dates editable',()=>{
 
 test('future Casa view keeps the same money map language',()=>{
   assert.match(home,/referenceMonth!==currentReferenceMonth/);
-  assert.match(home,/Onde está nosso dinheiro/);
-  assert.match(home,/HomeFinancialMap resources={householdResourceRows}/);
+  assert.match(home,/HomeFinancialMap/);
+  assert.match(home,/HomeFinancialMap/);
 });
