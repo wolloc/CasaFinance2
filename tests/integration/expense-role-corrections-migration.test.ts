@@ -27,7 +27,9 @@ test('responsibility remains independent and totals one hundred percent',()=>{
   assert.match(sql,/reconcile_member_settlements\(tx\.id\)/);
 });
 
-test('unsafe third party corrections are blocked instead of inferred',()=>{
-  assert.match(sql,/third-party responsibility requires a dedicated correction route/);
-  assert.match(sql,/responsible_party_id is not null/);
+test('third-party responsibility is validated explicitly when present',()=>{
+  assert.match(sql,/responsible_party_id/);
+  assert.match(sql,/financial_parties/);
+  assert.match(sql,/invalid responsible third party/);
+  assert.match(sql,/each responsibility item must contain exactly one active member or third party/);
 });
