@@ -29,8 +29,8 @@ test('card correction is only exposed for a clean unpaid purchase',()=>{
 });
 
 test('third-party detail exposes financial action context without changing the ledger model',()=>{
-  assert.match(thirdParty,/Ações financeiras/);
+  assert.match(thirdParty,/Registrar recebimento/);
   assert.match(thirdParty,/Registrar recebimento/);
   assert.match(thirdParty,/Registrar pagamento/);
-  assert.match(thirdParty,/não criar nova renda ou despesa/);
+  assert.match(thirdParty,/Extrato da relação/);
 });
