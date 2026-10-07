@@ -164,10 +164,10 @@ begin
   );
 
   insert into public.transaction_adjustment_events(
-    household_id,source_transaction_id,kind,amount,before_payload,after_payload,
+    household_id,source_transaction_id,kind,before_payload,after_payload,
     reason,request_key,created_by_member_id
   ) values (
-    p_household_id,tx.id,'correction',tx.amount,before_payload,after_payload,
+    p_household_id,tx.id,'correction',before_payload,after_payload,
     trim(p_reason),trim(p_request_key),caller.id
   ) returning id into result;
 
