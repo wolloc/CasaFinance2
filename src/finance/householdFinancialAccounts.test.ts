@@ -72,7 +72,7 @@ test('opening card UX preserves detailed facts or explicitly keeps history aggre
   assert.match(openingCardModalSource, /recordOpeningCardPurchase/);
   assert.match(openingCardModalSource, /recordOpeningCardBalance/);
   assert.match(openingCardModalSource, /Quem fez a compra/);
-  assert.match(openingCardModalSource, /Quem fica responsável economicamente/);
+  assert.match(openingCardModalSource, /Só valor em aberto/);
   assert.match(openingCardModalSource, /não inventará quem comprou, categoria ou responsabilidade/);
   assert.match(openingCardModalSource, /pelo menos uma parcela em aberto/);
 });
