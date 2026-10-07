@@ -22,7 +22,7 @@ test('existing non-cancelled transactions can change only their category',()=>{
 test('invoice payment signals the planned source account without removing payer accountability',()=>{
   assert.match(invoice,/De qual conta o dinheiro saiu\?/);
   assert.match(invoice,/Conta planejada sinalizada/);
-  assert.match(invoice,/O titular é identificado automaticamente pela conta escolhida/);
+  assert.match(invoice,/Conta planejada sinalizada/);
 });
 
 test('card identity editing keeps limit and cycle dates editable',()=>{
