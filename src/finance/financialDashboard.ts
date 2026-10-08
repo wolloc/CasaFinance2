@@ -13,6 +13,7 @@ export type CardHealthPosition = { card_id:string; card_name:string; credit_limi
 export type MemberSettlementPosition = { debtor_member_id:string; creditor_member_id:string; realized_outstanding:number; projected_outstanding:number; scheduled_settlement_amount:number; net_position:number; };
 export type ResourceSummary = { availableCash:number; benefits:number; reserves:number; investments:number; };
 export type AccountMonthlyProjection = { account_id:string; name:string; type:string; current_balance:number; realized_income:number; expected_income:number; realized_outflow:number; projected_outflow:number; projected_ending_balance:number; };
+export type ThirdPartyProjectedReceivable = { obligation_id:string; counterparty_id:string; counterparty_name:string|null; due_date:string|null; outstanding_amount:number; financial_month:string; };
 export type FinancialDashboardAvailability = { household:boolean; members:boolean; health:boolean; confidence:boolean; attention:boolean; projection:boolean; cards:boolean; settlements:boolean; resources:boolean; guidance:boolean; };
 export type LiquidityGuidance = { household_id:string; current_cash:number; committed_before_new_income:number; free_cash_after_commitments:number; reliable_income_remaining:number; projected_ending_cash:number; coverage_gap:number; reserve_balance:number; investment_balance:number; overdraft_used:number; guidance_state:'covered'|'covered_by_expected_income'|'needs_resource_reallocation'|'needs_funding_plan'; guidance_title:string; };
 type AccountBalanceRow = { type:string; resource_restriction:string|null; current_balance:number|string; is_restricted:boolean; is_investment:boolean; };
@@ -25,7 +26,7 @@ export async function getMemberFinancialPerspective(client:SupabaseClient,househ
 export async function listUnattributedFundingDetails(client:SupabaseClient,householdId:string,financialMonth:string):Promise<UnattributedFundingDetail[]>{const response=await client.from('financial_unattributed_funding_details').select('commitment_key,financial_month,amount,source_type,description,due_date,source_obligation_id').eq('household_id',householdId).eq('financial_month',financialMonth).order('due_date');if(response.error)throw response.error;return(response.data??[])as UnattributedFundingDetail[];}
 
 export async function getFinancialDashboard(client:SupabaseClient,householdId:string,timeZone:string=DEFAULT_HOUSEHOLD_TIMEZONE){
-  const [household,members,health,confidence,attention,projection,cards,settlements,accountBalances,guidance,accountProjections]=await Promise.all([
+  const [household,members,health,confidence,attention,projection,cards,settlements,accountBalances,guidance,accountProjections,thirdPartyReceivables]=await Promise.all([
     client.from('financial_household_position').select('*').eq('household_id',householdId).maybeSingle(),
     client.from('financial_member_positions').select('*').eq('household_id',householdId),
     client.rpc('financial_household_health_position',{p_household_id:householdId}),
@@ -37,6 +38,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     client.from('financial_account_balances').select('type,resource_restriction,current_balance,is_restricted,is_investment').eq('household_id',householdId),
     client.rpc('financial_liquidity_guidance',{p_household_id:householdId}),
     client.from('financial_account_monthly_projection').select('account_id,name,type,current_balance,realized_income,expected_income,realized_outflow,projected_outflow,projected_ending_balance').eq('household_id',householdId).order('name'),
+    client.from('financial_home_third_party_receivables').select('obligation_id,counterparty_id,counterparty_name,due_date,outstanding_amount,financial_month').eq('household_id',householdId).eq('financial_month',currentMonth(timeZone)).order('due_date'),
   ]);
 
   const availability:FinancialDashboardAvailability={
@@ -51,6 +53,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     resources:!accountBalances.error,
     guidance:!guidance.error,
     accountProjections:!accountProjections.error,
+    thirdPartyReceivables:!thirdPartyReceivables.error,
   };
 
   if(!Object.values(availability).some(Boolean)){
@@ -69,6 +72,7 @@ export async function getFinancialDashboard(client:SupabaseClient,householdId:st
     resources:availability.resources?summarizeResources((accountBalances.data??[])as AccountBalanceRow[]):null,
     guidance:availability.guidance?((guidance.data??[])[0]??null)as LiquidityGuidance|null:null,
     accountProjections:availability.accountProjections?(accountProjections.data??[])as AccountMonthlyProjection[]:[],
+    thirdPartyReceivables:availability.thirdPartyReceivables?(thirdPartyReceivables.data??[])as ThirdPartyProjectedReceivable[]:[],
     availability,
   };
 }
