@@ -47,12 +47,13 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const[referenceMemberProjection,setReferenceMemberProjection]=useState<MemberMonthlyProjection[]>([]);
  const[referenceLoading,setReferenceLoading]=useState(false);
  const[referenceError,setReferenceError]=useState(false);
+ const[monthOpeningCash,setMonthOpeningCash]=useState<number|null>(null);
  const[attentionRefreshKey,setAttentionRefreshKey]=useState(0);
  const currentReferenceMonth=household?normalizeReferenceMonth(dateInTimeZone(household.timezone)):'';
 
  useEffect(()=>{if(!household)return;setReferenceMonth(normalizeReferenceMonth(dateInTimeZone(household.timezone)));setPeriodPickerOpen(false);},[household?.id,household?.timezone,attentionRefreshKey,refreshKey]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household||!referenceMonth){setReferenceContext(null);setReferenceProjection([]);setReferenceMemberProjection([]);return()=>{cancelled=true;};}setReferenceLoading(true);setReferenceError(false);setReferenceProjection([]);setReferenceMemberProjection([]);const load=async()=>{try{const context=await getReferenceMonthContext(supabase,household.id,referenceMonth);if(cancelled)return;setReferenceContext(context);if(context.period_kind==='future'){const [householdRows,memberRows]=await Promise.all([getHouseholdReferenceProjection(supabase,household.id,referenceMonth),perspective==='household'?Promise.resolve([]):getMemberReferenceProjection(supabase,household.id,perspective,referenceMonth)]);if(cancelled)return;setReferenceProjection(householdRows);setReferenceMemberProjection(memberRows);}}catch{if(!cancelled){setReferenceContext(null);setReferenceError(true);}}finally{if(!cancelled)setReferenceLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,referenceMonth,perspective,attentionRefreshKey,refreshKey]);
- useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);const load=async()=>{try{const projectionHorizon=recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone));try{await ensureRecurringExpenseHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}try{await ensureRecurringIncomeHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de entradas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled)setDashboard(nextDashboard);}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone,refreshKey]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);setMonthOpeningCash(null);const load=async()=>{try{const projectionHorizon=recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone));try{await ensureRecurringExpenseHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}try{await ensureRecurringIncomeHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de entradas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled){setDashboard(nextDashboard);const monthStart=normalizeReferenceMonth(dateInTimeZone(household.timezone));const previousDay=new Date(`${monthStart}T12:00:00Z`);previousDay.setUTCDate(previousDay.getUTCDate()-1);const openingResponse=await supabase.rpc('financial_available_cash_at_date',{p_household_id:household.id,p_as_of_date:previousDay.toISOString().slice(0,10)});setMonthOpeningCash(openingResponse.error?null:Number(openingResponse.data));}}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone,refreshKey]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household){setHouseholdResourceRows([]);return()=>{cancelled=true;};}listHouseholdResourcePositions(supabase,household.id).then(rows=>{if(!cancelled)setHouseholdResourceRows(rows);}).catch(()=>{if(!cancelled)setHouseholdResourceRows([]);});return()=>{cancelled=true;};},[household?.id,attentionRefreshKey,refreshKey]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'||!referenceMonth||referenceMonth!==currentReferenceMonth){setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);Promise.all([getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone),listCardOverviews(supabase,household.id),listMemberResourcePositions(supabase,household.id,perspective),listUnattributedFundingDetails(supabase,household.id,currentReferenceMonth)]).then(([rows,cardRows,resourceRows,detailRows])=>{if(cancelled)return;setMemberProjection(rows);setMemberCards(cardRows);setMemberResources(resourceRows);setUnattributedDetails(detailRows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective,referenceMonth,currentReferenceMonth,attentionRefreshKey,refreshKey]);
 
@@ -61,8 +62,9 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  if(error||!dashboard)return <p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-sm text-rose-200">Não foi possível carregar nenhuma fonte da posição financeira. Nenhum valor foi substituído por zero.</p>;
 
  const selectedMember=householdMembers.find(m=>m.id===perspective)??null;
- const{household:position,health,attention,projection,cards,settlements,resources,guidance,availability}=dashboard;
+ const{household:position,health,attention,projection,cards,settlements,resources,guidance,accountProjections,thirdPartyReceivables,availability}=dashboard;
  const currentMonth=availability.projection?projection[0]:undefined;
+ const thirdPartyProjected=thirdPartyReceivables.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
  const currentCash=health?.current_cash!=null?Number(health.current_cash):resources?resources.availableCash:null;
  const gap=guidance?Number(guidance.coverage_gap):null;
  const hasPartialFailure=Object.values(availability).some(value=>!value);
@@ -189,15 +191,16 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
    <FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/>
    <div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
     {!availability.projection||!currentMonth?<p className="text-sm text-slate-400">Ainda não há resumo financeiro confirmado para este mês.</p>:<MonthlyPositionStatement
-     opening={Number(currentMonth.opening_cash)}
+     opening={monthOpeningCash??Number(currentMonth.opening_cash)}
      realizedIncome={Number(currentMonth.realized_true_income_in_month)}
      expectedIncome={Number(currentMonth.expected_reliable_income_remaining)}
      realizedOutflow={Number(currentMonth.realized_commitments_in_month)}
      remainingOutflow={Number(currentMonth.remaining_commitments_in_month)+Number(currentMonth.projected_recurring_commitments)+Number(currentMonth.prior_pending_outflow)}
-     ending={Number(currentMonth.projected_ending_cash)}
+     ending={Number(currentMonth.projected_ending_cash)+thirdPartyProjected}
      currentAvailable={currentCash}
-     coverageState={guidance?.guidance_state}
+     coverageState={guidance&&Number(currentMonth.projected_ending_cash)+thirdPartyProjected>=0&&guidance.guidance_state==='needs_funding_plan'?'covered_by_expected_income':guidance?.guidance_state}
      coverageGap={gap??0}
+     thirdPartyExpectedInflow={thirdPartyProjected}
      reserveAndInvestments={guidance?Number(guidance.reserve_balance)+Number(guidance.investment_balance):0}
      benefitBalance={resources?.benefits??0}
      investmentBalance={resources?.investments??0}
