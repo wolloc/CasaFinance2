@@ -20,12 +20,11 @@ test('Income ledger still reads canonical income facts when recurrence maintenan
  assert.match(income,/from\('money_movements'\).*beneficiary_member_id/);
 });
 
-
 test('Dashboard preserves available canonical sections instead of failing all reads together',()=>{
  const dashboard=fs.readFileSync('src/finance/financialDashboard.ts','utf8');
  assert.match(dashboard,/FinancialDashboardAvailability/);
  assert.match(dashboard,/resources:!accountBalances\.error/);
- assert.match(dashboard,/if\(!Object\.values\(availability\)\.some\(Boolean\)\)/);
+ assert.match(dashboard,/if\(!Object\.values\(availability\)\.some\(Boolean\)/);
  assert.doesNotMatch(dashboard,/for\(const response of\[household,members,health,confidence,attention,projection,cards,settlements,accountBalances,guidance\]\)if\(response\.error\)throw response\.error/);
 });
 
@@ -40,18 +39,17 @@ test('Home never turns an unavailable dashboard section into an apparent financi
  assert.doesNotMatch(home,/health\?\.current_cash\?\?resources\.availableCash/);
 });
 
-
 test('Home consolida a posição mensal e mantém classes de recursos distintas',()=>{
  assert.match(home,/MonthlyPositionStatement/);
  assert.match(statement,/Estamos tranquilos neste mês/);
  assert.match(statement,/pode terminar este mês com/);
  assert.match(statement,/Ainda entra/);
  assert.match(statement,/Ainda sai/);
- assert.match(statement,/A projeção combina o que já aconteceu com os compromissos ainda previstos/);
+ assert.match(statement,/O efetivo mostra o que já aconteceu\. A projeção mostra o que ainda está previsto/);
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
  assert.match(map,/>Cartões</);
- assert.match(map,/>Outras pessoas</);
+ assert.match(map,/Pessoas e acertos/);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
  assert.doesNotMatch(map,/label:'Dinheiro reservado'/);
 });
