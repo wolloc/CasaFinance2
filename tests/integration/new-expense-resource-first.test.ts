@@ -53,3 +53,10 @@ test('resource cards stay compact and avoid redundant payment-mode labels',()=>{
   assert.doesNotMatch(wizard,/Poupança · Pix \/ débito/);
   assert.doesNotMatch(wizard,/const kind=account\.type==='cash'\?'Dinheiro'/);
 });
+
+test('step 2 shows a compact summary of the expense before financial choices',()=>{
+  assert.match(wizard,/description \|\| 'Novo gasto'/);
+  assert.match(wizard,/buyerMemberId/);
+  assert.match(wizard,/toLocaleDateString\('pt-BR'\)/);
+  assert.match(wizard,/>Editar<\/button>/);
+});
