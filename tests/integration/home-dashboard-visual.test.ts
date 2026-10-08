@@ -45,8 +45,8 @@ test('Mapa financeiro isola falhas entre blocos independentes',()=>{
   // Contrato de resiliência: uma falha local não deve derrubar os demais blocos.
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
-  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Outras pessoas"/);
-  assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Responsabilidades de terceiros"/);
+  assert.match(financialMap,/Pessoas e acertos/);
+  assert.match(financialMap,/Responsabilidades de terceiros/);
   assert.match(financialMap,/const safeResources=Array\.isArray\(resources\)\?resources:\[\]/);
   assert.match(financialMap,/const safeCards=Array\.isArray\(cards\)\?cards:\[\]/);
 });
