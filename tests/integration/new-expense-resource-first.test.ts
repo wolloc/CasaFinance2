@@ -24,9 +24,9 @@ test('account resource derives the canonical payment choice from its type',()=>{
 
 test('card resource keeps purchase installment and card Pix routes inside the selected card',()=>{
   assert.match(wizard,/chooseCardResource/);
-  assert.match(wizard,/Compra à vista/);
-  assert.match(wizard,/Compra parcelada/);
-  assert.match(wizard,/Pix com este cartão/);
+  assert.match(wizard,/label="À vista"/);
+  assert.match(wizard,/label="Parcelada"/);
+  assert.match(wizard,/label="Pix"/);
   assert.match(wizard,/setPaymentChoice\('card_pix'\)/);
   assert.match(wizard,/O Pix foi parcelado\?/);
   assert.match(wizard,/createSimpleCardPixExpense/);
@@ -52,4 +52,43 @@ test('resource cards stay compact and avoid redundant payment-mode labels',()=>{
   assert.doesNotMatch(wizard,/Conta corrente · Pix \/ débito/);
   assert.doesNotMatch(wizard,/Poupança · Pix \/ débito/);
   assert.doesNotMatch(wizard,/const kind=account\.type==='cash'\?'Dinheiro'/);
+});
+
+test('step 2 shows a compact summary of the expense before financial choices',()=>{
+  assert.match(wizard,/description \|\| 'Novo gasto'/);
+  assert.match(wizard,/buyerMemberId/);
+  assert.match(wizard,/toLocaleDateString\('pt-BR'\)/);
+  assert.match(wizard,/>Editar<\/button>/);
+});
+
+test('responsibility selection explains the financial meaning without changing the contract',()=>{
+  assert.match(wizard,/Este gasto fica por conta de/);
+  assert.match(wizard,/O valor será dividido igualmente entre as pessoas da Casa/);
+  assert.match(wizard,/Você vai definir quanto cabe a cada pessoa/);
+});
+ 
+test('card payment routes stay compact on mobile',()=>{
+  assert.match(wizard,/grid grid-cols-3 gap-2/);
+  assert.match(wizard,/label="À vista"/);
+  assert.match(wizard,/label="Parcelada"/);
+  assert.match(wizard,/label="Pix"/);
+});
+
+
+test('selected card keeps institution and holder context visible before choosing the purchase route',()=>{
+  assert.match(wizard,/const selectedCard = cards\.find\(card=>card\.id===cardId\)/);
+  assert.match(wizard,/meta\?\.institution/);
+  assert.match(wizard,/meta\?\.ownerLabel/);
+  assert.match(wizard,/Como esta operação ficou no cartão\?/);
+});
+
+
+test('Nova Despesa deixa clara a etapa atual e permite voltar aos detalhes sem criar uma nova etapa',()=>{
+  assert.match(wizard,/Etapa/);
+  assert.match(wizard,/step === 1/);
+  assert.match(wizard,/step === 2/);
+  assert.match(wizard,/>Detalhes</);
+  assert.match(wizard,/>Financeiro</);
+  assert.match(wizard,/aria-current=\{step === 1 \? 'step' : undefined\}/);
+  assert.match(wizard,/if \(step === 2\) \{ setError\(null\); setStep\(1\); \}/);
 });
