@@ -14,10 +14,10 @@ test('exclusão da posição inicial não exige invoice_id no lançamento de ori
   assert.match(migration,/installment_plans/);
 });
 
-test('Casa apresenta responsabilidades atribuídas a terceiros',()=>{
+test('Casa apresenta responsabilidades e acertos no mapa de pessoas',()=>{
   assert.match(home,/Responsabilidades de terceiros/);
   assert.match(home,/responsible_party_id/);
-  assert.match(home,/Valores a receber ou pagar fora da Casa/);
+  assert.match(home,/Pessoas e acertos/);
   assert.match(home,/financial_parties!inner/);
 });
 
