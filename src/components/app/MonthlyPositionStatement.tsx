@@ -15,7 +15,7 @@ export function MonthlyPositionStatement({
   coverageState,
   coverageGap=0,
   reserveAndInvestments=0,
-  benefitBalance: _benefitBalance=0,
+  benefitBalance=0,
   investmentBalance: _investmentBalance=0,
   subjectLabel='Casa',
   periodMode='current',
