@@ -36,8 +36,8 @@ describe('Etapa 10H.7 cumulative monthly projections migration', () => {
   it('uses canonical balances and exact available-cash classifications', async () => {
     const sql = await migration('202609050025_financial_monthly_projections.sql');
     assert.match(sql, /from public\.financial_account_balances b/);
-    assert.match(sql, /b\.type in \('cash','checking','savings','digital_wallet'\)/);
-    assert.match(sql, /b\.resource_restriction is null/);
+    assert.match(sql, /b\.type in \('cash','checking','savings','digital_wallet','meal_benefit'\)/);
+    assert.match(sql, /b\.resource_restriction is null or b\.resource_restriction='meal_benefit'/);
     assert.doesNotMatch(sql, /opening_balance\s*[+)]/i);
     assert.doesNotMatch(sql, /current_balance\s*\+\s*[^\n;]*overdraft_limit/i);
   });
