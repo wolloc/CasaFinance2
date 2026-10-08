@@ -204,9 +204,9 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      subjectLabel="Casa"
     />}
     {resources&&<div className="mt-3 grid grid-cols-3 gap-2">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Caixa</p><strong className="mt-1 block text-sm text-slate-100">{money(currentCash)}</strong></div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Benefícios</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.benefits)}</strong></div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Investimentos</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.investments)}</strong></div>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Disponível agora</p><strong className="mt-1 block text-sm text-slate-100">{money(currentCash)}</strong></div>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Benefícios incluídos</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.benefits)}</strong></div>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Investimentos à parte</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.investments)}</strong><p className="mt-1 text-[10px] text-slate-500">Último recurso</p></div>
     </div>}
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}
