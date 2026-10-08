@@ -48,6 +48,13 @@ test('card ownership is not transaction responsibility', () => {
   assert.match(screenSource, /Compras e faturas já registradas não são reescritas/);
 });
 
+test('card identity edit cannot be blocked silently by native browser validation', () => {
+  assert.match(screenSource, /<form noValidate onSubmit=\{submitIdentityEdit\}/);
+  assert.match(screenSource, /Number\.isFinite\(Number\(editCardLimit\)\)/);
+  assert.match(screenSource, /\\d\{4\}/);
+  assert.match(screenSource, /Revise limite, final do cartão, fechamento e vencimento/);
+});
+
 test('legacy DatabaseStore remains outside the Supabase financial path', () => {
   assert.doesNotMatch(serviceSource, /DatabaseStore|ApiService|fetch\(['"]\/api/);
   assert.doesNotMatch(screenSource, /DatabaseStore|ApiService/);
