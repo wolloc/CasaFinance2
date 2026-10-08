@@ -63,7 +63,7 @@ test('perspectiva individual preserva responsabilidade e valor original do gasto
  assert.match(economicQuery,/memberAmounts\.get\(row\.id\)/);
  assert.match(economicQuery,/original_amount:String\(row\.amount\)/);
  assert.match(economicQuery,/household_amount:String\(householdAmount\)/);
- assert.match(browser,/Sua parte · valor original/);
+ assert.match(browser,/selectedMember\?'Sua parte'/);
  assert.match(browser,/valor original \{money\(original\)\}/);
  assert.match(service,/original_amount:row\.source_transaction_id/);
 });
@@ -131,7 +131,7 @@ test('Gastos usa lista de página inteira e leva a recorrência para o detalhe d
  assert.doesNotMatch(browser,/return <section className="rounded-2xl border border-slate-800 bg-slate-900\/60 p-4/);
  assert.match(service,/from\('recurring_occurrences'\)/);
  assert.match(service,/recurring_rule_id/);
- assert.match(screen,/Gerenciar esta recorrência/);
+ assert.match(screen,/<RecurringExpenseManagement focusRuleId=\{detailRecurringRuleId\}/);
  assert.match(screen,/focusRuleId=\{detailRecurringRuleId\}/);
  assert.doesNotMatch(screen,/>Recorrências<span/);
 });

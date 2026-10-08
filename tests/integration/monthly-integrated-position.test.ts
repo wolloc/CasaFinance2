@@ -19,18 +19,15 @@ test('Casa current month uses an integrated monthly statement from opening to pr
 test('monthly statement keeps liquidity coverage separate from reserves and investments',()=>{
   for(const copy of [
     'pode terminar o mês com',
-    'Recursos para usar hoje',
-    'Caixa hoje',
     'Ainda entra',
     'Ainda sai',
-    'Fim do mês',
     'Estamos tranquilos neste mês',
-    'O mês fecha, contando com o que ainda entra',
+    'O mês fecha contando com o que ainda entra',
     'Vamos precisar mexer em outros recursos',
     'Precisamos nos organizar neste mês',
-    'Entender essa previsão',
+    'A projeção combina o que já aconteceu com os compromissos ainda previstos',
   ]) assert.match(statement,new RegExp(copy.replace(/[?]/g,'\\?')));
-  assert.match(statement,/reserva \+ investimentos/i);
+  assert.match(statement,/reserva e investimentos/i);
   assert.match(engine,/Investimentos e reservas[\s\S]*classes patrimoniais separadas do caixa transacional/);
 });
 

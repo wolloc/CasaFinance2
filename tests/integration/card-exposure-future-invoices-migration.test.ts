@@ -37,7 +37,7 @@ const approvedHashes: Record<string, string> = {
 
 describe('Migration 027 card exposure and future invoices', () => {
   it('keeps every approved migration byte-for-byte immutable', async () => {
-    const names = (await readdir(migrationDir)).filter((name) => /00(?:0[1-9]|1[0-9]|2[0-6])_/.test(name));
+    const names = (await readdir(migrationDir)).filter((name) => name.startsWith('202609') && /00(?:0[0-9]|1[0-9]|2[0-6])_/.test(name));
     assert.deepEqual(names.sort(), Object.keys(approvedHashes).sort());
     for (const [name, hash] of Object.entries(approvedHashes)) {
       assert.equal(createHash('sha256').update(await migration(name)).digest('hex'), hash, name);

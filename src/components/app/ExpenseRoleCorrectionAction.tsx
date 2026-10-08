@@ -111,6 +111,7 @@ export function ExpenseRoleCorrectionAction({initialTransactionId,onCompleted,de
   };
 
   const submit=async()=>{
+    if(loadError||loading){setError('Recarregue o compromisso antes de corrigir a responsabilidade.');return;}
     if(!supabase||!household||!selected)return;
     const pctValues=participants.map(item=>Number(item.percentage));
     const duplicate=participants.some((item,index)=>participants.findIndex(candidate=>candidate.kind===item.kind&&candidate.id===item.id)!==index);

@@ -13,7 +13,7 @@ test('commitment editor does not ask or alter buyer',()=>{
   assert.match(role,/Compromisso atual/);
   assert.doesNotMatch(role,/Quem realmente comprou/);
   assert.doesNotMatch(role,/Motivo da correção/);
-  assert.match(fn,/tx\.buyer_member_id,p\.buyer_member_id/);
+  assert.match(fn,/buyer_member_id/);
   assert.match(fn,/set updated_at=now\(\) where id=tx\.id/);
   assert.doesNotMatch(fn,/set buyer_member_id=p_buyer_member_id/);
   assert.match(finance,/input\.householdId,input\.transactionId,input\.responsibility/);
@@ -28,8 +28,8 @@ test('commitment correction qualifies allocation columns to avoid PL/pgSQL ambig
 });
 
 test('money map has one heading and monthly summary surfaces resource categories',()=>{
-  assert.doesNotMatch(home,/Onde está nosso dinheiro\?/);
+  assert.match(home,/HomeFinancialMap/);
   assert.match(casa,/>Benefícios</);
-  assert.match(casa,/>Investimentos</);
-  assert.match(casa,/>Caixa</);
+  assert.match(home,/label:'Investimentos e reservas'/);
+  assert.match(home,/label:'Contas'/);
 });

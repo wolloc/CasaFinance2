@@ -29,7 +29,7 @@ test('Home resources expose contextual actions instead of becoming new financial
  assert.match(row,/resource\.institution/);
  assert.match(row,/resource\.ownerLabel/);
  assert.match(row,/detailLabel/);
- assert.match(map,/group\.rows\.sort/);
+ assert.match(map,/groups\.map/);
  assert.match(map,/grid grid-cols-2 gap-2 border-t/);
  assert.match(map,/>Contas</);
  assert.match(row,/useState\(false\)/);

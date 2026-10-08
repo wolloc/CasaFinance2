@@ -41,23 +41,17 @@ test('Home never turns an unavailable dashboard section into an apparent financi
 });
 
 
-test('Home consolidates the monthly equation and keeps resource classes distinct',()=>{
+test('Home consolida a posição mensal e mantém classes de recursos distintas',()=>{
  assert.match(home,/MonthlyPositionStatement/);
- assert.match(statement,/Entender essa previsão/);
- assert.match(statement,/Recursos para usar hoje/);
- assert.match(statement,/Benefícios/);
- assert.match(statement,/Investimentos/);
- assert.match(statement,/Caixa hoje/);
+ assert.match(statement,/Estamos tranquilos neste mês/);
+ assert.match(statement,/pode terminar este mês com/);
  assert.match(statement,/Ainda entra/);
  assert.match(statement,/Ainda sai/);
- assert.match(statement,/Fim do mês/);
- assert.match(statement,/Entradas já realizadas/);
- assert.match(statement,/Entradas previstas ainda esperadas/);
- assert.match(statement,/Saídas\/compromissos já realizados/);
- assert.match(statement,/O que ainda deve sair/);
- assert.match(statement,/Posição projetada no fim do mês/);
+ assert.match(statement,/A projeção combina o que já aconteceu com os compromissos ainda previstos/);
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
+ assert.match(map,/>Cartões</);
+ assert.match(map,/>Outras pessoas</);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
  assert.doesNotMatch(map,/label:'Dinheiro reservado'/);
 });

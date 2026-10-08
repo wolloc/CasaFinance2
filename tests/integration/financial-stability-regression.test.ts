@@ -10,12 +10,12 @@ const invoice=fs.readFileSync(path.join(root,'src/finance/financialInvoices.ts')
 
 test('fatura tem fallback seguro para a posição materializada',()=>{
   assert.match(journey,/financial_card_invoice_positions/);
-  assert.match(journey,/.neq('state', 'cancelled')/);
+  assert.match(journey,/\.neq\(['"]state['"], ['"]cancelled['"]\)/);
   assert.match(journey,/card_name/);
 });
 
 test('responsabilidade oferece terceiro como opção explícita',()=>{
-  assert.match(role,/setPreset\(mode:'single'\|'equal'\|'thirdParty'/);
+  assert.match(role,/const setPreset=\(mode:'single'\|'equal'\|'thirdParty'\)/);
   assert.match(role,/100% de um terceiro/);
   assert.match(role,/Adicionar terceiro/);
 });

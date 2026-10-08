@@ -49,6 +49,7 @@ test('Gastos realizados uses canonical member-attributed amount and legacy gross
       {transaction_id:'third-party',responsible_member_id:null,responsible_party_id:'party-1',amount:'40.00'},
     ],error:null}],
     recurring_occurrences:[{data:[{transaction_id:'mixed',recurring_rule_id:'rule-1'}],error:null}],
+    installment_plans:[{data:[],error:null}],
   });
 
   const rows=await listEconomicMonthExpenses(fake.client as never,'household-1','2026-09');

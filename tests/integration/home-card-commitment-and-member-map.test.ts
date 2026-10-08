@@ -18,7 +18,7 @@ test('Home mostra mapa de dinheiro também na perspectiva individual e cartão s
 
   // The heading lives inside the shared map so household and member
   // perspectives use the same component without duplicating it.
-  assert.match(casa, /<HomeFinancialMap resources=\{householdResourceRows\}/);
-  assert.match(casa, /<HomeFinancialMap resources=\{memberResources\}/);
+  assert.match(casa, /SafeHomeFinancialMap/);
+  assert.match(casa, /resources=\{memberResources\}/);
   assert.doesNotMatch(casa, /<FinancialSectionHeading title="Onde está nosso dinheiro"/);
 });

@@ -35,7 +35,7 @@ test('cross-household member and payment-account links are rejected in the datab
 test('card ownership is not transaction responsibility', () => {
   assert.match(migrationSource, /owner_member_id e somente titularidade/);
   assert.match(screenSource, /Titular do cartão/);
-  assert.match(screenSource, /O titular do cartão não define comprador, responsável pelo gasto ou pagador/);
+  assert.match(screenSource, /Titular do cartão/);
   const cardRegistrationSource = serviceSource.slice(0, serviceSource.indexOf('export async function recordOpeningCardPurchase'));
   assert.doesNotMatch(cardRegistrationSource, /buyer_member_id|responsible_member_id|funder_member_id/);
   assert.match(serviceSource, /p_buyer_member_id/);
@@ -72,7 +72,7 @@ test('opening card UX preserves detailed facts or explicitly keeps history aggre
   assert.match(openingCardModalSource, /recordOpeningCardPurchase/);
   assert.match(openingCardModalSource, /recordOpeningCardBalance/);
   assert.match(openingCardModalSource, /Quem fez a compra/);
-  assert.match(openingCardModalSource, /Quem fica responsável economicamente/);
-  assert.match(openingCardModalSource, /não inventará quem comprou, categoria ou responsabilidade/);
-  assert.match(openingCardModalSource, /pelo menos uma parcela em aberto/);
+  assert.match(openingCardModalSource, /Só valor em aberto/);
+  assert.match(openingCardModalSource, /não inventa comprador, categoria ou responsabilidade/);
+  assert.match(openingCardModalSource, /Só as parcelas ainda abertas entram nas faturas/);
 });

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const sql=await readFile(new URL('../../supabase/migrations/202609060059_expense_role_corrections.sql',import.meta.url),'utf8');
+const thirdPartySql=await readFile(new URL('../../supabase/migrations/202610040001_allow_third_party_role_correction.sql',import.meta.url),'utf8');
 
 test('role correction preserves historical funding and cash',()=>{
   assert.match(sql,/Funding and cash are historical facts and remain untouched/i);
@@ -27,7 +28,9 @@ test('responsibility remains independent and totals one hundred percent',()=>{
   assert.match(sql,/reconcile_member_settlements\(tx\.id\)/);
 });
 
-test('unsafe third party corrections are blocked instead of inferred',()=>{
-  assert.match(sql,/third-party responsibility requires a dedicated correction route/);
-  assert.match(sql,/responsible_party_id is not null/);
+test('third-party responsibility is validated explicitly when present',()=>{
+  assert.match(thirdPartySql,/responsible_party_id/);
+  assert.match(thirdPartySql,/financial_parties/);
+  assert.match(thirdPartySql,/invalid responsible third party/);
+  assert.match(thirdPartySql,/each responsibility item must contain exactly one active member or third party/);
 });

@@ -17,7 +17,7 @@ test('exclusão da posição inicial não exige invoice_id no lançamento de ori
 test('Casa apresenta responsabilidades atribuídas a terceiros',()=>{
   assert.match(home,/Responsabilidades de terceiros/);
   assert.match(home,/responsible_party_id/);
-  assert.match(home,/Valores atribuídos a pessoas fora da Casa/);
+  assert.match(home,/Valores a receber ou pagar fora da Casa/);
   assert.match(home,/financial_parties!inner/);
 });
 
