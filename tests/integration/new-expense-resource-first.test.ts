@@ -73,3 +73,11 @@ test('card payment routes stay compact on mobile',()=>{
   assert.match(wizard,/label="Parcelada"/);
   assert.match(wizard,/label="Pix"/);
 });
+
+
+test('selected card keeps institution and holder context visible before choosing the purchase route',()=>{
+  assert.match(wizard,/const selectedCard = cards\.find\(card=>card\.id===cardId\)/);
+  assert.match(wizard,/meta\?\.institution/);
+  assert.match(wizard,/meta\?\.ownerLabel/);
+  assert.match(wizard,/Como esta operação ficou no cartão\?/);
+});
