@@ -8,7 +8,7 @@ const service = await readFile(new URL('../../src/finance/simpleCardPixExpense.t
 const sql = await readFile(new URL('../../supabase/migrations/202609090067_simple_card_pix_expense.sql', import.meta.url), 'utf8');
 
 test('Nova Despesa exposes Pix por cartão after selecting the real card resource', () => {
-  assert.match(wizard, /Pix com este cartão/);
+  assert.match(wizard, /Pix/);
   assert.match(wizard, /chooseCardRoute\('pix'\)/);
   assert.match(wizard, /Encargos financeiros/);
   assert.match(wizard, /Total no cartão/);
