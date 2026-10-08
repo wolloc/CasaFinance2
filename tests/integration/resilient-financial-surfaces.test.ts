@@ -45,7 +45,7 @@ test('Home consolida a posição mensal e mantém classes de recursos distintas'
  assert.match(statement,/pode terminar este mês com/);
  assert.match(statement,/Ainda entra/);
  assert.match(statement,/Ainda sai/);
- assert.match(statement,/O efetivo mostra o que já aconteceu\\. A projeção mostra o que ainda está previsto/);
+ assert.match(statement,/O efetivo mostra o que já aconteceu\. A projeção mostra o que ainda está previsto/);
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
  assert.match(map,/>Cartões</);
