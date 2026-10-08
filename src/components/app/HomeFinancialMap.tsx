@@ -91,6 +91,7 @@ export function HomeFinancialMap({
   memberName,
   householdId,
   refreshKey,
+  accountProjections,
   onOpenCard,
   onResourceAction,
   onSettlementAction,
