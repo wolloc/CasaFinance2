@@ -17,7 +17,7 @@ export type LiquidityGuidance = { household_id:string; current_cash:number; comm
 type AccountBalanceRow = { type:string; resource_restriction:string|null; current_balance:number|string; is_restricted:boolean; is_investment:boolean; };
 
 const currentMonth=(timeZone:string)=>monthStartInTimeZone(timeZone);
-const summarizeResources=(rows:AccountBalanceRow[]):ResourceSummary=>rows.reduce((summary,row)=>{const amount=Number(row.current_balance??0);if(row.is_investment)summary.investments+=amount;else if(row.resource_restriction==='reserve')summary.reserves+=amount;else if(row.type==='meal_benefit')summary.benefits+=amount;else if(!row.is_restricted)summary.availableCash+=amount;return summary;},{availableCash:0,benefits:0,reserves:0,investments:0});
+const summarizeResources=(rows:AccountBalanceRow[]):ResourceSummary=>rows.reduce((summary,row)=>{const amount=Number(row.current_balance??0);if(row.is_investment)summary.investments+=amount;else if(row.resource_restriction==='reserve')summary.reserves+=amount;else if(row.type==='meal_benefit'){summary.benefits+=amount;summary.availableCash+=amount;}else if(!row.is_restricted)summary.availableCash+=amount;return summary;},{availableCash:0,benefits:0,reserves:0,investments:0});
 
 export async function getMemberFinancialPerspective(client:SupabaseClient,householdId:string,memberId:string,timeZone:string=DEFAULT_HOUSEHOLD_TIMEZONE):Promise<MemberMonthlyProjection[]>{const response=await client.rpc('financial_member_monthly_projection',{p_household_id:householdId,p_member_id:memberId,p_reference_month:currentMonth(timeZone),p_horizon_months:4});if(response.error)throw response.error;return(response.data??[])as MemberMonthlyProjection[];}
 
