@@ -67,7 +67,7 @@ export function MonthlyPositionStatement({
 
     <div className="mt-5 grid grid-cols-3 gap-2">
       <div className="rounded-xl bg-slate-950/45 p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Abertura':'Hoje'}</p>
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{futurePeriod?'Abertura':'Disponível agora'}</p>
         <strong className="mt-1 block text-sm text-slate-100">{money(available)}</strong>
       </div>
       <div className="rounded-xl bg-slate-950/45 p-3">
@@ -79,6 +79,9 @@ export function MonthlyPositionStatement({
         <strong className="mt-1 block text-sm text-rose-200">− {money(remainingOutflow)}</strong>
       </div>
     </div>
+
+    {!futurePeriod && benefitBalance>0 && <p className="mt-3 rounded-xl bg-orange-500/10 px-3 py-2 text-xs text-orange-100">Inclui {money(benefitBalance)} em benefícios para usar.</p>}
+    {!futurePeriod && reserveAndInvestments>0 && <p className="mt-2 rounded-xl bg-slate-950/45 px-3 py-2 text-xs text-slate-400">Reserva e investimentos: {money(reserveAndInvestments)} à parte, para um último recurso.</p>}
 
     <p className="mt-4 text-xs text-slate-500">A projeção combina o que já aconteceu com os compromissos ainda previstos. Novos lançamentos podem mudar esse valor.</p>
     {coverageState==='needs_funding_plan'&&coverageGap>0&&<p className="mt-3 rounded-xl bg-rose-950/30 p-3 text-xs text-rose-200">Ainda faltam {money(coverageGap)} para cobrir os compromissos conhecidos.</p>}
