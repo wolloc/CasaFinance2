@@ -81,3 +81,12 @@ test('selected card keeps institution and holder context visible before choosing
   assert.match(wizard,/meta\?\.ownerLabel/);
   assert.match(wizard,/Como esta operação ficou no cartão\?/);
 });
+
+
+test('Nova Despesa deixa clara a etapa atual e permite voltar aos detalhes sem criar uma nova etapa',()=>{
+  assert.match(wizard,/Etapa \{step\} de 2/);
+  assert.match(wizard,/>Detalhes</);
+  assert.match(wizard,/>Financeiro</);
+  assert.match(wizard,/aria-current=\{step === 1 \? 'step' : undefined\}/);
+  assert.match(wizard,/if \(step === 2\) \{ setError\(null\); setStep\(1\); \}/);
+});
