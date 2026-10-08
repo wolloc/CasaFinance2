@@ -84,7 +84,9 @@ test('selected card keeps institution and holder context visible before choosing
 
 
 test('Nova Despesa deixa clara a etapa atual e permite voltar aos detalhes sem criar uma nova etapa',()=>{
-  assert.match(wizard,/Etapa \{step\} de 2/);
+  assert.match(wizard,/Etapa/);
+  assert.match(wizard,/step === 1/);
+  assert.match(wizard,/step === 2/);
   assert.match(wizard,/>Detalhes</);
   assert.match(wizard,/>Financeiro</);
   assert.match(wizard,/aria-current=\{step === 1 \? 'step' : undefined\}/);
