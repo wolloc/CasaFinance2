@@ -24,9 +24,9 @@ test('account resource derives the canonical payment choice from its type',()=>{
 
 test('card resource keeps purchase installment and card Pix routes inside the selected card',()=>{
   assert.match(wizard,/chooseCardResource/);
-  assert.match(wizard,/Compra à vista/);
-  assert.match(wizard,/Compra parcelada/);
-  assert.match(wizard,/Pix com este cartão/);
+  assert.match(wizard,/label="À vista"/);
+  assert.match(wizard,/label="Parcelada"/);
+  assert.match(wizard,/label="Pix"/);
   assert.match(wizard,/setPaymentChoice\('card_pix'\)/);
   assert.match(wizard,/O Pix foi parcelado\?/);
   assert.match(wizard,/createSimpleCardPixExpense/);
