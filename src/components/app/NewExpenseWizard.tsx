@@ -437,6 +437,17 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
       </div>}
 
       {!loading && !recurrenceRecovery && step === 2 && <div className="mt-5 space-y-5">
+        <div className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-100">{description || 'Novo gasto'}</p>
+              <p className="mt-1 truncate text-xs text-slate-400">
+                {householdMembers.find((member) => member.id === buyerMemberId)?.display_name ?? 'Quem fez o gasto'} · {date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR') : 'Hoje'}
+              </p>
+            </div>
+            <button type="button" onClick={() => { setError(null); setStep(1); }} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-slate-200">Editar</button>
+          </div>
+        </div>
         <label className="block text-sm font-semibold text-slate-200">Quanto? <span className="text-rose-300">*</span><div className="mt-2 flex min-h-16 items-center rounded-2xl border border-blue-500/40 bg-slate-800 px-4 shadow-sm"><span className="mr-2 text-lg text-slate-400">R$</span><input required inputMode="decimal" type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} onBlur={() => { if (amount && Number.isFinite(Number(amount))) setAmount(Number(amount).toFixed(2)); }} className="min-h-14 w-full bg-transparent text-2xl font-black outline-none" placeholder="0,00" /></div></label>
 
         <fieldset><legend className="text-sm font-semibold text-slate-200">Quem assume esse gasto? <span className="text-rose-300">*</span></legend><div className="mt-2 grid grid-cols-2 gap-2">{householdMembers.map((member) => <ChoiceButton key={member.id} active={responsibility === member.id} onClick={() => setResponsibility(member.id)} label={member.display_name} />)}<ChoiceButton active={responsibility === 'split'} onClick={() => setResponsibility('split')} label="Dividir igualmente" /><ChoiceButton active={responsibility === 'split-custom'} onClick={() => setResponsibility('split-custom')} label="Divisão personalizada" /><ChoiceButton active={responsibility === 'party'} onClick={() => setResponsibility('party')} label="Outra pessoa envolvida" /></div>
