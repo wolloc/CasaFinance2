@@ -60,3 +60,19 @@ Essa comparação fica como próxima evolução da mesma frente, sem alterar fat
 - O motor financeiro canônico continua sendo a fonte dos cálculos.
 - Pagamentos realizados continuam separados de previsões.
 - Titularidade de cartão não determina quem efetivamente financia a fatura.
+
+
+## Evolução temporal definida em 2026-10-08
+
+A projeção da Casa deve ser tratada como uma cadeia mensal, não como uma fotografia isolada:
+
+- o dia de corte e a posição inicial inauguram o acompanhamento financeiro;
+- enquanto o mês está aberto, o fechamento projetado alimenta o cenário dos meses seguintes;
+- quando o mês é encerrado, o fechamento realizado passa a ser a abertura real do mês seguinte;
+- previsões nunca são convertidas automaticamente em fatos realizados;
+- a mesma linha temporal deve existir para a visão consolidada da Casa e para as perspectivas individuais de Wallace e Guilherme;
+- a perspectiva individual respeita responsabilidade econômica, funding e acertos, sem dividir valores artificialmente.
+
+A função canônica `financial_monthly_projection` já encadeia o fechamento projetado de um mês como abertura do seguinte, e `financial_member_monthly_projection` fornece a perspectiva individual. A Home deve consumir essas fontes como referência temporal, evitando criar um segundo motor de projeção.
+
+A projeção por recurso permanece complementar: ela explica como contas e outros recursos tendem a terminar o mês, mas não substitui a cadeia financeira mensal canônica.
