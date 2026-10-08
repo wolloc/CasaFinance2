@@ -60,3 +60,9 @@ test('step 2 shows a compact summary of the expense before financial choices',()
   assert.match(wizard,/toLocaleDateString\('pt-BR'\)/);
   assert.match(wizard,/>Editar<\/button>/);
 });
+
+test('responsibility selection explains the financial meaning without changing the contract',()=>{
+  assert.match(wizard,/Este gasto fica por conta de/);
+  assert.match(wizard,/O valor será dividido igualmente entre as pessoas da Casa/);
+  assert.match(wizard,/Você vai definir quanto cabe a cada pessoa/);
+});
