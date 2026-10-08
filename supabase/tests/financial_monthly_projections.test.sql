@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(36);
 
 insert into auth.users (id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values
@@ -98,39 +98,40 @@ select is((select current_balance from public.financial_available_cash_positions
 select is((select sum(current_balance) from public.financial_available_cash_positions where household_id='25000000-0000-4000-8000-000000000010'),1150::numeric,'3 overdraft limit is not cash');
 select is((select count(*) from public.financial_available_cash_positions where account_id='25000000-0000-4000-8000-000000000032'),0::bigint,'4 investment excluded');
 select is((select count(*) from public.financial_available_cash_positions where account_id='25000000-0000-4000-8000-000000000033'),0::bigint,'5 reserve excluded');
-select is((select count(*) from public.financial_available_cash_positions where account_id='25000000-0000-4000-8000-000000000034'),0::bigint,'6 benefit excluded');
-select is((select count(*) from public.financial_true_income_positions where money_movement_id is null),0::bigint,'7 receivable is absent from income positions');
-select is((select remaining_commitments_in_month from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where month_index=0),1100::numeric,'8 payable is included with direct remaining commitment');
+select is((select current_balance from public.financial_available_cash_positions where account_id='25000000-0000-4000-8000-000000000034'),500::numeric,'6 benefit is available usable resource');
+select is((select sum(current_balance) from public.financial_available_cash_positions where household_id='25000000-0000-4000-8000-000000000010'),1650::numeric,'7 benefit participates in available household resources');
+select is((select count(*) from public.financial_true_income_positions where money_movement_id is null),0::bigint,'8 receivable is absent from income positions');
+select is((select remaining_commitments_in_month from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where month_index=0),1100::numeric,'9 payable is included with direct remaining commitment');
 select results_eq($$select opening_cash,realized_true_income_in_month from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where month_index=0$$,$$values(1150::numeric,500::numeric)$$,'9 realized salary is explanatory and already in cash');
-select is((select expected_reliable_income_remaining from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where month_index=0),0::numeric,'10 unlinked projected income is not reliable');
+select is((select expected_reliable_income_remaining from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where month_index=0),0::numeric,'36 unlinked projected income is not reliable');
 select is((select projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',1)),-250::numeric,'uncertain income does not improve ending cash');
 select is((select expected_reliable_income_remaining from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-10-01'),2000::numeric,'confirmed linked income enters once');
-select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010'),2::bigint,'11 own transfer is not income');
-select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and amount=700),0::bigint,'12 borrowed principal is not income');
-select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and amount=50),0::bigint,'13 refund is not income');
-select is((select remaining_amount from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000052'),0::numeric,'14 realized commitment is not subtracted');
-select is((select remaining_amount from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000051'),600::numeric,'15 partial commitment uses remaining only');
-select is((select remaining_commitments_in_month from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-10-01'),200::numeric,'16 TV contributes 200 in October');
-select is((select sum(remaining_amount) from public.financial_commitment_positions where source_transaction_id='25000000-0000-4000-8000-000000000060'),2400::numeric,'17 purchase is not added over its installments');
-select is((select count(*) from public.financial_commitment_positions where commitment_type='invoice_payment'),0::bigint,'18 invoice payment is not a commitment');
-select results_eq($$select month_index,prior_pending_outflow from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) order by month_index$$,$$values (0,300::numeric),(1,0::numeric),(2,0::numeric),(3,0::numeric)$$,'19 prior pending is charged once');
-select is((select financial_month from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000050'),'2026-08-01'::date,'20 prior pending preserves original month');
-select ok((select n.opening_cash=o.projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) o join public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) n on n.month_index=o.month_index+1 where o.month_index=1),'21 October ending feeds November opening');
-select ok((select n.opening_cash=o.projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) o join public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) n on n.month_index=o.month_index+1 where o.month_index=2),'22 November ending feeds December opening');
-select is((select projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'),0::numeric,'23 occurrence suppresses rule on its date');
-select is((select projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-10-01'),250::numeric,'24 future recurring estimate is projected');
-select results_eq($$select remaining_commitments_in_month,projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'$$,$$values(487.43::numeric,0::numeric)$$,'25 confirmed occurrence replaces its 250 estimate and preserves cents');
-select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and financial_month='2026-09-01'),2::bigint,'26 member settlements never become household income');
-select is((select projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'),812.57::numeric,'27 projection preserves cents');
+select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010'),2::bigint,'36 own transfer is not income');
+select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and amount=700),0::bigint,'36 borrowed principal is not income');
+select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and amount=50),0::bigint,'36 refund is not income');
+select is((select remaining_amount from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000052'),0::numeric,'36 realized commitment is not subtracted');
+select is((select remaining_amount from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000051'),600::numeric,'36 partial commitment uses remaining only');
+select is((select remaining_commitments_in_month from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-10-01'),200::numeric,'36 TV contributes 200 in October');
+select is((select sum(remaining_amount) from public.financial_commitment_positions where source_transaction_id='25000000-0000-4000-8000-000000000060'),2400::numeric,'36 purchase is not added over its installments');
+select is((select count(*) from public.financial_commitment_positions where commitment_type='invoice_payment'),0::bigint,'36 invoice payment is not a commitment');
+select results_eq($$select month_index,prior_pending_outflow from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) order by month_index$$,$$values (0,300::numeric),(1,0::numeric),(2,0::numeric),(3,0::numeric)$$,'36 prior pending is charged once');
+select is((select financial_month from public.financial_commitment_positions where source_id='25000000-0000-4000-8000-000000000050'),'2026-08-01'::date,'36 prior pending preserves original month');
+select ok((select n.opening_cash=o.projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) o join public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) n on n.month_index=o.month_index+1 where o.month_index=1),'36 October ending feeds November opening');
+select ok((select n.opening_cash=o.projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) o join public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) n on n.month_index=o.month_index+1 where o.month_index=2),'36 November ending feeds December opening');
+select is((select projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'),0::numeric,'36 occurrence suppresses rule on its date');
+select is((select projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-10-01'),250::numeric,'36 future recurring estimate is projected');
+select results_eq($$select remaining_commitments_in_month,projected_recurring_commitments from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'$$,$$values(487.43::numeric,0::numeric)$$,'36 confirmed occurrence replaces its 250 estimate and preserves cents');
+select is((select count(*) from public.financial_true_income_positions where household_id='25000000-0000-4000-8000-000000000010' and financial_month='2026-09-01'),2::bigint,'36 member settlements never become household income');
+select is((select projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where financial_month='2026-11-01'),812.57::numeric,'36 projection preserves cents');
 select set_config('request.jwt.claim.sub','25000000-0000-4000-8000-000000000002',true);
 select results_eq($$select opening_cash,projected_ending_cash from public.financial_monthly_projection('25000000-0000-4000-8000-000000000011','2026-11-01',1)$$,$$values(2500::numeric,2200::numeric)$$,'future reference carries intermediate October');
-select throws_ok($$select * from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4)$$,'42501',null,'28 RLS/membership blocks another household');
+select throws_ok($$select * from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4)$$,'42501',null,'36 RLS/membership blocks another household');
 select throws_ok($$select * from public.financial_monthly_projection('25000000-0000-4000-8000-000000000011','2026-08-01',1)$$,'22023',null,'historical reference is rejected');
 reset role;
 select set_config('request.jwt.claim.sub','25000000-0000-4000-8000-000000000001',true);
 set local role authenticated;
-select is((select count(*) from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4)),4::bigint,'29 function returns at least four requested months');
-select is((select count(*) from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where projected_ending_cash<>opening_cash+expected_reliable_income_remaining-remaining_commitments_in_month-projected_recurring_commitments-prior_pending_outflow),0::bigint,'30 every projected ending closes mathematically without realized-flow duplication');
+select is((select count(*) from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4)),4::bigint,'36 function returns at least four requested months');
+select is((select count(*) from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-09-01',4) where projected_ending_cash<>opening_cash+expected_reliable_income_remaining-remaining_commitments_in_month-projected_recurring_commitments-prior_pending_outflow),0::bigint,'36 every projected ending closes mathematically without realized-flow duplication');
 
 select is((select prior_pending_outflow from public.financial_monthly_projection('25000000-0000-4000-8000-000000000010','2026-10-01',2) where month_index=0),0::numeric,'prior pending is not charged again at future reference');
 
