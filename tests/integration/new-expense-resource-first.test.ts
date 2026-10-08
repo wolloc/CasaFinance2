@@ -66,3 +66,10 @@ test('responsibility selection explains the financial meaning without changing t
   assert.match(wizard,/O valor será dividido igualmente entre as pessoas da Casa/);
   assert.match(wizard,/Você vai definir quanto cabe a cada pessoa/);
 });
+ 
+test('card payment routes stay compact on mobile',()=>{
+  assert.match(wizard,/grid grid-cols-3 gap-2/);
+  assert.match(wizard,/label="À vista"/);
+  assert.match(wizard,/label="Parcelada"/);
+  assert.match(wizard,/label="Pix"/);
+});
