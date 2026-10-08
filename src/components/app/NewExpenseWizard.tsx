@@ -413,6 +413,19 @@ export function NewExpenseWizard({ openRequestId, onSaved }: Props) {
   return <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
     <form role="dialog" aria-modal="true" aria-label="Nova despesa" onSubmit={save} className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
       <FinancialActionDialogHeader tone="expense" eyebrow="Gasto" title="Nova despesa" icon={<Receipt className="h-5 w-5"/>} onClose={()=>setOpen(false)} closeLabel="Fechar nova despesa"/>
+      <div className="border-b border-slate-800 bg-slate-950/40 px-4 py-3">
+        <div className="flex items-center gap-2" aria-label={`Etapa ${step} de 2`}>
+          <button type="button" onClick={() => { if (step === 2) { setError(null); setStep(1); } }} className={`flex min-h-9 flex-1 items-center gap-2 rounded-xl px-2 text-left ${step === 1 ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-800/70'}`} aria-current={step === 1 ? 'step' : undefined}>
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${step === 1 ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-300'}`}>1</span>
+            <span><strong className="block text-xs">Detalhes</strong><span className="block text-[10px] text-slate-500">o que aconteceu</span></span>
+          </button>
+          <span aria-hidden="true" className="text-slate-600">→</span>
+          <div className={`flex min-h-9 flex-1 items-center gap-2 rounded-xl px-2 ${step === 2 ? 'bg-slate-800 text-slate-100' : 'text-slate-500'}`} aria-current={step === 2 ? 'step' : undefined}>
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${step === 2 ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-400'}`}>2</span>
+            <span><strong className="block text-xs">Financeiro</strong><span className="block text-[10px] text-slate-500">como foi pago</span></span>
+          </div>
+        </div>
+      </div>
       <div className="p-4">
       {loading && <div className="flex min-h-40 items-center justify-center"><LoaderCircle className="h-6 w-6 animate-spin text-blue-300" /></div>}
 
