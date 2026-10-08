@@ -9,11 +9,11 @@ select b.household_id,
        b.type,
        b.current_balance::numeric(19,2) as current_balance
   from public.financial_account_balances b
- where b.type in ('cash','checking','savings','digital_wallet')
-   and b.resource_restriction is null;
+ where b.type in ('cash','checking','savings','digital_wallet','meal_benefit')
+   and (b.resource_restriction is null or b.resource_restriction='meal_benefit');
 
 comment on view public.financial_available_cash_positions is
-  'Real household cash from canonical balance events plus realized movement legs. Restricted benefits/reserves, investments and every credit limit are excluded; negative balances remain negative.';
+  'Real household usable resources from canonical balance events plus realized movement legs. Meal benefits are usable resources; reserves, investments and every credit limit remain excluded. Negative balances remain negative.';
 
 create or replace view public.financial_true_income_positions
 with (security_invoker=true) as

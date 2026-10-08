@@ -31,7 +31,7 @@ const appliedHashes: Record<string, string> = {
   '202609050022_financial_engine_v2_foundation.sql': '6f604d7ad64f1bcf5dae9b4ce6cb392454df0c46f7b3282cb82fb0b1c9134a84',
   '202609050023_member_settlements.sql': '1c0fba14bf51507f4b95c3c196911f93b0d4039c1d80cdd0397be3af7d0f3f36',
   '202609050024_financial_commitments.sql': '0f8a77f4656e2e671b548fddaad9c3c1382f8af72dbe3607465db55ee186a83d',
-  '202609050025_financial_monthly_projections.sql': '3213d8e6161b12a4e3db00ac573f10fbcac9af02465013c22d4efc09cdf66914',
+  '202609050025_financial_monthly_projections.sql': '858917208b04c14867b15fe896236ab83c8127421eca5a87475fe249b496bfa3',
 };
 
 describe('Etapa 10H.8 member financial perspectives migration', () => {
