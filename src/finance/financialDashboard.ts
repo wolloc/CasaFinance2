@@ -14,7 +14,7 @@ export type MemberSettlementPosition = { debtor_member_id:string; creditor_membe
 export type ResourceSummary = { availableCash:number; benefits:number; reserves:number; investments:number; };
 export type AccountMonthlyProjection = { account_id:string; name:string; type:string; current_balance:number; realized_income:number; expected_income:number; realized_outflow:number; projected_outflow:number; projected_ending_balance:number; };
 export type ThirdPartyProjectedReceivable = { obligation_id:string; counterparty_id:string; counterparty_name:string|null; due_date:string|null; outstanding_amount:number; financial_month:string; };
-export type FinancialDashboardAvailability = { household:boolean; members:boolean; health:boolean; confidence:boolean; attention:boolean; projection:boolean; cards:boolean; settlements:boolean; resources:boolean; guidance:boolean; };
+export type FinancialDashboardAvailability = { household:boolean; members:boolean; health:boolean; confidence:boolean; attention:boolean; projection:boolean; cards:boolean; settlements:boolean; resources:boolean; guidance:boolean; accountProjections:boolean; thirdPartyReceivables:boolean; };
 export type LiquidityGuidance = { household_id:string; current_cash:number; committed_before_new_income:number; free_cash_after_commitments:number; reliable_income_remaining:number; projected_ending_cash:number; coverage_gap:number; reserve_balance:number; investment_balance:number; overdraft_used:number; guidance_state:'covered'|'covered_by_expected_income'|'needs_resource_reallocation'|'needs_funding_plan'; guidance_title:string; };
 type AccountBalanceRow = { type:string; resource_restriction:string|null; current_balance:number|string; is_restricted:boolean; is_investment:boolean; };
 
