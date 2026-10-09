@@ -38,5 +38,6 @@ test('monthly story keeps the current humanized coverage summary',()=>{
   assert.match(statement,/Precisamos nos organizar neste mês/);
   assert.match(home,/Como estamos\?/);
   assert.match(home,/Olhando pra frente/);
-  assert.match(home,/Alguns dados não atualizaram agora/);
+  assert.doesNotMatch(home,/Alguns dados não atualizaram agora/);
+  assert.match(home,/financial_household_opening_position_at_date/);
 });
