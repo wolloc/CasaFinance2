@@ -50,18 +50,18 @@ function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId
  if(loading)return <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3"><p className="text-[11px] text-slate-500">Carregando responsabilidades de terceiros…</p></div>;
  if(failed||rows.length===0)return null;
  const total=rows.reduce((sum,row)=>sum+row.amount,0);
- return <div className="rounded-2xl border border-cyan-900/45 bg-cyan-950/10">
-   <div className="flex items-center justify-between gap-3 px-4 py-3">
-     <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><UsersRound className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Responsabilidades de terceiros</p><p className="text-[11px] text-slate-500">Terceiros que assumem parte ou todo o compromisso</p></div></div>
+ return <div className="space-y-2">
+   <div className="flex items-center justify-between gap-3 border-b border-cyan-900/30 pb-2">
+     <div><p className="text-xs font-bold text-slate-300">Responsabilidade por compromissos</p><p className="text-[11px] text-slate-500">Parte dos gastos assumida por terceiros</p></div>
      <strong className="text-sm text-cyan-200">{money(total)}</strong>
    </div>
-   <div className="border-t border-cyan-900/30 p-2 space-y-1.5">
-    {rows.map(row=><div key={row.partyId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/40 px-3 py-2.5">
+   <div className="space-y-1">
+    {rows.map(row=><div key={row.partyId} className="flex items-center justify-between gap-3 border-b border-slate-800/70 py-2 last:border-0">
       <div><p className="text-sm font-semibold text-slate-300">{row.name}</p><p className="text-[10px] text-slate-600">{row.count} {row.count===1?'lançamento':'lançamentos'} · parte ou total do compromisso</p></div>
       <strong className="text-sm text-slate-100">{money(row.amount)}</strong>
     </div>)}
    </div>
- </div>;
+ </div>;;
 }
 
 class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:boolean}>{
