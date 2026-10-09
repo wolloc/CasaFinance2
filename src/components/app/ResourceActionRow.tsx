@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { financialUi } from './FinancialSectionHeading.js';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Banknote, ChevronRight, HandCoins, Landmark, Pencil, PiggyBank, TrendingDown, TrendingUp, Utensils, Wallet } from 'lucide-react';
 
 export type ResourceNavigationAction={kind:'transfer'|'deposit'|'withdraw'|'invest'|'redeem'|'loan-granted'|'loan-taken'|'settings';accountId:string;resourceType:string;resourceRestriction:string|null;isInvestment:boolean};
@@ -33,8 +34,8 @@ export function ResourceActionRow({resource,onAction}:{key?:string;resource:Reso
  const cashLike=resource.type==='cash'||resource.type==='digital_wallet';
  const bankLike=resource.type==='checking'||resource.type==='savings';
  const act=(kind:ResourceNavigationAction['kind'])=>{setOpen(false);onAction?.({kind,accountId:resource.accountId,resourceType:resource.type,resourceRestriction:resource.resourceRestriction,isInvestment:resource.isInvestment});};
- return <div ref={rootRef} className="relative rounded-2xl border border-slate-800 bg-white/[0.035]">
-  <button type="button" aria-expanded={open} onClick={()=>setOpen(value=>!value)} className="flex min-h-[92px] w-full flex-col items-start gap-2 rounded-2xl p-3 text-left hover:bg-white/[0.025]">
+ return <div ref={rootRef} className={`relative ${financialUi.surfaceInteractive}`}>
+  <button type="button" aria-expanded={open} onClick={()=>setOpen(value=>!value)} className="flex min-h-[92px] w-full flex-col items-start gap-2 rounded-2xl p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60">
    <div className="flex w-full items-start justify-between gap-2"><ResourceIcon resource={resource}/><ChevronRight className={`h-4 w-4 shrink-0 text-slate-600 transition-transform ${open?'rotate-90':''}`}/></div>
    <div className="min-w-0 w-full"><p className="truncate text-xs font-semibold text-slate-200">{resource.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{[resource.institution,resource.ownerLabel].filter(Boolean).join(' · ')||resource.amountLabel}</p>{resource.detailLabel&&<p className="truncate text-[10px] text-slate-400">{resource.detailLabel}</p>}<strong className="mt-2 block text-sm">{money(resource.amount)}</strong></div>
   </button>

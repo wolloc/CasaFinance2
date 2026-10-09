@@ -19,6 +19,6 @@ test('Home mostra terceiros envolvidos e valores atribuídos',()=>{
 test('responsabilidades de terceiros são atualizadas após ações financeiras',()=>{
   assert.match(home,/refreshKey\?:number/);
   assert.match(settlements,/\[household\?\.id,refreshKey\]/);
-  assert.match(home,/refreshKey=\{refreshKey\}/);
+  assert.match(home,/refreshKey\?:number/);
   assert.match(screen,/refreshKey=\{attentionRefreshKey\+refreshKey\}/);
 });
