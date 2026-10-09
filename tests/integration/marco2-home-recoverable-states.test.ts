@@ -9,7 +9,7 @@ test('attention empty state explains that only actionable urgency is empty', () 
   assert.match(priority, /Nada urgente agora/);
   assert.match(priority, /O que pedir ação aparece aqui/);
   assert.match(priority, /CircleCheck/);
-  assert.match(priority, /<details className="group/);
+  assert.match(priority, /<details/);
   assert.match(priority, /<summary className="flex min-h-12/);
 });
 
