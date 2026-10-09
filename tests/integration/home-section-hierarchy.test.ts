@@ -10,21 +10,21 @@ const heading=await readFile(new URL('../../src/components/app/FinancialSectionH
 
 test('Home usa uma única hierarquia para títulos de seção',()=>{
   for(const title of ['Como estamos?','Entre vocês','Olhando pra frente']){
-    assert.match(home,new RegExp(`FinancialSectionHeading[^\\n]*title="${title.replace(/[?]/g,'\\\\?')}"`));
+    assert.ok(home.includes(`<FinancialSectionHeading title="${title}"`),`Home deve usar FinancialSectionHeading para "${title}"`);
   }
   assert.match(home,/HomeFinancialMap/);
-  assert.match(priority,/<summary[^\\n]*>/);
+  assert.match(priority,/<summary[^\n]*>/);
   assert.match(priority,/Precisa de atenção/);
-  assert.match(priority,/\\{children\\}/);
+  assert.match(priority,/\{children\}/);
   assert.match(upcoming,/embedded/);
   assert.match(upcoming,/Próximos 7 dias/);
-  assert.match(settlements,/FinancialSectionHeading[^\\n]*title="Valores com pessoas"/);
+  assert.ok(settlements.includes('FinancialSectionHeading title="Valores com pessoas"'));
 });
 
 test('escala de seção é definida em um único lugar',()=>{
   assert.match(heading,/text-base font-extrabold leading-snug text-slate-100 sm:text-lg/);
   assert.match(heading,/text-sm leading-5 text-slate-400/);
-  assert.match(heading,/text-\\[11px\\] font-bold uppercase tracking-\\[0\\.12em\\]/);
+  assert.match(heading,/text-\[11px\] font-bold uppercase tracking-\[0\.12em\]/);
 });
 
 
