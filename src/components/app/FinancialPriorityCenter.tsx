@@ -2,9 +2,8 @@ import { AlertTriangle, ArrowRight, CircleCheck } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { AttentionItem } from '../../finance/financialDashboard.js';
 import { ProjectionReviewCenter } from './ProjectionReviewCenter.js';
-import { FinancialSectionHeading } from './FinancialSectionHeading.js';
+import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.js';
 import { IncomeReceiptAction } from './IncomeReceiptAction.js';
-import { financialUi } from './FinancialSectionHeading.js';
 
 const money=(value:number|string|null|undefined)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
