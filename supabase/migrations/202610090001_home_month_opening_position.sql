@@ -81,7 +81,7 @@ end
 $$;
 
 comment on function public.financial_household_opening_position_at_date(uuid,date) is
-  'Household opening position at the start of a date, based on canonical balance events and realized movement legs before that date. Includes usable meal benefits to match the household projection, excludes investments, reserves, restricted resources and credit, and returns NULL before financial tracking starts.';
+  'Household opening position at the start of a date, based on canonical balance events and realized movement legs before that date. Includes usable meal benefits to match the household projection, excludes investments, reserves, and restricted resources other than usable meal benefits, plus credit, and returns NULL before financial tracking starts.';
 
 revoke all on function public.financial_household_opening_position_at_date(uuid,date)
   from public,anon;
