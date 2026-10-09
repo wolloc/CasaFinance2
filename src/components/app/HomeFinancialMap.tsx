@@ -14,56 +14,6 @@ type ResourceRow=HouseholdResourcePosition|MemberResourcePosition;
 
 const amountOf=(row:ResourceRow)=>'attributed_amount' in row?Number(row.attributed_amount):Number(row.current_balance);
 
-function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId:string;refreshKey?:number}){
- const[rows,setRows]=useState<Array<{partyId:string;name:string;amount:number;count:number}>>([]);
- const[loading,setLoading]=useState(true);
- const[failed,setFailed]=useState(false);
- useEffect(()=>{
-  let active=true;
-  const load=async()=>{
-   if(!supabase||!householdId){if(active)setLoading(false);return;}
-   setLoading(true);setFailed(false);
-   try{
-    const tx=await supabase.from('transactions').select('id').eq('household_id',householdId).is('deleted_at',null).not('economic_state','in','(cancelled,reversed)');
-    if(tx.error)throw tx.error;
-    const ids=(tx.data??[]).map(row=>String(row.id));
-    if(ids.length===0){if(active)setRows([]);return;}
-    const response=await supabase.from('economic_allocations').select('responsible_party_id,amount,transaction_id,financial_parties!inner(id,name)').eq('household_id',householdId).not('responsible_party_id','is',null).in('transaction_id',ids);
-    if(response.error)throw response.error;
-    const grouped=new Map<string,{partyId:string;name:string;amount:number;transactions:Set<string>}>();
-    for(const row of response.data??[]){
-      const party=Array.isArray(row.financial_parties)?row.financial_parties[0]:row.financial_parties;
-      if(!party?.id)continue;
-      const partyId=String(party.id);
-      const current=grouped.get(partyId)??{partyId,name:String(party.name??'Terceiro'),amount:0,transactions:new Set<string>()};
-      current.amount+=Number(row.amount??0);
-      current.transactions.add(String(row.transaction_id));
-      grouped.set(partyId,current);
-    }
-    if(active)setRows(Array.from(grouped.values()).map(item=>({partyId:item.partyId,name:item.name,amount:item.amount,count:item.transactions.size})).sort((a,b)=>b.amount-a.amount));
-   }catch{if(active){setRows([]);setFailed(true);}}
-   finally{if(active)setLoading(false);}
-  };
-  void load();
-  return()=>{active=false;};
- },[householdId,refreshKey]);
- if(loading)return <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-3"><p className="text-[11px] text-slate-500">Carregando responsabilidades de terceiros…</p></div>;
- if(failed||rows.length===0)return null;
- const total=rows.reduce((sum,row)=>sum+row.amount,0);
- return <div className="space-y-2">
-   <div className="flex items-center justify-between gap-3 border-b border-cyan-900/30 pb-2">
-     <div><p className="text-xs font-bold text-slate-300">Responsabilidade por compromissos</p><p className="text-[11px] text-slate-500">Parte dos gastos assumida por terceiros</p></div>
-     <strong className="text-sm text-cyan-200">{money(total)}</strong>
-   </div>
-   <div className="space-y-1">
-    {rows.map(row=><div key={row.partyId} className="flex items-center justify-between gap-3 border-b border-slate-800/70 py-2 last:border-0">
-      <div><p className="text-sm font-semibold text-slate-300">{row.name}</p><p className="text-[10px] text-slate-600">{row.count} {row.count===1?'lançamento':'lançamentos'} · parte ou total do compromisso</p></div>
-      <strong className="text-sm text-slate-100">{money(row.amount)}</strong>
-    </div>)}
-   </div>
- </div>;
-}
-
 class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:boolean}>{
  declare readonly props: Readonly<{children:ReactNode}>;
  state={hasError:false};
@@ -189,8 +139,7 @@ export function HomeFinancialMap({
 
   </section>
   {perspective==='household'&&householdId&&<section className="space-y-3 rounded-[1.6rem] border border-cyan-900/40 bg-cyan-950/10 p-4">
-    <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><h2 className="font-bold text-slate-200">Valores com terceiros</h2><p className="text-[11px] text-slate-500">Valores a receber, a pagar e compromissos assumidos por outras pessoas.</p></div></div>
-    <ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>
+    <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><h2 className="font-bold text-slate-200">Valores com terceiros</h2></div>
     <SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeMembers={false} includeThirdParties/>
   </section>}
   </div>;
