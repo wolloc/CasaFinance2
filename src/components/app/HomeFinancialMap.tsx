@@ -6,7 +6,6 @@ import type { HouseholdResourcePosition, MemberResourcePosition } from '../../fi
 import type { ResourceNavigationAction } from './ResourceActionRow.js';
 import { ResourceActionRow } from './ResourceActionRow.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
-import { SettlementHub } from './SettlementHub.js';
 import { supabase } from '../../lib/supabase.js';
 
 const money=(value:number|string)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value));
@@ -127,7 +126,7 @@ export function HomeFinancialMap({
     return totals;
   },{current:0,future:0,limit:0});
 
-  return <section className="space-y-3">
+  return <div className="space-y-7"><section className="space-y-3">
     <div className="flex items-center justify-between gap-3 px-1">
       <div>
         <h2 className="text-lg font-black tracking-tight text-slate-100">Onde está nosso dinheiro?</h2>
@@ -187,17 +186,12 @@ export function HomeFinancialMap({
       </div>
     </details></HomeFinancialMapSectionBoundary>
 
-    {perspective==='household'&&householdId&&<HomeFinancialMapSectionBoundary label="Pessoas e acertos"><details open className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
-      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Pessoas e acertos</p><p className="text-[11px] text-slate-500">Quem deve, quem recebe e o que já está projetado</p></div></div>
-        <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/>
-      </summary>
-      <div className="space-y-3 border-t border-cyan-900/30 p-3">
-        <div><p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Compromissos assumidos por terceiros</p><ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/></div>
-        <div><p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Acertos entre pessoas</p><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeMembers includeThirdParties/></div>
-      </div>
-    </details></HomeFinancialMapSectionBoundary>}
-  </section>;
+  </section>
+  {perspective==='household'&&householdId&&<section className="space-y-3 rounded-[1.6rem] border border-cyan-900/40 bg-cyan-950/10 p-4">
+    <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><h2 className="font-bold text-slate-200">Valores com terceiros</h2><p className="text-[11px] text-slate-500">Valores a receber, a pagar e compromissos assumidos por outras pessoas.</p></div></div>
+    <ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/>
+  </section>}
+  </div>;
 }
 
 export function SafeHomeFinancialMap(props:Parameters<typeof HomeFinancialMap>[0]){return <HomeFinancialMapBoundary><HomeFinancialMap {...props}/></HomeFinancialMapBoundary>;}
