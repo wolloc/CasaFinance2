@@ -6,7 +6,7 @@ export type MonthlyCoverageState='covered'|'covered_by_expected_income'|'needs_r
 export function MonthlyPositionStatement({
   opening,realizedIncome,expectedIncome,realizedOutflow,remainingOutflow,ending,currentAvailable,coverageState,coverageGap=0,reserveAndInvestments=0,benefitBalance=0,thirdPartyExpectedInflow=0,subjectLabel='Casa',periodMode='current',
 }:{
-  opening:number;realizedIncome:number;expectedIncome:number;realizedOutflow:number;remainingOutflow:number;ending:number;currentAvailable?:number|null;coverageState?:MonthlyCoverageState|null;coverageGap?:number;reserveAndInvestments?:number;benefitBalance?:number;investmentBalance?:number;thirdPartyExpectedInflow?:number;subjectLabel?:string;periodMode?:'current'|'future';
+  opening:number|null;realizedIncome:number;expectedIncome:number;realizedOutflow:number;remainingOutflow:number;ending:number;currentAvailable?:number|null;coverageState?:MonthlyCoverageState|null;coverageGap?:number;reserveAndInvestments?:number;benefitBalance?:number;investmentBalance?:number;thirdPartyExpectedInflow?:number;subjectLabel?:string;periodMode?:'current'|'future';
 }){
  const available=currentAvailable??opening;
  const futurePeriod=periodMode==='future';
@@ -22,7 +22,7 @@ export function MonthlyPositionStatement({
  return <article className={`rounded-[2rem] border p-5 ${coverageCopy.panel}`}>
   <div className="flex items-center gap-2"><span className={`flex h-8 w-8 items-center justify-center rounded-xl bg-slate-950/45 ${coverageCopy.tone}`}><CoverageIcon className="h-4 w-4"/></span><p className={`font-black ${coverageCopy.tone}`}>{coverageCopy.title}</p></div>
   <div className="mt-5"><p className="text-xs text-slate-500">{futurePeriod?`${subjectLabel} pode terminar este mês com`:`Se nada mudar, ${subjectLabel.toLowerCase()} pode terminar o mês com`}</p><strong className={`mt-1 block text-4xl tracking-tight ${ending<0?'text-rose-300':'text-white'}`}>{money(ending)}</strong></div>
-  <div className="mt-5 rounded-2xl bg-slate-950/45 p-4"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Posição inicial do mês</p><strong className="mt-1 block text-base text-slate-100">{money(opening)}</strong><p className="mt-1 text-[11px] text-slate-500">Saldo disponível no início do acompanhamento deste mês.</p></div>
+  <div className="mt-5 rounded-2xl bg-slate-950/45 p-4"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Posição inicial do mês</p><strong className="mt-1 block text-base text-slate-100">{opening===null?'Ainda não disponível':money(opening)}</strong><p className="mt-1 text-[11px] text-slate-500">{opening===null?'O acompanhamento financeiro ainda não cobre o início deste mês.':'Saldo dos recursos utilizáveis no início do mês, conforme os registros disponíveis.'}</p></div>
   <div className="mt-3 grid grid-cols-2 gap-2">
    <div className="rounded-xl bg-slate-950/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400/80">Efetivo · entrou</p><strong className="mt-1 block text-sm text-emerald-200">+ {money(realizedIncome)}</strong></div>
    <div className="rounded-xl bg-slate-950/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-rose-400/80">Efetivo · saiu</p><strong className="mt-1 block text-sm text-rose-200">− {money(realizedOutflow)}</strong></div>
