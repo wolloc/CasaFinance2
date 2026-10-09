@@ -89,5 +89,5 @@ test('Nova Despesa mantém o fluxo de duas etapas sem cabeçalho técnico',()=>{
   assert.doesNotMatch(wizard,/Etapa/);
   assert.doesNotMatch(wizard,/>Detalhes</);
   assert.doesNotMatch(wizard,/>Financeiro</);
-  assert.match(wizard,/setStep\\(1\\)/);
+  assert.match(wizard,/setStep\(1\)/);
 });
