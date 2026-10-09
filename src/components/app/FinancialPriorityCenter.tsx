@@ -4,6 +4,7 @@ import type { AttentionItem } from '../../finance/financialDashboard.js';
 import { ProjectionReviewCenter } from './ProjectionReviewCenter.js';
 import { FinancialSectionHeading } from './FinancialSectionHeading.js';
 import { IncomeReceiptAction } from './IncomeReceiptAction.js';
+import { financialUi } from './FinancialSectionHeading.js';
 
 const money=(value:number|string|null|undefined)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value??0));
 const shortDate=(value:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
@@ -44,7 +45,7 @@ export function FinancialPriorityCenter({items,onNavigate,onResolved,children}:{
   const[activeIncomeMovementId,setActiveIncomeMovementId]=useState<string|null>(null);
   const attentionIncomeMovementIds=items.filter(item=>item.attention_type==='delayed_expected_income'&&item.entity_type==='money_movement').map(item=>item.entity_id);
   return <section aria-labelledby="atencao">
-    <details open={items.some(item=>item.severity==='red')} className="group rounded-2xl border border-slate-800 bg-slate-900/45">
+    <details open={items.some(item=>item.severity==='red')} className={`group ${financialUi.surface}`}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400"/><strong id="atencao" className="text-sm">Precisa de atenção</strong></div>
         <div className="flex items-center gap-2">{items.length>0?<span className="rounded-full bg-amber-950/50 px-2 py-1 text-[11px] font-bold text-amber-300">{items.length}</span>:<CircleCheck className="h-4 w-4 text-emerald-400"/>}<ArrowRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/></div>
