@@ -29,8 +29,9 @@ test('Dashboard preserves available canonical sections instead of failing all re
 });
 
 test('Home never turns an unavailable dashboard section into an apparent financial zero',()=>{
- assert.match(home,/Alguns dados não atualizaram agora/);
- assert.match(home,/unavailableLabels/);
+ assert.doesNotMatch(home,/Alguns dados não atualizaram agora/);
+ assert.match(home,/financial_household_opening_position_at_date/);
+ assert.match(home,/openingResponse\.data==null\?null:Number\(openingResponse\.data\)/);
  assert.match(home,/currentAvailable=\{currentCash\}/);
  assert.match(statement,/pode terminar o mês com/);
  assert.match(statement,/subjectLabel/);
@@ -49,7 +50,8 @@ test('Home consolida a posição mensal e mantém classes de recursos distintas'
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
  assert.match(map,/>Cartões</);
- assert.match(map,/Pessoas e acertos/);
+ assert.match(map,/Valores com terceiros/);
+ assert.match(map,/includeMembers=\{false\}/);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
  assert.doesNotMatch(map,/label:'Dinheiro reservado'/);
 });

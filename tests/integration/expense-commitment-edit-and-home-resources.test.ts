@@ -29,7 +29,7 @@ test('commitment correction qualifies allocation columns to avoid PL/pgSQL ambig
 
 test('money map has one heading and monthly summary surfaces resource categories',()=>{
   assert.match(home,/HomeFinancialMap/);
-  assert.match(casa,/>Benefícios</);
+  assert.match(home,/label:'Benefícios'/);
   assert.match(home,/label:'Investimentos e reservas'/);
   assert.match(home,/label:'Contas'/);
 });

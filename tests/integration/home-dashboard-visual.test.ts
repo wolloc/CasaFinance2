@@ -13,7 +13,8 @@ test('Home traduz a posição financeira em leitura rápida',()=>{
   assert.match(home,/Como estamos\?/);
   assert.match(home,/Olhando pra frente/);
   assert.match(home,/Entre vocês/);
-  assert.match(home,/Alguns dados não atualizaram agora/);
+  assert.doesNotMatch(home,/Alguns dados não atualizaram agora/);
+  assert.match(home,/financial_household_opening_position_at_date/);
   assert.match(statement,/Estamos tranquilos neste mês/);
   assert.match(statement,/O mês fecha contando com o que ainda entra/);
 });
@@ -45,8 +46,8 @@ test('Mapa financeiro isola falhas entre blocos independentes',()=>{
   // Contrato de resiliência: uma falha local não deve derrubar os demais blocos.
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
-  assert.match(financialMap,/Pessoas e acertos/);
-  assert.match(financialMap,/Responsabilidades de terceiros/);
+  assert.match(financialMap,/Valores com terceiros/);
+  assert.match(financialMap,/Responsabilidade por compromissos/);
   assert.match(financialMap,/const safeResources=Array\.isArray\(resources\)\?resources:\[\]/);
   assert.match(financialMap,/const safeCards=Array\.isArray\(cards\)\?cards:\[\]/);
 });

@@ -38,7 +38,9 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const[householdResourceRows,setHouseholdResourceRows]=useState<HouseholdResourcePosition[]>([]);
  const[memberLoading,setMemberLoading]=useState(false);
  const[memberError,setMemberError]=useState(false);
+ const[memberDetailsWarning,setMemberDetailsWarning]=useState(false);
  const[loading,setLoading]=useState(true);
+ const[monthOpeningCash,setMonthOpeningCash]=useState<number|null>(null);
  const[error,setError]=useState(false);
  const[referenceMonth,setReferenceMonth]=useState('');
  const[periodPickerOpen,setPeriodPickerOpen]=useState(false);
@@ -47,15 +49,14 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const[referenceMemberProjection,setReferenceMemberProjection]=useState<MemberMonthlyProjection[]>([]);
  const[referenceLoading,setReferenceLoading]=useState(false);
  const[referenceError,setReferenceError]=useState(false);
- const[monthOpeningCash,setMonthOpeningCash]=useState<number|null>(null);
  const[attentionRefreshKey,setAttentionRefreshKey]=useState(0);
  const currentReferenceMonth=household?normalizeReferenceMonth(dateInTimeZone(household.timezone)):'';
 
  useEffect(()=>{if(!household)return;setReferenceMonth(normalizeReferenceMonth(dateInTimeZone(household.timezone)));setPeriodPickerOpen(false);},[household?.id,household?.timezone,attentionRefreshKey,refreshKey]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household||!referenceMonth){setReferenceContext(null);setReferenceProjection([]);setReferenceMemberProjection([]);return()=>{cancelled=true;};}setReferenceLoading(true);setReferenceError(false);setReferenceProjection([]);setReferenceMemberProjection([]);const load=async()=>{try{const context=await getReferenceMonthContext(supabase,household.id,referenceMonth);if(cancelled)return;setReferenceContext(context);if(context.period_kind==='future'){const [householdRows,memberRows]=await Promise.all([getHouseholdReferenceProjection(supabase,household.id,referenceMonth),perspective==='household'?Promise.resolve([]):getMemberReferenceProjection(supabase,household.id,perspective,referenceMonth)]);if(cancelled)return;setReferenceProjection(householdRows);setReferenceMemberProjection(memberRows);}}catch{if(!cancelled){setReferenceContext(null);setReferenceError(true);}}finally{if(!cancelled)setReferenceLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,referenceMonth,perspective,attentionRefreshKey,refreshKey]);
- useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);setMonthOpeningCash(null);const load=async()=>{try{const projectionHorizon=recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone));try{await ensureRecurringExpenseHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}try{await ensureRecurringIncomeHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de entradas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled){setDashboard(nextDashboard);const monthStart=normalizeReferenceMonth(dateInTimeZone(household.timezone));const previousDay=new Date(`${monthStart}T12:00:00Z`);previousDay.setUTCDate(previousDay.getUTCDate()-1);const openingResponse=await supabase.rpc('financial_available_cash_at_date',{p_household_id:household.id,p_as_of_date:previousDay.toISOString().slice(0,10)});setMonthOpeningCash(openingResponse.error?null:Number(openingResponse.data));}}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone,refreshKey]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household)return()=>{cancelled=true;};setLoading(true);setError(false);setDashboard(null);setMonthOpeningCash(null);const load=async()=>{try{const projectionHorizon=recurringExpenseRollingHorizonDate(dateInTimeZone(household.timezone));try{await ensureRecurringExpenseHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de despesas recorrentes antes da Home.',error);}try{await ensureRecurringIncomeHorizon(supabase,household.id,projectionHorizon);}catch(error){console.warn('Casa Finance: não foi possível atualizar o horizonte de entradas recorrentes antes da Home.',error);}const nextDashboard=await getFinancialDashboard(supabase,household.id,household.timezone);if(!cancelled){setDashboard(nextDashboard);try{const monthStart=normalizeReferenceMonth(dateInTimeZone(household.timezone));const openingResponse=await supabase.rpc('financial_household_opening_position_at_date',{p_household_id:household.id,p_as_of_date:monthStart});if(!cancelled)setMonthOpeningCash(openingResponse.error||openingResponse.data==null?null:Number(openingResponse.data));}catch{if(!cancelled)setMonthOpeningCash(null);}}}catch{if(!cancelled)setError(true);}finally{if(!cancelled)setLoading(false);}};void load();return()=>{cancelled=true;};},[household?.id,household?.timezone,refreshKey]);
  useEffect(()=>{let cancelled=false;if(!supabase||!household){setHouseholdResourceRows([]);return()=>{cancelled=true;};}listHouseholdResourcePositions(supabase,household.id).then(rows=>{if(!cancelled)setHouseholdResourceRows(rows);}).catch(()=>{if(!cancelled)setHouseholdResourceRows([]);});return()=>{cancelled=true;};},[household?.id,attentionRefreshKey,refreshKey]);
- useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'||!referenceMonth||referenceMonth!==currentReferenceMonth){setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);setMemberError(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);Promise.all([getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone),listCardOverviews(supabase,household.id),listMemberResourcePositions(supabase,household.id,perspective),listUnattributedFundingDetails(supabase,household.id,currentReferenceMonth)]).then(([rows,cardRows,resourceRows,detailRows])=>{if(cancelled)return;setMemberProjection(rows);setMemberCards(cardRows);setMemberResources(resourceRows);setUnattributedDetails(detailRows);}).catch(()=>{if(!cancelled)setMemberError(true);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective,referenceMonth,currentReferenceMonth,attentionRefreshKey,refreshKey]);
+ useEffect(()=>{let cancelled=false;if(!supabase||!household||perspective==='household'||!referenceMonth||referenceMonth!==currentReferenceMonth){setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);setMemberError(false);setMemberDetailsWarning(false);return()=>{cancelled=true;};}setMemberLoading(true);setMemberError(false);setMemberDetailsWarning(false);setMemberProjection([]);setMemberCards([]);setMemberResources([]);setUnattributedDetails([]);Promise.allSettled([getMemberFinancialPerspective(supabase,household.id,perspective,household.timezone),listCardOverviews(supabase,household.id),listMemberResourcePositions(supabase,household.id,perspective),listUnattributedFundingDetails(supabase,household.id,currentReferenceMonth)]).then(([projectionResult,cardResult,resourceResult,detailResult])=>{if(cancelled)return;if(projectionResult.status==='rejected'){setMemberError(true);return;}setMemberDetailsWarning([cardResult,resourceResult,detailResult].some(result=>result.status==='rejected'));setMemberProjection(projectionResult.value);setMemberCards(cardResult.status==='fulfilled'?cardResult.value:[]);setMemberResources(resourceResult.status==='fulfilled'?resourceResult.value:[]);setUnattributedDetails(detailResult.status==='fulfilled'?detailResult.value:[]);}).finally(()=>{if(!cancelled)setMemberLoading(false);});return()=>{cancelled=true;};},[household?.id,household?.timezone,perspective,referenceMonth,currentReferenceMonth,attentionRefreshKey,refreshKey]);
 
 
  if(loading)return <LoaderCircle className="mx-auto mt-16 h-7 w-7 animate-spin text-blue-400"/>;
@@ -67,8 +68,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
  const thirdPartyProjected=thirdPartyReceivables.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
  const currentCash=health?.current_cash!=null?Number(health.current_cash):resources?resources.availableCash:null;
  const gap=guidance?Number(guidance.coverage_gap):null;
- const hasPartialFailure=Object.values(availability).some(value=>!value);
- const unavailableLabels=[!availability.household&&'posição da Casa',!availability.members&&'moradores',!availability.health&&'saúde do mês',!availability.confidence&&'qualidade das previsões',!availability.attention&&'itens de atenção',!availability.projection&&'projeção mensal',!availability.cards&&'cartões',!availability.settlements&&'valores entre moradores',!availability.resources&&'recursos',!availability.guidance&&'orientação de cobertura'].filter((value):value is string=>Boolean(value));
  const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Morador';
  const selector=<FinancialPerspectiveSelector value={perspective} onChange={onPerspectiveChange}/>;
  const resourceOwnerLabel=(ids:string[])=>{const names=ids.map(id=>householdMembers.find(member=>member.id===id)?.display_name).filter((name):name is string=>Boolean(name));return names.length>1?names.join(' + '):names[0]??null;};
@@ -148,7 +147,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   const current=memberProjection[0];
   const memberBenefitBalance=memberResources.filter(item=>item.type==='meal_benefit').reduce((sum,item)=>sum+Number(item.attributed_amount),0);
   const memberInvestmentBalance=memberResources.filter(item=>item.is_investment).reduce((sum,item)=>sum+Number(item.attributed_amount),0);
-  return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
+  return <div className="space-y-7"><FinancialPageHeader title="Casa"/>{monthNavigator}{selector}{memberDetailsWarning&&<p role="status" className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-xs text-slate-400">Alguns detalhes complementares não carregaram. A projeção principal do morador continua disponível.</p>}{memberLoading?<LoaderCircle className="mx-auto h-7 w-7 animate-spin"/>:memberError||!current?<p role="alert" className="rounded-2xl border border-rose-900 bg-rose-950/30 p-4 text-sm text-rose-200">Não foi possível carregar esta perspectiva financeira. Nenhum valor foi substituído por zero.</p>:<>
    <section><FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/><div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
     <MonthlyPositionStatement
      opening={Number(current.opening_liquidity)}
@@ -185,13 +184,12 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
   <FinancialPageHeader title="Casa"/>
   {monthNavigator}
   {selector}
-  {hasPartialFailure&&<details className="rounded-2xl border border-amber-900/60 bg-amber-950/15 px-4 py-3 text-sm text-amber-100"><summary className="cursor-pointer font-semibold">Alguns dados não atualizaram agora</summary><p className="mt-2 text-xs text-amber-100/80">Não foi possível confirmar: {unavailableLabels.join(', ')}. Os demais valores continuam vindo das fontes que responderam.</p></details>}
 
   <section>
    <FinancialSectionHeading title="Como estamos?" icon={<CircleGauge className="h-5 w-5 text-blue-400"/>}/>
    <div className="rounded-[2rem] border border-slate-800 bg-slate-900/65 p-5 shadow-sm">
     {!availability.projection||!currentMonth?<p className="text-sm text-slate-400">Ainda não há resumo financeiro confirmado para este mês.</p>:<MonthlyPositionStatement
-     opening={monthOpeningCash??Number(currentMonth.opening_cash)}
+     opening={monthOpeningCash}
      realizedIncome={Number(currentMonth.realized_true_income_in_month)}
      expectedIncome={Number(currentMonth.expected_reliable_income_remaining)}
      realizedOutflow={Number(currentMonth.realized_commitments_in_month)}
@@ -206,19 +204,16 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
      investmentBalance={resources?.investments??0}
      subjectLabel="Casa"
     />}
-    {resources&&<div className="mt-3 grid grid-cols-3 gap-2">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Caixa</p><strong className="mt-1 block text-sm text-slate-100">{money(currentCash)}</strong></div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Benefícios</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.benefits)}</strong></div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/45 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Investimentos</p><strong className="mt-1 block text-sm text-slate-100">{money(resources.investments)}</strong></div>
-    </div>}
+
    </div>
    {!availability.guidance&&unavailable('A orientação de cobertura está indisponível agora. O Casa não vai presumir quanto está livre ou faltando.')}
    {guidance&&(guidance.guidance_state==='needs_resource_reallocation'||guidance.guidance_state==='needs_funding_plan')&&<article className="mt-3 rounded-2xl border border-slate-800 bg-slate-900/45 p-4"><p className="text-sm font-bold text-slate-200">Quer ajustar esse mês?</p><p className="mt-1 text-xs text-slate-400">Essas ações mudam a forma de cobertura; nenhuma é aplicada automaticamente.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button onClick={()=>onCoverageAction?.('transfer',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Mover dinheiro de outra conta</button>{Number(guidance.reserve_balance)+Number(guidance.investment_balance)>0&&<button onClick={()=>onCoverageAction?.('reserve',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Usar reserva ou investimento</button>}<button onClick={()=>onCoverageAction?.('loan',gap??0)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-bold">Ver opção de empréstimo</button></div></article>}
   </section>
 
-  <section>
-   <FinancialSectionHeading title="Entre vocês"/>
-   {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):<SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeThirdParties={false}/>}
+  <section className="rounded-[1.6rem] border border-cyan-800/60 bg-gradient-to-br from-cyan-950/40 to-slate-900/60 p-4 shadow-lg shadow-cyan-950/15">
+   <FinancialSectionHeading title="Entre vocês" icon={<Landmark className="h-5 w-5 text-cyan-300"/>}/>
+   <p className="mb-3 text-xs text-slate-400">Acertos entre os moradores, separados dos valores com terceiros.</p>
+   {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):<SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeMembers includeThirdParties={false}/>}
   </section>
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}

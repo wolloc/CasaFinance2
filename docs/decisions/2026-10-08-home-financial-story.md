@@ -76,3 +76,15 @@ A projeção da Casa deve ser tratada como uma cadeia mensal, não como uma foto
 A função canônica `financial_monthly_projection` já encadeia o fechamento projetado de um mês como abertura do seguinte, e `financial_member_monthly_projection` fornece a perspectiva individual. A Home deve consumir essas fontes como referência temporal, evitando criar um segundo motor de projeção.
 
 A projeção por recurso permanece complementar: ela explica como contas e outros recursos tendem a terminar o mês, mas não substitui a cadeia financeira mensal canônica.
+
+## Ajustes de UX após validação visual — 2026-10-09
+
+**Estado: DEFINIDO**
+
+- O fechamento projetado aparece como o principal valor da seção `Como estamos?`; não deve ser repetido no resumo logo abaixo.
+- A posição inicial do mês deve vir da projeção financeira canônica, respeitando as posições iniciais registradas nas contas. Não usar uma consulta paralela que possa apresentar zero quando houver posição de abertura.
+- Remover a mensagem isolada sobre benefícios incluídos e os cartões-resumo repetidos de Caixa, Benefícios e Investimentos. Manter a observação de reserva e investimentos como recursos separados para eventual cobertura.
+- `Entre vocês` deve ter maior destaque visual e continuar sendo o único local dos acertos entre os moradores na Home.
+- `Valores com terceiros` deve ser uma seção própria, fora do agrupamento de contas/cartões, sem repetir os acertos entre os moradores.
+- Falhas em fontes secundárias não devem bloquear a perspectiva individual do morador; somente falha na projeção principal impede exibir os valores daquela perspectiva. Não exibir um alerta global genérico quando cada seção pode sinalizar sua própria indisponibilidade.
+- Manter `Precisa de atenção` e `Onde está nosso dinheiro?` com a hierarquia visual atual; o destaque adicional desta rodada é exclusivo de `Entre vocês`.
