@@ -32,5 +32,5 @@ test('centro de atenção usa datas e severidade em linguagem humana',()=>{
  assert.match(priority,/shortDate/);
  assert.match(priority,/Ação importante/);
  assert.match(priority,/Vale conferir/);
- assert.doesNotMatch(priority,/\\{item\\.due_date\\}<\\/span>/);
+ assert.equal(priority.includes('{item.due_date}</span>'),false);
 });
