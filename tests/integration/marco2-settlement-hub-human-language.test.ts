@@ -31,7 +31,7 @@ test('third parties show the person first and keep obligations inside the relati
 });
 
 test('settlement hub empty state is compact and retry remains explicit', () => {
-  assert.match(source, /Tudo equilibrado por enquanto/);
+  assert.doesNotMatch(source, /Tudo equilibrado por enquanto/);
   assert.match(source, /Não foi possível conferir os valores com pessoas agora/);
   assert.match(source, /Tentar novamente/);
 });
