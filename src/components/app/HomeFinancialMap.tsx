@@ -5,7 +5,7 @@ import type { AccountMonthlyProjection } from '../../finance/financialDashboard.
 import type { HouseholdResourcePosition, MemberResourcePosition } from '../../finance/memberResources.js';
 import type { ResourceNavigationAction } from './ResourceActionRow.js';
 import { ResourceActionRow } from './ResourceActionRow.js';
-import { financialUi } from './FinancialSectionHeading.js';
+import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.js';
 import { SettlementHub } from './SettlementHub.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { supabase } from '../../lib/supabase.js';
@@ -129,11 +129,8 @@ export function HomeFinancialMap({
   },{current:0,future:0,limit:0});
 
   return <div className="space-y-7"><section className="space-y-3">
-    <div className="flex items-center justify-between gap-3 px-1">
-      <div>
-        <h2 className="text-lg font-black tracking-tight text-slate-100">Onde está nosso dinheiro?</h2>
-        {perspective!=='household'&&<p className="mt-0.5 text-[11px] text-slate-500">Recursos e cartões nesta perspectiva</p>}
-      </div>
+    <div className="px-1">
+      <FinancialSectionHeading title="Onde está nosso dinheiro?" description={perspective!=='household'?'Recursos e cartões nesta perspectiva':undefined}/>
     </div>
     <HomeFinancialMapSectionBoundary label="Contas"><details open className={`group ${financialUi.surface}`}>
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
