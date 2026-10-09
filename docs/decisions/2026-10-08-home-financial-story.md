@@ -87,4 +87,4 @@ A projeção por recurso permanece complementar: ela explica como contas e outro
 - `Entre vocês` deve ter maior destaque visual e continuar sendo o único local dos acertos entre os moradores na Home.
 - `Valores com terceiros` deve ser uma seção própria, fora do agrupamento de contas/cartões, sem repetir os acertos entre os moradores.
 - Falhas em fontes secundárias não devem bloquear a perspectiva individual do morador; somente falha na projeção principal impede exibir os valores daquela perspectiva. Não exibir um alerta global genérico quando cada seção pode sinalizar sua própria indisponibilidade.
-- `Precisa de atenção` deve ter hierarquia visual mais forte, usando o nível de risco real dos itens para orientar o destaque.
+- Manter `Precisa de atenção` e `Onde está nosso dinheiro?` com a hierarquia visual atual; o destaque adicional desta rodada é exclusivo de `Entre vocês`.
