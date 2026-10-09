@@ -47,7 +47,7 @@ test('Mapa financeiro isola falhas entre blocos independentes',()=>{
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
   assert.match(financialMap,/Valores com terceiros/);
-  assert.match(financialMap,/Responsabilidades de terceiros/);
+  assert.match(financialMap,/Responsabilidade por compromissos/);
   assert.match(financialMap,/const safeResources=Array\.isArray\(resources\)\?resources:\[\]/);
   assert.match(financialMap,/const safeCards=Array\.isArray\(cards\)\?cards:\[\]/);
 });
