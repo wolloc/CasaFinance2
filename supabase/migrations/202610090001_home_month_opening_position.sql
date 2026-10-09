@@ -51,7 +51,7 @@ begin
       join eligible_accounts a on a.id=e.account_id
      where e.household_id=p_household_id
        and e.reversed_at is null
-       and e.effective_date<=p_as_of_date
+       and e.effective_date between v_tracking_start and p_as_of_date
 
     union all
 
@@ -60,6 +60,7 @@ begin
       join eligible_accounts a on a.id=m.destination_account_id
      where m.household_id=p_household_id
        and m.state='realized'
+       and m.movement_date>=v_tracking_start
        and m.movement_date<p_as_of_date
 
     union all
