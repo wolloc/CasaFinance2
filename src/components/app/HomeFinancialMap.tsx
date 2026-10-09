@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ChevronRight, CreditCard, HandCoins, UsersRound, Utensils, WalletCards } from 'lucide-react';
 import type { CardOverview } from '../../finance/cardOverview.js';
+import type { AccountMonthlyProjection } from '../../finance/financialDashboard.js';
 import type { HouseholdResourcePosition, MemberResourcePosition } from '../../finance/memberResources.js';
 import type { ResourceNavigationAction } from './ResourceActionRow.js';
 import { ResourceActionRow } from './ResourceActionRow.js';
@@ -90,6 +91,7 @@ export function HomeFinancialMap({
   memberName,
   householdId,
   refreshKey,
+  accountProjections,
   onOpenCard,
   onResourceAction,
   onSettlementAction,
@@ -103,9 +105,12 @@ export function HomeFinancialMap({
   onResourceAction?:(action:ResourceNavigationAction)=>void;
   onSettlementAction?:(intent:SettlementActionIntent)=>void;
   refreshKey?:number;
+  accountProjections?:AccountMonthlyProjection[];
 }){
   const safeResources=Array.isArray(resources)?resources:[];
   const safeCards=Array.isArray(cards)?cards:[];
+  const safeAccountProjections=Array.isArray(accountProjections)?accountProjections:[];
+  const projectionByAccount=new Map(safeAccountProjections.map(row=>[row.account_id,row]));
   const groups=[
     {key:'accounts',label:'Contas',rows:safeResources.filter(item=>['checking','savings'].includes(item.type)&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
     {key:'cash',label:'Dinheiro',rows:safeResources.filter(item=>!item.institution&&!item.is_investment&&item.resource_restriction!=='reserve'&&item.type!=='meal_benefit')},
@@ -147,7 +152,7 @@ export function HomeFinancialMap({
             isInvestment:item.is_investment,
             amount:amountOf(item),
             amountLabel:'attributed_amount' in item&&item.allocation_ratio<1?`Sua parte · ${Math.round(item.allocation_ratio*100)}%`:'Saldo atual',
-            detailLabel:item.resource_restriction==='reserve'?'Reserva':item.is_investment?'Posição patrimonial':null,
+            detailLabel:item.resource_restriction==='reserve'?'Reserva':item.is_investment?'Posição patrimonial':(()=>{const projected=projectionByAccount.get(item.account_id);return projected&&Math.abs(Number(projected.projected_ending_balance)-Number(projected.current_balance))>0.009?`Fecha o mês · ${money(Number(projected.projected_ending_balance))}`:null;})(),
           }} onAction={onResourceAction}/>)}</div>
         </details>})}
       </div>
@@ -182,15 +187,16 @@ export function HomeFinancialMap({
       </div>
     </details></HomeFinancialMapSectionBoundary>
 
-    {perspective==='household'&&householdId&&<HomeFinancialMapSectionBoundary label="Responsabilidades de terceiros"><ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/></HomeFinancialMapSectionBoundary>}
-
-    <HomeFinancialMapSectionBoundary label="Outras pessoas"><details className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
+    {perspective==='household'&&householdId&&<HomeFinancialMapSectionBoundary label="Pessoas e acertos"><details open className="group rounded-[1.6rem] border border-cyan-900/45 bg-cyan-950/10">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Outras pessoas</p><p className="text-[11px] text-slate-500">Valores a receber ou pagar fora da Casa</p></div></div>
+        <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><div><p className="font-bold text-slate-200">Pessoas e acertos</p><p className="text-[11px] text-slate-500">Quem deve, quem recebe e o que já está projetado</p></div></div>
         <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90"/>
       </summary>
-      <div className="border-t border-cyan-900/30 p-3"><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeMembers={false}/></div>
-    </details></HomeFinancialMapSectionBoundary>
+      <div className="space-y-3 border-t border-cyan-900/30 p-3">
+        <div><p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Compromissos assumidos por terceiros</p><ThirdPartyResponsibilitySummary householdId={householdId} refreshKey={refreshKey}/></div>
+        <div><p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Acertos entre pessoas</p><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeMembers includeThirdParties/></div>
+      </div>
+    </details></HomeFinancialMapSectionBoundary>}
   </section>;
 }
 

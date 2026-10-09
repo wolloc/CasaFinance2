@@ -8,11 +8,11 @@ const engine=await readFile(new URL('../../docs/financial-engine-v2.md',import.m
 
 test('Casa current month uses an integrated monthly statement from opening to projected ending',()=>{
   assert.match(home,/MonthlyPositionStatement/);
-  assert.match(home,/opening=\{Number\(currentMonth\.opening_cash\)\}/);
+  assert.match(home,/opening=\{monthOpeningCash\?\?Number\(currentMonth\.opening_cash\)\}/);
   assert.match(home,/realizedIncome=\{Number\(currentMonth\.realized_true_income_in_month\)\}/);
   assert.match(home,/expectedIncome=\{Number\(currentMonth\.expected_reliable_income_remaining\)\}/);
   assert.match(home,/remainingOutflow=\{Number\(currentMonth\.remaining_commitments_in_month\)\+Number\(currentMonth\.projected_recurring_commitments\)\+Number\(currentMonth\.prior_pending_outflow\)\}/);
-  assert.match(home,/ending=\{Number\(currentMonth\.projected_ending_cash\)\}/);
+  assert.match(home,/ending=\{Number\(currentMonth\.projected_ending_cash\)\+thirdPartyProjected\}/);
   assert.match(home,/subjectLabel="Casa"/);
 });
 
@@ -25,7 +25,7 @@ test('monthly statement keeps liquidity coverage separate from reserves and inve
     'O mês fecha contando com o que ainda entra',
     'Vamos precisar mexer em outros recursos',
     'Precisamos nos organizar neste mês',
-    'A projeção combina o que já aconteceu com os compromissos ainda previstos',
+    'O efetivo mostra o que já aconteceu. A projeção mostra o que ainda está previsto',
   ]) assert.match(statement,new RegExp(copy.replace(/[?]/g,'\\?')));
   assert.match(statement,/reserva e investimentos/i);
   assert.match(engine,/Investimentos e reservas[\s\S]*classes patrimoniais separadas do caixa transacional/);

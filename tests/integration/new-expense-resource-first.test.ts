@@ -83,12 +83,11 @@ test('selected card keeps institution and holder context visible before choosing
 });
 
 
-test('Nova Despesa deixa clara a etapa atual e permite voltar aos detalhes sem criar uma nova etapa',()=>{
-  assert.match(wizard,/Etapa/);
+test('Nova Despesa mantém o fluxo de duas etapas sem cabeçalho técnico',()=>{
   assert.match(wizard,/step === 1/);
   assert.match(wizard,/step === 2/);
-  assert.match(wizard,/>Detalhes</);
-  assert.match(wizard,/>Financeiro</);
-  assert.match(wizard,/aria-current=\{step === 1 \? 'step' : undefined\}/);
-  assert.match(wizard,/if \(step === 2\) \{ setError\(null\); setStep\(1\); \}/);
+  assert.doesNotMatch(wizard,/Etapa/);
+  assert.doesNotMatch(wizard,/>Detalhes</);
+  assert.doesNotMatch(wizard,/>Financeiro</);
+  assert.match(wizard,/setStep\(1\)/);
 });
