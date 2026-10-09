@@ -8,7 +8,8 @@ const engine=await readFile(new URL('../../docs/financial-engine-v2.md',import.m
 
 test('Casa current month uses an integrated monthly statement from opening to projected ending',()=>{
   assert.match(home,/MonthlyPositionStatement/);
-  assert.match(home,/opening=\{monthOpeningCash\?\?Number\(currentMonth\.opening_cash\)\}/);
+  assert.match(home,/opening=\{monthOpeningCash\}/);
+  assert.match(home,/financial_household_opening_position_at_date/);
   assert.match(home,/realizedIncome=\{Number\(currentMonth\.realized_true_income_in_month\)\}/);
   assert.match(home,/expectedIncome=\{Number\(currentMonth\.expected_reliable_income_remaining\)\}/);
   assert.match(home,/remainingOutflow=\{Number\(currentMonth\.remaining_commitments_in_month\)\+Number\(currentMonth\.projected_recurring_commitments\)\+Number\(currentMonth\.prior_pending_outflow\)\}/);
