@@ -214,7 +214,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
    <FinancialSectionHeading title="Entre vocês" icon={<Landmark className="h-5 w-5 text-cyan-300"/>}/>
    <p className="mb-3 text-xs text-slate-400">Acertos entre os moradores, separados dos valores com terceiros.</p>
    {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):<SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeMembers includeThirdParties={false}/>}
-  </section>>
+  </section>
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}
 
