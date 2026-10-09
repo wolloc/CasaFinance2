@@ -1,6 +1,6 @@
 -- Casa Home: canonical opening position for the selected month.
--- Unlike the cash-only historical read, this includes usable meal benefits so
--- the opening figure uses the same resource scope as the household projection.
+-- This opening value is cash-like account balance only. Meal benefits remain
+-- visible as a separate restricted resource and are not treated as cash.
 create or replace function public.financial_household_opening_position_at_date(
   p_household_id uuid,
   p_as_of_date date
@@ -42,8 +42,8 @@ begin
     select a.id
       from public.accounts a
      where a.household_id=p_household_id
-       and a.type in ('cash','checking','savings','digital_wallet','meal_benefit')
-       and (a.resource_restriction is null or a.resource_restriction='meal_benefit')
+       and a.type in ('cash','checking','savings','digital_wallet')
+       and a.resource_restriction is null
   ),
   legs as (
     select e.amount::numeric(19,2) as amount
@@ -81,7 +81,7 @@ end
 $$;
 
 comment on function public.financial_household_opening_position_at_date(uuid,date) is
-  'Household opening position at the start of a date, based on canonical balance events and realized movement legs before that date. Includes usable meal benefits to match the household projection, excludes investments, reserves, and restricted resources other than usable meal benefits, plus credit, and returns NULL before financial tracking starts.';
+  'Household opening position at the start of a date, based on canonical balance events and realized movement legs before that date. Excludes benefits, investments, reserves, restricted resources and credit, and returns NULL before financial tracking starts.';
 
 revoke all on function public.financial_household_opening_position_at_date(uuid,date)
   from public,anon;
