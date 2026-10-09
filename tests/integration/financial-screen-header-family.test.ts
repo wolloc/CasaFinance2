@@ -14,5 +14,5 @@ test('Casa Entradas e Gastos usam o mesmo header de tela',()=>{
 });
 
 test('escala tipográfica do título é definida em um único lugar',()=>{
-  assert.match(header,/text-2xl font-black leading-tight tracking-tight text-slate-100/);
+  assert.match(header,/text-xl font-extrabold leading-tight tracking-tight text-slate-100 sm:text-2xl/);
 });
