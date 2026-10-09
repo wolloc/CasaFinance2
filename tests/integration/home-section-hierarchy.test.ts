@@ -22,7 +22,7 @@ test('Home usa uma única hierarquia para títulos de seção',()=>{
 });
 
 test('escala de seção é definida em um único lugar',()=>{
-  assert.match(heading,/text-lg font-black leading-tight text-slate-100/);
+  assert.match(heading,/text-base font-extrabold leading-snug text-slate-100 sm:text-lg/);
   assert.match(heading,/text-sm leading-5 text-slate-400/);
   assert.match(heading,/text-xs font-bold uppercase tracking-\[0\.14em\]/);
 });
