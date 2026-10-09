@@ -61,7 +61,7 @@ function ThirdPartyResponsibilitySummary({householdId,refreshKey=0}:{householdId
       <strong className="text-sm text-slate-100">{money(row.amount)}</strong>
     </div>)}
    </div>
- </div>;;
+ </div>;
 }
 
 class HomeFinancialMapBoundary extends Component<{children:ReactNode},{hasError:boolean}>{
