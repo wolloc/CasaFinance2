@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase.js';
 import { listMemberSettlementEvents, listMemberSettlementPositions, type MemberSettlementEvent, type MemberSettlementPosition } from '../../finance/memberSettlements.js';
 import { listOpenThirdPartyObligations, type ThirdPartyObligation } from '../../finance/thirdPartyObligations.js';
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
-import { FinancialSectionHeading } from './FinancialSectionHeading.js';
+import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.js';
 import { ThirdPartyContextModal } from './ThirdPartyContextModal.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -89,7 +89,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
         const projectedText=pair.projected&&pair.projectedAmount>0?`Tendência: ${memberName(pair.projected.creditor_member_id)} pode ficar com ${money(pair.projectedAmount)} de ${memberName(pair.projected.debtor_member_id)}`:'Sem diferença projetada';
         const realizedEvents=pairEvents(pair.leftId,pair.rightId,'realized');
         const projectedEvents=pairEvents(pair.leftId,pair.rightId,'projected');
-        return <details key={pair.key} className="group rounded-2xl border border-cyan-900/60 bg-cyan-950/15">
+        return <details key={pair.key} className="group rounded-2xl border border-cyan-900/60 bg-cyan-950/15 transition-colors hover:border-cyan-800/80">
           <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0"><strong className="block text-sm">{memberName(pair.leftId)} ↔ {memberName(pair.rightId)}</strong><p className="mt-1 truncate text-xs text-slate-500">{current?currentText:'Tudo equilibrado hoje'}</p></div>
             <strong className="whitespace-nowrap text-base text-cyan-200">{current?money(currentAmount):money(0)}</strong>
@@ -105,7 +105,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
         const status=perspective==='household'?(group.net>0?`${group.name} deve à Casa`:group.net<0?`A Casa deve a ${group.name}`:'Valores equilibrados'):(group.net>0?`${group.name} deve a você`:group.net<0?`Você deve a ${group.name}`:'Valores equilibrados');
         const responsibilityLabels=[...new Set(group.rows.map(responsibilityLabel))];
         const responsibility=responsibilityLabels.length===1?responsibilityLabels[0]:'Responsabilidade mista';
-        return <details key={group.counterpartyId} className="group rounded-2xl border border-slate-800 bg-slate-900/35">
+        return <details key={group.counterpartyId} className={`group ${financialUi.surfaceInteractive}`}>
           <summary onClick={event=>{event.preventDefault();setSelectedThirdParty(group);}} className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="block truncate text-sm">{group.name}</strong><span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{responsibility}</span></div><p className="mt-1 text-xs text-slate-500">{status}{group.nearestDue?` · ${dateLabel(group.nearestDue)}`:''}</p></div>
             <strong className={`whitespace-nowrap ${group.net>0?'text-emerald-300':group.net<0?'text-rose-300':'text-slate-300'}`}>{money(Math.abs(group.net))}</strong>
