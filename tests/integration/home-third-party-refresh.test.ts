@@ -8,9 +8,9 @@ const home=fs.readFileSync(path.join(root,'src/components/app/HomeFinancialMap.t
 const screen=fs.readFileSync(path.join(root,'src/components/app/CasaHomeScreen.tsx'),'utf8');
 
 test('Home mostra terceiros envolvidos e valores atribuídos',()=>{
-  assert.match(home,/Terceiros que assumem parte ou todo o compromisso/);
+  assert.match(home,/Parte dos gastos assumida por terceiros/);
   assert.match(home,/responsible_party_id/);
-  assert.match(home,/Responsabilidades de terceiros/);
+  assert.match(home,/Responsabilidade por compromissos/);
 });
 
 test('responsabilidades de terceiros são atualizadas após ações financeiras',()=>{
