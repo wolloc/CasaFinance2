@@ -88,3 +88,15 @@ A projeção por recurso permanece complementar: ela explica como contas e outro
 - `Valores com terceiros` deve ser uma seção própria, fora do agrupamento de contas/cartões, sem repetir os acertos entre os moradores.
 - Falhas em fontes secundárias não devem bloquear a perspectiva individual do morador; somente falha na projeção principal impede exibir os valores daquela perspectiva. Não exibir um alerta global genérico quando cada seção pode sinalizar sua própria indisponibilidade.
 - Manter `Precisa de atenção` e `Onde está nosso dinheiro?` com a hierarquia visual atual; o destaque adicional desta rodada é exclusivo de `Entre vocês`.
+
+
+### Remoção de textos auxiliares redundantes — 2026-10-09
+
+**Estado: DEFINIDO**
+
+- Remover a explicação abaixo da posição inicial do mês quando houver saldo conhecido; manter apenas a mensagem de indisponibilidade quando a abertura não puder ser confirmada.
+- Remover a frase explicativa sobre efetivo versus projeção; os rótulos e valores já distinguem as duas leituras.
+- Manter a linha de reserva e investimentos sem a expressão "à parte, para um último recurso".
+- Remover a legenda abaixo de "Entre vocês" e a descrição redundante abaixo de "Valores com terceiros".
+- Remover o resumo agregado "Responsabilidade por compromissos / Parte dos gastos assumida por terceiros" e seu total destacado; os compromissos individuais continuam acessíveis dentro de "Valores com terceiros".
+- Não mostrar "Tudo equilibrado por enquanto" quando não houver acertos; deixar o espaço sem uma mensagem afirmativa redundante.

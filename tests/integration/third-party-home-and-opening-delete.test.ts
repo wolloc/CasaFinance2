@@ -6,6 +6,7 @@ import path from 'node:path';
 const root=process.cwd();
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/202610040004_fix_opening_card_delete_invoice_link.sql'),'utf8');
 const home=fs.readFileSync(path.join(root,'src/components/app/HomeFinancialMap.tsx'),'utf8');
+const settlements=fs.readFileSync(path.join(root,'src/components/app/SettlementHub.tsx'),'utf8');
 const setup=fs.readFileSync(path.join(root,'src/components/auth/HouseholdTransactionsSetup.tsx'),'utf8');
 
 test('exclusão da posição inicial não exige invoice_id no lançamento de origem',()=>{
@@ -15,10 +16,12 @@ test('exclusão da posição inicial não exige invoice_id no lançamento de ori
 });
 
 test('Casa apresenta responsabilidades e acertos no mapa de pessoas',()=>{
-  assert.match(home,/Responsabilidade por compromissos/);
-  assert.match(home,/responsible_party_id/);
+  assert.doesNotMatch(home,/Responsabilidade por compromissos/);
   assert.match(home,/Valores com terceiros/);
-  assert.match(home,/financial_parties!inner/);
+  assert.match(home,/includeThirdParties/);
+  assert.match(settlements,/listOpenThirdPartyObligations/);
+  assert.match(settlements,/Registrar recebimento/);
+  assert.match(settlements,/Registrar pagamento/);
 });
 
 test('fluxo atual de exclusão e cancelamento é explícito',()=>{

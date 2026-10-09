@@ -46,11 +46,14 @@ test('Home consolida a posição mensal e mantém classes de recursos distintas'
  assert.match(statement,/pode terminar este mês com/);
  assert.match(statement,/Ainda entra/);
  assert.match(statement,/Ainda sai/);
- assert.match(statement,/O efetivo mostra o que já aconteceu\. A projeção mostra o que ainda está previsto/);
+ assert.doesNotMatch(statement,/O efetivo mostra o que já aconteceu/);
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
  assert.match(map,/>Cartões</);
  assert.match(map,/Valores com terceiros/);
+ assert.doesNotMatch(map,/Valores a receber, a pagar e compromissos assumidos por outras pessoas/);
+ assert.doesNotMatch(map,/Responsabilidade por compromissos/);
+ assert.doesNotMatch(map,/Parte dos gastos assumida por terceiros/);
  assert.match(map,/includeMembers=\{false\}/);
  for(const value of ["label:'Contas'","label:'Dinheiro'","label:'Benefícios'","label:'Investimentos e reservas'"]) assert.match(map,new RegExp(value));
  assert.doesNotMatch(map,/label:'Dinheiro reservado'/);

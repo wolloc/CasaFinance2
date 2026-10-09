@@ -212,7 +212,6 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   <section className="rounded-[1.6rem] border border-cyan-800/60 bg-gradient-to-br from-cyan-950/40 to-slate-900/60 p-4 shadow-lg shadow-cyan-950/15">
    <FinancialSectionHeading title="Entre vocês" icon={<Landmark className="h-5 w-5 text-cyan-300"/>}/>
-   <p className="mb-3 text-xs text-slate-400">Acertos entre os moradores, separados dos valores com terceiros.</p>
    {!availability.settlements?unavailable('Não foi possível conferir os valores entre moradores agora.'):<SettlementHub perspective="household" onResolve={onSettlementAction} embedded includeMembers includeThirdParties={false}/>}
   </section>
 
