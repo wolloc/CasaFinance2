@@ -10,15 +10,18 @@ const settlements=fs.readFileSync(path.join(root,'src/components/app/SettlementH
 
 test('Home mostra terceiros envolvidos e valores atribuídos',()=>{
   assert.doesNotMatch(home,/Parte dos gastos assumida por terceiros/);
-  assert.match(home,/Values with third parties|Valores com terceiros/);
-  assert.match(home,/SettlementHub perspective="household" onResolve=\{onSettlementAction\} embedded includeMembers=\{false\} includeThirdParties/);
-  assert.match(settlements,/listOpenThirdPartyObligations/);\n  assert.match(settlements,/financialMonth\?rows\.filter\(row=>row\.due_date\?\.slice\(0,7\)===financialMonth\.slice\(0,7\)\):rows/);\n  assert.match(settlements,/Total em aberto/);\n  assert.match(settlements,/Compromissos/);
+  assert.match(home,/Valores com terceiros/);
+  assert.match(home,/SettlementHub perspective=\{perspective\} financialMonth=\{financialMonth\} onResolve=\{onSettlementAction\} embedded includeMembers=\{false\} includeThirdParties/);
+  assert.match(settlements,/listOpenThirdPartyObligations/);
+  assert.match(settlements,/financialMonth\?rows\.filter\(row=>row\.due_date\?\.slice\(0,7\)===financialMonth\.slice\(0,7\)\):rows/);
+  assert.match(settlements,/Total em aberto/);
+  assert.match(settlements,/Compromissos/);
   assert.doesNotMatch(home,/Responsabilidade por compromissos/);
 });
 
 test('responsabilidades de terceiros são atualizadas após ações financeiras',()=>{
   assert.match(home,/refreshKey\?:number/);
   assert.match(settlements,/\[household\?\.id,refreshKey\]/);
-  assert.match(home,/refreshKey\?:number/);
+  assert.match(screen,/financialMonth=\{referenceMonth\.slice\(0,7\)\}/);
   assert.match(screen,/refreshKey=\{attentionRefreshKey\+refreshKey\}/);
 });
