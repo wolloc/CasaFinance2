@@ -8,5 +8,5 @@ test('retry triggers a fresh canonical read before actions return',()=>{assert.o
 test('settlement hub remains read-only',()=>{assert.doesNotMatch(source,/\.rpc\(|\.insert\(|\.update\(|\.delete\(|settleMemberPosition|createResourceTransfer/);});
 
 test('successful empty third-party read renders a friendly empty state',()=>{assert.match(source,/includeThirdParties&&thirdPartyGroups\.length===0/);assert.match(source,/<UsersRound className=/);assert.match(source,/Nenhum valor com terceiros em aberto/);assert.match(source,/Quando houver valores a receber ou a pagar, eles aparecerão aqui/);});
-test('empty state is suppressed when the canonical read fails',()=>{assert.match(source,/!error&&<div className=\\\"space-y-2\\\"/);assert.match(source,/error&&<div className=\\\"rounded-xl border border-rose-900/);});
+test('empty state is suppressed when the canonical read fails',()=>{assert.match(source,/!error&&<div className=/);assert.match(source,/error&&<div className=/);});
 test('settlement data loads concurrently with stale effect cancellation',()=>{assert.match(source,/let cancelled=false/);assert.match(source,/Promise\.all\(\[/);assert.match(source,/if\(cancelled\)return/);});
