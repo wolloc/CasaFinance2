@@ -9,7 +9,7 @@ import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.
 import { ThirdPartyContextModal } from './ThirdPartyContextModal.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const monthLabel=(value:string)=>{const[year,month]=value.slice(0,7).split('-').map(Number);return new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1));};
+const monthLabel=(value:string)=>{const[year,month]=value.slice(0,7).split('-').map(Number);return new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));};
 const dateLabel=(value:string|null)=>{if(!value)return 'Sem vencimento';const date=new Date(`${value}T12:00:00`);const today=new Date();today.setHours(0,0,0,0);date.setHours(0,0,0,0);if(date.getTime()<today.getTime())return `Venceu em ${date.toLocaleDateString('pt-BR')}`;if(date.getTime()===today.getTime())return 'Vence hoje';return `Vence em ${date.toLocaleDateString('pt-BR')}`;};
 
 type MemberPairSummary={
