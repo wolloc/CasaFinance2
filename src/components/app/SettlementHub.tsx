@@ -32,7 +32,7 @@ type ThirdPartyGroup={
 };
 
 export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true,financialMonth}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean;financialMonth?:string}){
-  const{household,householdMembers}=useSupabaseAuth();
+  const{household,householdMembers,householdLoading}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
   const[thirdPartyRows,setThirdPartyRows]=useState<ThirdPartyObligation[]>([]);
@@ -41,7 +41,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
   const[refreshKey,setRefreshKey]=useState(0);
   const[selectedThirdParty,setSelectedThirdParty]=useState<ThirdPartyGroup|null>(null);
 
-  useEffect(()=>{let cancelled=false;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listMemberSettlementPositions(supabase,household.id),listOpenThirdPartyObligations(supabase,household.id),listMemberSettlementEvents(supabase,household.id)]).then(([members,thirdParties,events])=>{if(cancelled)return;setMemberRows(members);setThirdPartyRows(thirdParties);setMemberEvents(events);}).catch(()=>{if(cancelled)return;setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,refreshKey]);
+  useEffect(()=>{let cancelled=false;if(!supabase){setLoading(false);setError(true);return()=>{cancelled=true;};}if(householdLoading)return()=>{cancelled=true;};if(!household){setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setLoading(false);setError(true);return()=>{cancelled=true;};}setLoading(true);setError(false);Promise.all([listMemberSettlementPositions(supabase,household.id),listOpenThirdPartyObligations(supabase,household.id),listMemberSettlementEvents(supabase,household.id)]).then(([members,thirdParties,events])=>{if(cancelled)return;setMemberRows(members);setThirdPartyRows(thirdParties);setMemberEvents(events);}).catch(()=>{if(cancelled)return;setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,householdLoading,refreshKey]);
 
   const retry=()=>setRefreshKey(value=>value+1);
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
