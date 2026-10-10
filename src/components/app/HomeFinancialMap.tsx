@@ -138,7 +138,7 @@ export function HomeFinancialMap({
     </details></HomeFinancialMapSectionBoundary>
 
   </section>
-  {householdId&&<section className="space-y-3 rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4">
+  {<section className="space-y-3 rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4">
     <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300"><HandCoins className="h-4 w-4"/></span><h2 className="font-bold text-slate-200">Valores com terceiros</h2></div>
     <SettlementHub perspective={perspective} financialMonth={financialMonth} onResolve={onSettlementAction} embedded includeMembers={false} includeThirdParties/>
   </section>}
