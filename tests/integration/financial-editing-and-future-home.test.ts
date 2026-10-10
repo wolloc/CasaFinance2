@@ -19,10 +19,11 @@ test('existing non-cancelled transactions can change only their category',()=>{
   assert.match(txScreen,/Alterar categoria/);
 });
 
-test('invoice payment signals the planned source account without removing payer accountability',()=>{
+test('invoice payment keeps source account choice while removing redundant planned-account copy',()=>{
   assert.match(invoice,/De qual conta o dinheiro saiu\?/);
-  assert.match(invoice,/Conta planejada sinalizada/);
-  assert.match(invoice,/Conta planejada sinalizada/);
+  assert.match(invoice,/Conta sugerida:/);
+  assert.doesNotMatch(invoice,/Conta planejada sinalizada/);
+  assert.doesNotMatch(invoice,/O Casa já sinalizou a conta planejada desta fatura/);
 });
 
 test('card identity editing keeps limit and cycle dates editable',()=>{
