@@ -137,7 +137,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
       {futureCurrent&&perspective!=='household'&&Number((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)>0&&<p className="mt-3 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-100">{money((futureCurrent as MemberMonthlyProjection).unattributed_funding_remaining)} ainda não têm responsável definido entre os moradores. O valor já está na projeção da Casa, mas não foi atribuído à sua projeção individual.</p>}
      </div>
     </section>
-    {perspective==='household'&&<SafeHomeFinancialMap householdId={household?.id ?? ''} resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>}
+    {perspective==='household'&&<SafeHomeFinancialMap householdId={household?.id ?? ''} financialMonth={referenceMonth.slice(0,7)} resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>}
     {futureRows.length>1&&<section><FinancialSectionHeading title="Olhando pra frente"/><div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">{futureRows.slice(1).map(row=>{const ending=perspective==='household'?Number((row as Dashboard['projection'][number]).projected_ending_cash):Number((row as MemberMonthlyProjection).projected_ending_liquidity);return <article key={row.financial_month} className="min-w-[68%] snap-start rounded-2xl border border-slate-800 bg-slate-900/60 p-4"><div className="flex items-center gap-2"><span className={'h-2.5 w-2.5 rounded-full '+(ending<0?'bg-rose-400':'bg-emerald-400')}/><b className="capitalize">{monthLabel(row.financial_month)}</b></div><p className="mt-3 text-xs text-slate-500">{ending<0?'Pode faltar dinheiro no fechamento':'Deve fechar com'}</p><strong className={ending<0?'text-rose-300':'text-slate-100'}>{money(ending)}</strong></article>})}</div></section>}
    </>}
   </div>;
@@ -172,7 +172,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
    <section><FinancialSectionHeading title="Entre vocês"/><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeThirdParties={false}/></section>
 
-   <SafeHomeFinancialMap resources={memberResources} cards={memberCards} perspective={perspective} memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction}/>
+   <SafeHomeFinancialMap householdId={household?.id ?? ''} financialMonth={referenceMonth.slice(0,7)} resources={memberResources} cards={memberCards} perspective={perspective} memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction}/>
 
    <UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard}/>
 
@@ -217,7 +217,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
   {availability.attention?<FinancialPriorityCenter items={attention} onNavigate={onAttentionAction} onResolved={()=>setAttentionRefreshKey(value=>value+1)}><UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard} embedded refreshKey={attentionRefreshKey+refreshKey}/></FinancialPriorityCenter>:unavailable('Não foi possível conferir o centro de atenção. Nenhuma pendência foi presumida como resolvida.')}
 
-  {!availability.resources||!resources?unavailable('Não foi possível confirmar os saldos dos recursos da Casa.'):<SafeHomeFinancialMap householdId={household?.id ?? ''} resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>}
+  {!availability.resources||!resources?unavailable('Não foi possível confirmar os saldos dos recursos da Casa.'):<SafeHomeFinancialMap householdId={household?.id ?? ''} financialMonth={referenceMonth.slice(0,7)} resources={householdResourceRows} cards={cards} perspective="household" memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>}
 
   <section>
    <FinancialSectionHeading title="Olhando pra frente" icon={<Landmark className="h-5 w-5 text-emerald-400"/>}/>
