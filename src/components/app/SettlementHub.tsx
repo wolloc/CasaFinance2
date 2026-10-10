@@ -9,6 +9,7 @@ import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.
 import { ThirdPartyContextModal } from './ThirdPartyContextModal.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const monthLabel=(value:string)=>{const[year,month]=value.slice(0,7).split('-').map(Number);return new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));};
 const dateLabel=(value:string|null)=>{if(!value)return 'Sem vencimento';const date=new Date(`${value}T12:00:00`);const today=new Date();today.setHours(0,0,0,0);date.setHours(0,0,0,0);if(date.getTime()<today.getTime())return `Venceu em ${date.toLocaleDateString('pt-BR')}`;if(date.getTime()===today.getTime())return 'Vence hoje';return `Vence em ${date.toLocaleDateString('pt-BR')}`;};
 
 type MemberPairSummary={
@@ -25,10 +26,12 @@ type ThirdPartyGroup={
   name:string;
   rows:ThirdPartyObligation[];
   net:number;
+  monthlyAmount:number;
+  totalOpen:number;
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean}){
+export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true,financialMonth}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean;financialMonth?:string}){
   const{household,householdMembers}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
@@ -67,10 +70,13 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
     if(!includeThirdParties)return [];
     return [...groups.entries()].map(([counterpartyId,rows])=>{
       const net=rows.reduce((sum,row)=>sum+(row.kind==='receivable'?Number(row.outstanding_amount):-Number(row.outstanding_amount)),0);
-      const dueDates=rows.map(row=>row.due_date).filter((value):value is string=>Boolean(value)).sort();
-      return{counterpartyId,name:rows[0]?.counterparty_name??'Outra pessoa',rows,net,nearestDue:dueDates[0]??null};
-    }).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.name.localeCompare(b.name));
-  },[thirdPartyRows,perspective,includeThirdParties]);
+      const monthlyRows=financialMonth?rows.filter(row=>row.due_date?.slice(0,7)===financialMonth.slice(0,7)):rows;
+      const monthlyAmount=monthlyRows.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
+      const totalOpen=rows.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
+      const dueDates=monthlyRows.map(row=>row.due_date).filter((value):value is string=>Boolean(value)).sort();
+      return{counterpartyId,name:rows[0]?.counterparty_name??'Outra pessoa',rows,net,monthlyAmount,totalOpen,nearestDue:dueDates[0]??null};
+    }).sort((a,b)=>b.totalOpen-a.totalOpen||a.name.localeCompare(b.name));
+  },[thirdPartyRows,perspective,includeThirdParties,financialMonth]);
 
   if(loading)return <section>{!embedded&&<FinancialSectionHeading title="Valores com pessoas" icon={<UsersRound className="h-5 w-5 text-cyan-400"/>}/>}<LoaderCircle className="h-5 w-5 animate-spin text-cyan-300"/></section>;
 
@@ -107,7 +113,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
         return <details key={group.counterpartyId} className={`group ${financialUi.surfaceInteractive}`}>
           <summary onClick={event=>{event.preventDefault();setSelectedThirdParty(group);}} className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="block truncate text-sm">{group.name}</strong><span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-slate-400">{responsibility}</span></div><p className="mt-1 text-xs text-slate-500">{status}{group.nearestDue?` · ${dateLabel(group.nearestDue)}`:''}</p></div>
-            <strong className={`whitespace-nowrap ${group.net>0?'text-emerald-300':group.net<0?'text-rose-300':'text-slate-300'}`}>{money(Math.abs(group.net))}</strong>
+            <div className="shrink-0 text-right"><strong className="block whitespace-nowrap text-sm text-cyan-200">{money(group.monthlyAmount)}</strong><p className="text-[10px] text-slate-500">{financialMonth? `Compromissos · ${monthLabel(financialMonth)}`:'Compromissos em aberto'}</p><p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">Total em aberto · {money(group.totalOpen)}</p></div>
           </summary>
           <div className="space-y-3 border-t border-slate-800 px-4 py-3">{group.rows.map(row=><article key={row.id} className="rounded-xl bg-slate-950/55 p-3">
             <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold text-slate-300">{row.kind==='receivable'?'A receber':'A pagar'} · {dateLabel(row.due_date)}</p><p className="mt-1 truncate text-xs text-slate-500">{row.description}</p><p className="mt-1 text-[10px] font-semibold text-cyan-300/80">{perspective==='household'?`Responsabilidade: ${responsibilityLabel(row)}`:'Sua parte desta posição'}</p></div><strong className="whitespace-nowrap text-sm">{money(row.outstanding_amount)}</strong></div>
