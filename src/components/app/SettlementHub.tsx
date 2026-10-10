@@ -41,7 +41,39 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
   const[refreshKey,setRefreshKey]=useState(0);
   const[selectedThirdParty,setSelectedThirdParty]=useState<ThirdPartyGroup|null>(null);
 
-  useEffect(()=>{let cancelled=false;if(!supabase||!household)return;setLoading(true);setError(false);Promise.all([listMemberSettlementPositions(supabase,household.id),listOpenThirdPartyObligations(supabase,household.id),listMemberSettlementEvents(supabase,household.id)]).then(([members,thirdParties,events])=>{if(cancelled)return;setMemberRows(members);setThirdPartyRows(thirdParties);setMemberEvents(events);}).catch(()=>{if(cancelled)return;setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[household?.id,refreshKey]);
+  useEffect(()=>{
+    let cancelled=false;
+    const loadSettlementData=async()=>{
+      if(!supabase||!household?.id){
+        if(!cancelled){setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(false);setLoading(false);}
+        return;
+      }
+      setLoading(true);
+      setError(false);
+      try{
+        const [members,thirdParties,events]=await Promise.all([
+          listMemberSettlementPositions(supabase,household.id),
+          listOpenThirdPartyObligations(supabase,household.id),
+          listMemberSettlementEvents(supabase,household.id),
+        ]);
+        if(cancelled)return;
+        setMemberRows(members);
+        setThirdPartyRows(thirdParties);
+        setMemberEvents(events);
+      }catch(cause){
+        if(cancelled)return;
+        console.error('Casa Finance: falha ao carregar valores com pessoas',cause);
+        setMemberRows([]);
+        setThirdPartyRows([]);
+        setMemberEvents([]);
+        setError(true);
+      }finally{
+        if(!cancelled)setLoading(false);
+      }
+    };
+    void loadSettlementData();
+    return()=>{cancelled=true;};
+  },[household?.id,refreshKey]);
 
   const retry=()=>setRefreshKey(value=>value+1);
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
@@ -122,6 +154,15 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
           </article>)}</div>
         </details>;
       })}
+      {includeThirdParties&&thirdPartyGroups.length===0&&<div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+        <div className="flex items-start gap-3">
+          <UsersRound className="mt-0.5 h-5 w-5 text-slate-400"/>
+          <div>
+            <p className="text-sm font-semibold text-slate-200">Nenhum valor com terceiros em aberto</p>
+            <p className="mt-1 text-xs text-slate-400">Quando houver valores a receber ou a pagar, eles aparecerão aqui.</p>
+          </div>
+        </div>
+      </div>}
     </div>}
     {selectedThirdParty&&<ThirdPartyContextModal counterpartyId={selectedThirdParty.counterpartyId} name={selectedThirdParty.name} net={selectedThirdParty.net} openRows={selectedThirdParty.rows} onClose={()=>setSelectedThirdParty(null)} onResolve={onResolve}/>}
   </section>;
