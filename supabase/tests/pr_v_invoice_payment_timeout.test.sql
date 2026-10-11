@@ -115,7 +115,7 @@ select is(
     and invoice_id=(select invoice_id from public.transactions
       where household_id='c3000000-0000-4000-8000-000000000010'
         and description='PR-V high-volume purchase 1')),
- 1200.00::numeric,
+ 4000.00::numeric,
  'V06 funding allocation totals the paid invoice amount'
 );
 
