@@ -38,7 +38,7 @@ set local statement_timeout='0';
 do $fixture$
 declare i integer;
 begin
- for i in 1..12 loop
+ for i in 1..40 loop
   perform public.create_financial_transaction_idempotent(
    'c3000000-0000-4000-8000-000000000010','expense',
    'PR-V high-volume purchase '||i,100.00,current_date,null,
@@ -57,7 +57,7 @@ select is(
     and description like 'PR-V high-volume purchase %'
     and invoice_id is not null),
  1::bigint,
- 'V01 all twelve synthetic card purchases land on one invoice'
+ 'V01 all forty synthetic card purchases land on one invoice'
 );
 
 set local statement_timeout='8s';
@@ -70,7 +70,7 @@ select lives_ok($$
      and description='PR-V high-volume purchase 1'),
   'c3000000-0000-4000-8000-000000000031',
   'c3000000-0000-4000-8000-000000000021',
-  1200.00,now(),'pr-v-high-volume-pay'
+  4000.00,now(),'pr-v-high-volume-pay'
  )
 $$,'V02 high-volume invoice payment completes within the 8-second statement timeout');
 
@@ -97,8 +97,8 @@ select is(
  (select coalesce(sum(amount),0) from public.money_movements
   where household_id='c3000000-0000-4000-8000-000000000010'
     and kind='invoice_payment'),
- 1200.00::numeric,
- 'V05 exactly one 1200 cash outflow is recorded'
+ 4000.00::numeric,
+ 'V05 exactly one 4000 cash outflow is recorded'
 );
 
 select is(
