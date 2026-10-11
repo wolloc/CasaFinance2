@@ -90,7 +90,7 @@ select lives_ok($$
      and description='PR-V high-volume purchase 1'),
   'c3000000-0000-4000-8000-000000000031',
   'c3000000-0000-4000-8000-000000000021',
-  1200.00,now(),'pr-v-high-volume-pay'
+  4000.00,now(),'pr-v-high-volume-pay'
  )
 $$,'V03 retry with same idempotency key succeeds');
 
