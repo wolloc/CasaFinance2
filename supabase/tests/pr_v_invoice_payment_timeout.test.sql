@@ -2,7 +2,7 @@ begin;
 
 set local time zone 'America/Sao_Paulo';
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(7);
 
 insert into auth.users(
  id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -58,6 +58,14 @@ select is(
     and invoice_id is not null),
  1::bigint,
  'V01 all forty synthetic card purchases land on one invoice'
+);
+
+select is(
+ (select count(*) from public.transactions
+  where household_id='c3000000-0000-4000-8000-000000000010'
+    and description like 'PR-V high-volume purchase %'),
+ 40::bigint,
+ 'V01b fixture contains exactly forty synthetic card purchases'
 );
 
 set local statement_timeout='8s';
