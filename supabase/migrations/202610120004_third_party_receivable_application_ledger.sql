@@ -141,14 +141,26 @@ revoke all on function public.apply_third_party_contribution_to_receivables() fr
 -- against a second forecast.
 create or replace view public.financial_third_party_commitment_positions
 with (security_invoker=true) as
-with contributions as (
+with contribution_totals as (
   select e.household_id,e.commitment_key,e.counterparty_id,
-    coalesce(sum(e.amount),0)::numeric(19,2) received_contribution_amount,
+    coalesce(sum(e.amount),0)::numeric(19,2) received_contribution_amount
+  from public.third_party_contribution_events e
+  group by e.household_id,e.commitment_key,e.counterparty_id
+), application_totals as (
+  select e.household_id,e.commitment_key,e.counterparty_id,
     coalesce(sum(a.amount) filter(where a.application_kind='pre_funding_offset'),0)::numeric(19,2) pre_funding_offset_amount
   from public.third_party_contribution_events e
-  left join public.third_party_contribution_applications a
+  join public.third_party_contribution_applications a
     on a.household_id=e.household_id and a.contribution_event_id=e.id
   group by e.household_id,e.commitment_key,e.counterparty_id
+), contributions as (
+  select t.household_id,t.commitment_key,t.counterparty_id,
+    t.received_contribution_amount,
+    coalesce(a.pre_funding_offset_amount,0)::numeric(19,2) pre_funding_offset_amount
+  from contribution_totals t
+  left join application_totals a
+    on a.household_id=t.household_id and a.commitment_key=t.commitment_key
+   and a.counterparty_id=t.counterparty_id
 )
 select
   r.household_id,r.commitment_key,r.source_type,r.source_id,r.source_transaction_id,
