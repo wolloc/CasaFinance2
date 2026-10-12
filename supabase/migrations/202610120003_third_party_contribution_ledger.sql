@@ -95,7 +95,7 @@ begin
     where id=p_destination_account_id and household_id=p_household_id and deactivated_at is null)
   then raise exception 'active household destination account required' using errcode='23514'; end if;
 
-  select r.responsibility_amount::numeric(19,2) into position
+  select r.remaining_responsibility_amount::numeric(19,2) as remaining_amount into position
   from public.financial_member_commitment_responsibility_positions r
   where r.household_id=p_household_id and r.commitment_key=p_commitment_key
     and r.responsible_party_id=p_counterparty_id;
@@ -105,7 +105,7 @@ begin
   where e.household_id=p_household_id and e.commitment_key=p_commitment_key
     and e.counterparty_id=p_counterparty_id;
 
-  if received_before+p_amount>position.responsibility_amount then
+  if received_before+p_amount>position.remaining_amount then
     raise exception 'contribution exceeds third-party responsibility remaining' using errcode='23514';
   end if;
 
