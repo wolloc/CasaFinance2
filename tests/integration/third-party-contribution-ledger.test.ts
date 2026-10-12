@@ -37,3 +37,13 @@ test('contribuição cria caixa real sem ser tratada como renda nem como recebí
   assert.match(ledger, /security_invoker=true/);
   assert.match(ledger, /grant select on public\.financial_third_party_commitment_positions to authenticated/);
 });
+
+const contributionUi = fs.readFileSync(path.join(root, 'src/components/app/ThirdPartyCommitmentProjection.tsx'), 'utf8');
+
+test('resposta ambígua mantém a mesma chave e bloqueia alterações no payload antes da confirmação', () => {
+  assert.match(contributionUi, /const identity = \[household\.id, row\.commitment_key, row\.counterparty_id\]/);
+  assert.match(contributionUi, /if \(uncertain\)[\s\S]*setRetryUncertain\(true\)/);
+  assert.match(contributionUi, /disabled=\{saving \|\| retryUncertain\}/);
+  assert.match(contributionUi, /Tentar confirmar recebimento/);
+  assert.match(contributionUi, /releaseRetryStableRequestKey\('third-party-contribution-record', identity\)/);
+});
