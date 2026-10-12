@@ -47,10 +47,6 @@ begin
 
   if not found then return new; end if;
 
-  perform pg_advisory_xact_lock(hashtextextended(
-    new.household_id::text || ':' || commitment.commitment_key, 0
-  ));
-
   for allocation in
     select ea.responsible_party_id, ea.percentage, p.name
     from public.economic_allocations ea
@@ -63,6 +59,13 @@ begin
       and ea.responsible_party_id is not null
     order by ea.allocation_order
   loop
+    -- Use the same lock key as record_third_party_contribution so a receipt
+    -- and invoice funding for this counterparty/commitment serialize together.
+    perform pg_advisory_xact_lock(hashtextextended(
+      new.household_id::text||':third-party-contribution-commitment:'||
+      commitment.commitment_key||':'||allocation.responsible_party_id::text,0
+    ));
+
     receivable_amount := round(new.amount * allocation.percentage / 100, 2);
     if receivable_amount <= 0 then continue; end if;
 
