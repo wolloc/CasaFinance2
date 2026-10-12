@@ -76,6 +76,14 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
     setNotice(null);
   };
 
+  const friendlyError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : '';
+    if (/over.?collect|exceed|responsibility|contribution.*limit/i.test(message)) return 'Esse valor supera o que ainda está previsto. Atualize os valores e tente novamente.';
+    if (/account|household|permission|unauthorized|forbidden|active member/i.test(message)) return 'Não foi possível validar a conta ou o acesso. Confira os dados e tente novamente.';
+    if (/duplicate|idempot|request key|payload/i.test(message)) return 'Esse recebimento pode já ter sido registrado. Atualize os valores antes de tentar novamente.';
+    return 'Não foi possível registrar o recebimento agora. Confira os dados e tente novamente.';
+  };
+
   const saveContribution = async (row: ThirdPartyCommitmentPosition) => {
     if (!supabase || !household?.id || saving) return;
     const normalized = amount.trim().replace(',', '.');
@@ -120,7 +128,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       await load();
     } catch (error) {
       console.error('Casa Finance: falha ao registrar contribuição de terceiro', error);
-      setFormError(error instanceof Error ? error.message : 'Não foi possível registrar a contribuição agora.');
+      setFormError(friendlyError(error));
     } finally {
       setSaving(false);
     }
@@ -130,11 +138,11 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
     <div className="flex items-center gap-2">
       <CalendarClock className="h-4 w-4 text-cyan-300" />
       <h3 className="text-xs font-bold text-slate-300">Valores com terceiros</h3>
-      <span className="ml-auto text-[10px] text-slate-500">Contribuições previstas · Projeção · não é saldo disponível</span>
+      <span className="ml-auto text-xs text-slate-500">Contribuições previstas · Projeção · não é saldo disponível</span>
     </div>
     {notice && <p role="status" className="text-xs text-emerald-300">{notice}</p>}
     {loading ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" /> :
-      failed ? <p role="status" className="text-xs text-amber-300">Não foi possível carregar os valores com terceiros agora.</p> :
+      failed ? <div role="status" className="flex items-center justify-between gap-3 text-sm text-amber-200"><span>Não foi possível carregar os valores com terceiros agora.</span><button type="button" onClick={() => void load()} className="min-h-10 rounded-lg border border-slate-700 px-3 text-sm font-semibold text-slate-200">Tentar novamente</button></div> :
       grouped.length === 0 ? <p className="text-xs text-slate-500">Nenhuma contribuição prevista para este período.</p> :
       <div className="space-y-2">
         {grouped.map(group => <details key={group.id} className="rounded-lg border border-slate-800/80 px-3 py-2" open={group.items.some(item => item.commitment_key === activeKey)}>
@@ -157,19 +165,19 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
               </div>
               {activeKey === item.commitment_key ? <div className="space-y-2 rounded-lg bg-slate-900/80 p-3">
                 <label className="block text-[11px] text-slate-300">Valor recebido
-                  <input aria-label={`Valor recebido de ${group.name}`} type="number" min="0.01" max={item.expected_contribution_amount} step="0.01" value={amount} onChange={event => setAmount(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label={`Valor recebido de ${group.name}`} type="number" min="0.01" max={item.expected_contribution_amount} step="0.01" value={amount} disabled={saving} onChange={event => setAmount(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 <label className="block text-[11px] text-slate-300">Conta em que entrou
-                  <select aria-label="Conta de destino" value={accountId} onChange={event => setAccountId(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white">
+                  <select aria-label="Conta de destino" value={accountId} disabled={saving} onChange={event => setAccountId(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white">
                     <option value="">Selecione a conta</option>
                     {accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
                   </select>
                 </label>
                 <label className="block text-[11px] text-slate-300">Data do recebimento
-                  <input aria-label="Data do recebimento" type="date" value={occurredAt} onChange={event => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label="Data do recebimento" type="date" value={occurredAt} disabled={saving} onChange={event => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 <label className="block text-[11px] text-slate-300">Observação (opcional)
-                  <input aria-label="Observação da contribuição" value={notes} onChange={event => setNotes(event.target.value)} maxLength={500} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label="Observação da contribuição" value={notes} disabled={saving} onChange={event => setNotes(event.target.value)} maxLength={500} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 {formError && <p role="alert" className="text-xs text-rose-300">{formError}</p>}
                 <div className="flex justify-end gap-2">
