@@ -113,7 +113,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       setFormError('Informe um valor maior que zero.');
       return;
     }
-    if (numericAmount > row.expected_contribution_amount + 0.000001) {
+    if (!retryUncertain && numericAmount > row.expected_contribution_amount + 0.000001) {
       setFormError('O valor não pode superar a contribuição ainda prevista.');
       return;
     }
