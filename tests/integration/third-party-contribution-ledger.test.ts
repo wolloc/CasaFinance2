@@ -49,6 +49,6 @@ test('resposta ambígua mantém a mesma chave e bloqueia alterações no payload
   assert.match(contributionUi, /window\.localStorage\.setItem\(key, JSON\.stringify\(value\)\)/);
   assert.match(contributionUi, /window\.localStorage\.getItem\(key\)/);
   assert.match(contributionUi, /existingPending\?\.requestKey/);
-  assert.match(contributionUi, /!retryUncertain && numericAmount > row\.expected_contribution_amount/);
+  assert.match(contributionUi, /!existingPending && numericAmount > row\.expected_contribution_amount/);
   assert.match(contributionUi, /releaseRetryStableRequestKey\('third-party-contribution-record', identity\)/);
 });
