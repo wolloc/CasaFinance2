@@ -172,7 +172,7 @@ export function CasaHomeScreen({perspective,onPerspectiveChange,onCoverageAction
 
    <section><FinancialSectionHeading title="Entre vocês"/><SettlementHub perspective={perspective} onResolve={onSettlementAction} embedded includeThirdParties={false}/></section>
 
-   <SafeHomeFinancialMap householdId={household?.id ?? ''} financialMonth={referenceMonth.slice(0,7)} resources={memberResources} cards={memberCards} perspective={perspective} memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction}/>
+   <SafeHomeFinancialMap householdId={household?.id ?? ''} financialMonth={referenceMonth.slice(0,7)} resources={memberResources} cards={memberCards} perspective={perspective} memberName={memberName} onOpenCard={onOpenCard} onResourceAction={onResourceAction} onSettlementAction={onSettlementAction} refreshKey={attentionRefreshKey+refreshKey}/>
 
    <UpcomingFinancialEvents perspective={perspective} onOpenCard={onOpenCard}/>
 
