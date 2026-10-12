@@ -7,6 +7,14 @@ alter table public.third_party_contribution_applications
 alter table public.third_party_contribution_applications
   add constraint third_party_contribution_applications_application_kind_check
   check (application_kind in ('pre_funding_offset','receivable_settlement','pre_funding_consumption'));
+alter table public.third_party_contribution_applications
+  drop constraint if exists third_party_contribution_applications_check;
+alter table public.third_party_contribution_applications
+  add constraint third_party_contribution_applications_check
+  check (
+    (application_kind='pre_funding_offset' and receivable_link_id is null)
+    or (application_kind in ('receivable_settlement','pre_funding_consumption') and receivable_link_id is not null)
+  );
 
 create or replace function public.materialize_third_party_receivables_from_funding()
 returns trigger
