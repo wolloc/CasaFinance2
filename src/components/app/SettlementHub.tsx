@@ -7,6 +7,7 @@ import { listOpenThirdPartyObligations, type ThirdPartyObligation } from '../../
 import type { SettlementActionIntent } from '../../finance/settlementActionIntent.js';
 import { FinancialSectionHeading, financialUi } from './FinancialSectionHeading.js';
 import { ThirdPartyContextModal } from './ThirdPartyContextModal.js';
+import { ThirdPartyCommitmentProjection } from './ThirdPartyCommitmentProjection.js';
 
 const money=(value:number|string)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const monthLabel=(value:string)=>{const[year,month]=value.slice(0,7).split('-').map(Number);return new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));};
@@ -119,6 +120,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
 
 
     {!error&&<div className="space-y-2">
+      {includeThirdParties&&perspective==='household'&&<ThirdPartyCommitmentProjection financialMonth={financialMonth}/>}
       {memberPairs.map(pair=>{
         const current=pair.realized;
         const currentAmount=current?Number(current.net_position):0;
