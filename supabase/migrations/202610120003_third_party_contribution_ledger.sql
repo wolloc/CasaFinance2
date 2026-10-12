@@ -95,7 +95,7 @@ begin
     where id=p_destination_account_id and household_id=p_household_id and deactivated_at is null)
   then raise exception 'active household destination account required' using errcode='23514'; end if;
 
-  select r.remaining_responsibility_amount::numeric(19,2) as remaining_amount into position
+  select r.responsibility_amount::numeric(19,2) as remaining_amount into position
   from public.financial_member_commitment_responsibility_positions r
   where r.household_id=p_household_id and r.commitment_key=p_commitment_key
     and r.responsible_party_id=p_counterparty_id;
