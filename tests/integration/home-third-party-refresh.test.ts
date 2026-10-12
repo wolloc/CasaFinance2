@@ -16,12 +16,17 @@ test('Home mostra terceiros envolvidos e valores atribuídos',()=>{
   assert.match(settlements,/financialMonth\?rows\.filter\(row=>row\.due_date\?\.slice\(0,7\)===financialMonth\.slice\(0,7\)\):rows/);
   assert.match(settlements,/Total em aberto/);
   assert.match(settlements,/Compromissos/);
+  assert.match(settlements,/Registrar recebimento/);
+  assert.match(settlements,/Registrar pagamento/);
+  assert.match(settlements,/kind:'third-party',obligationId:row\.id,amount:Number\(row\.outstanding_amount\)/);
   assert.doesNotMatch(home,/Responsabilidade por compromissos/);
 });
 
 test('responsabilidades de terceiros são atualizadas após ações financeiras',()=>{
   assert.match(home,/refreshKey\?:number/);
-  assert.match(settlements,/\[household\?\.id,refreshKey\]/);
+  assert.match(settlements,/\[household\?\.id,householdLoading,refreshKey,dataRefreshKey\]/);
+  assert.match(home,/dataRefreshKey=\{refreshKey\}/);
+  assert.match(screen,/refreshKey=\{attentionRefreshKey\+refreshKey\}/);
   assert.match(screen,/financialMonth=\{referenceMonth\.slice\(0,7\)\}/);
   assert.match(screen,/refreshKey=\{attentionRefreshKey\+refreshKey\}/);
 });
