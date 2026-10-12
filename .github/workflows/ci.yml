@@ -52,6 +52,13 @@ jobs:
 
             while IFS= read -r file; do
               case "${file}" in
+                .github/workflows/*)
+                  # CI policy changes must validate the full pipeline, not only secret scanning.
+                  app=true
+                  browser=true
+                  database=true
+                  dependencies=true
+                  ;;
                 package.json|package-lock.json)
                   app=true
                   dependencies=true
