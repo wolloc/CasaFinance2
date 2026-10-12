@@ -55,9 +55,9 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
     </div>
     {loading ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" /> :
       failed ? <p role="status" className="text-xs text-amber-300">Não foi possível carregar as contribuições previstas agora.</p> :
-      groups.length === 0 ? <p className="text-xs text-slate-500">Nenhuma contribuição prevista para este período.</p> :
+      grouped.length === 0 ? <p className="text-xs text-slate-500">Nenhuma contribuição prevista para este período.</p> :
       <div className="space-y-2">
-        {groups.map(group => <details key={group.id} className="rounded-lg border border-slate-800/80 px-3 py-2">
+        {grouped.map(group => <details key={group.id} className="rounded-lg border border-slate-800/80 px-3 py-2">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
             <span className="truncate text-xs font-semibold text-slate-300">{group.name}</span>
             <strong className="whitespace-nowrap text-xs text-cyan-200">{money(group.total)}</strong>
