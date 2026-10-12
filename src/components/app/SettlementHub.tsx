@@ -31,8 +31,8 @@ type ThirdPartyGroup={
   nearestDue:string|null;
 };
 
-export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true,financialMonth}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean;financialMonth?:string}){
-  const{household,householdMembers}=useSupabaseAuth();
+export function SettlementHub({onResolve,perspective='household',embedded=false,includeMembers=true,includeThirdParties=true,financialMonth,dataRefreshKey=0}:{onResolve?:(intent:SettlementActionIntent)=>void;perspective?:'household'|string;embedded?:boolean;includeMembers?:boolean;includeThirdParties?:boolean;financialMonth?:string;dataRefreshKey?:number}){
+  const{household,householdMembers,householdLoading}=useSupabaseAuth();
   const[memberRows,setMemberRows]=useState<MemberSettlementPosition[]>([]);
   const[memberEvents,setMemberEvents]=useState<MemberSettlementEvent[]>([]);
   const[thirdPartyRows,setThirdPartyRows]=useState<ThirdPartyObligation[]>([]);
@@ -44,6 +44,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
   useEffect(()=>{
     let cancelled=false;
     const loadSettlementData=async()=>{
+      if(householdLoading)return;
       if(!supabase||!household?.id){
         if(!cancelled){setMemberRows([]);setThirdPartyRows([]);setMemberEvents([]);setError(false);setLoading(false);}
         return;
@@ -73,7 +74,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
     };
     void loadSettlementData();
     return()=>{cancelled=true;};
-  },[household?.id,refreshKey]);
+  },[household?.id,householdLoading,refreshKey,dataRefreshKey]);
 
   const retry=()=>setRefreshKey(value=>value+1);
   const memberName=(id:string)=>householdMembers.find(member=>member.id===id)?.display_name??'Membro';
