@@ -25,3 +25,20 @@ test('responsabilidades de terceiros são atualizadas após ações financeiras'
   assert.match(screen,/financialMonth=\{referenceMonth\.slice\(0,7\)\}/);
   assert.match(screen,/refreshKey=\{attentionRefreshKey\+refreshKey\}/);
 });
+
+
+test('Casa mostra contribuições de terceiros projetadas por compromisso e vencimento',()=>{
+  const projection=fs.readFileSync(path.join(root,'src/components/app/ThirdPartyCommitmentProjection.tsx'),'utf8');
+  const reader=fs.readFileSync(path.join(root,'src/finance/thirdPartyCommitments.ts'),'utf8');
+  const migration=fs.readFileSync(path.join(root,'supabase/migrations/202610120001_third_party_commitment_positions.sql'),'utf8');
+  assert.match(settlements,/ThirdPartyCommitmentProjection financialMonth=\{financialMonth\}/);
+  assert.match(projection,/Contribuições previstas/);
+  assert.match(projection,/Projeção · não é saldo disponível/);
+  assert.match(reader,/financial_third_party_commitment_positions/);
+  assert.match(reader,/financial_month/);
+  assert.match(migration,/financial_member_commitment_responsibility_positions/);
+  assert.match(migration,/financial_commitment_positions/);
+  assert.match(migration,/security_invoker=true/);
+  assert.match(migration,/revoke all on public\.financial_third_party_commitment_positions from public,anon/);
+  assert.match(migration,/grant select on public\.financial_third_party_commitment_positions to authenticated/);
+});
