@@ -101,10 +101,6 @@ begin
           0
         )::numeric(19,2) available
       from public.third_party_contribution_events e
-      join public.third_party_contribution_applications a0
-        on a0.household_id=e.household_id
-       and a0.contribution_event_id=e.id
-       and a0.application_kind='pre_funding_offset'
       left join public.third_party_contribution_applications a
         on a.household_id=e.household_id and a.contribution_event_id=e.id
       where e.household_id=new.household_id
@@ -117,7 +113,6 @@ begin
           0
         ) > 0
       order by e.occurred_at,e.id
-      for update of e
     loop
       exit when remaining <= 0;
       available_offset := contribution.available;
