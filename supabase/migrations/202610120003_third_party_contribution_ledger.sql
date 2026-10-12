@@ -160,11 +160,11 @@ select
   r.commitment_state,
   r.responsibility_amount::numeric(19,2) as responsibility_amount,
   r.realized_responsibility_amount::numeric(19,2) as funded_responsibility_amount,
-  coalesce(x.received_contribution_amount,0)::numeric(19,2) as received_contribution_amount,
   greatest(r.remaining_responsibility_amount-coalesce(x.received_contribution_amount,0),0)::numeric(19,2) as expected_contribution_amount,
   c.description,
   c.due_date,
-  c.economic_date
+  c.economic_date,
+  coalesce(x.received_contribution_amount,0)::numeric(19,2) as received_contribution_amount
 from public.financial_member_commitment_responsibility_positions r
 join public.financial_commitment_positions c
   on c.household_id=r.household_id and c.commitment_key=r.commitment_key
