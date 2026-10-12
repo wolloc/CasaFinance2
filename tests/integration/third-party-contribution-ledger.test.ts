@@ -27,7 +27,8 @@ test('repetições são idempotentes e recebimentos concorrentes não podem exce
   assert.match(ledger, /unique \(household_id, request_key\)/);
   assert.match(ledger, /idempotency key already used with different payload/);
   assert.match(ledger, /third-party-contribution-commitment:/);
-  assert.match(ledger, /received_before\+p_amount>position\.responsibility_amount/);
+  assert.match(ledger, /select r\.remaining_responsibility_amount::numeric\(19,2\) as remaining_amount into position/);
+  assert.match(ledger, /received_before\+p_amount>position\.remaining_amount/);
 });
 
 test('contribuição cria caixa real sem ser tratada como renda nem como recebível automático', () => {
