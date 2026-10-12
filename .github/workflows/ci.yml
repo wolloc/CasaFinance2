@@ -135,7 +135,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Production build
-        if: steps.changes.outputs.app == 'true'
+        if: always() && steps.changes.outputs.app == 'true'
         env:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
@@ -159,7 +159,9 @@ jobs:
   database-security:
     name: Supabase RLS and database contracts
     needs: validate
-    if: needs.validate.outputs.database == 'true'
+    # Run database gates independently so an unrelated audit/build failure does not hide migration failures.
+    # The overall workflow remains failed if validate fails; this does not bypass release gates.
+    if: always() && needs.validate.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
