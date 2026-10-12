@@ -15,6 +15,7 @@ export type ThirdPartyCommitmentPosition = {
   responsibility_amount: number;
   funded_responsibility_amount: number;
   expected_contribution_amount: number;
+  received_contribution_amount: number;
   description: string;
   due_date: string | null;
   economic_date: string;
@@ -27,7 +28,7 @@ export async function listThirdPartyCommitmentPositions(
 ): Promise<ThirdPartyCommitmentPosition[]> {
   let query = client
     .from('financial_third_party_commitment_positions')
-    .select('commitment_key,source_type,source_id,source_transaction_id,source_installment_id,invoice_id,counterparty_id,counterparty_name,financial_date,financial_month,commitment_state,responsibility_amount,funded_responsibility_amount,expected_contribution_amount,description,due_date,economic_date')
+    .select('commitment_key,source_type,source_id,source_transaction_id,source_installment_id,invoice_id,counterparty_id,counterparty_name,financial_date,financial_month,commitment_state,responsibility_amount,funded_responsibility_amount,expected_contribution_amount,received_contribution_amount,description,due_date,economic_date')
     .eq('household_id', householdId)
     .gt('expected_contribution_amount', 0)
     .order('financial_date', { ascending: true });
@@ -42,5 +43,6 @@ export async function listThirdPartyCommitmentPositions(
     responsibility_amount: Number(row.responsibility_amount ?? 0),
     funded_responsibility_amount: Number(row.funded_responsibility_amount ?? 0),
     expected_contribution_amount: Number(row.expected_contribution_amount ?? 0),
+    received_contribution_amount: Number(row.received_contribution_amount ?? 0),
   })) as ThirdPartyCommitmentPosition[];
 }
