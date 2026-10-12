@@ -6,6 +6,23 @@ import { getRetryStableRequestKey, releaseRetryStableRequestKey } from '../../fi
 import { listThirdPartyCommitmentPositions, type ThirdPartyCommitmentPosition } from '../../finance/thirdPartyCommitments.js';
 
 type AccountOption = { id: string; name: string };
+type PendingContribution = { requestKey: string; commitmentKey: string; counterpartyId: string; amount: string; accountId: string; occurredAt: string; notes: string };
+const pendingStorageKey = (householdId: string, commitmentKey: string, counterpartyId: string) =>
+  `casa:third-party-contribution:${householdId}:${commitmentKey}:${counterpartyId}`;
+const readPendingContribution = (key: string): PendingContribution | null => {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+    if (!raw) return null;
+    const value = JSON.parse(raw) as PendingContribution;
+    return value && typeof value.requestKey === 'string' ? value : null;
+  } catch { return null; }
+};
+const writePendingContribution = (key: string, value: PendingContribution) => {
+  try { if (typeof window !== 'undefined') window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable; server idempotency still applies in this page. */ }
+};
+const clearPendingContribution = (key: string) => {
+  try { if (typeof window !== 'undefined') window.localStorage.removeItem(key); } catch { /* Best effort cleanup. */ }
+};
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const dateLabel = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
 const today = () => {
@@ -131,9 +148,9 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       releaseRetryStableRequestKey('third-party-contribution-record', identity);
       setRetryUncertain(false);
       setActiveKey(null);
-      setNotice(`Contribuição de ${money(numericAmount)} registrada como entrada de caixa, não como renda.`);
+      setNotice(`Contribuição de ${money(submittedAmount)} registrada como entrada de caixa, não como renda.`);
       const refreshed = await load();
-      if (!refreshed) setNotice(`Contribuição de ${money(numericAmount)} registrada, mas a tela não atualizou. Use “Tentar novamente” para conferir os valores.`);
+      if (!refreshed) setNotice(`Contribuição de ${money(submittedAmount)} registrada, mas a tela não atualizou. Use “Tentar novamente” para conferir os valores.`);
     } catch (error) {
       console.error('Casa Finance: falha ao registrar contribuição de terceiro', error);
       const message = error instanceof Error ? error.message : '';
