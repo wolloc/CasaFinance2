@@ -45,6 +45,6 @@ test('resposta ambígua mantém a mesma chave e bloqueia alterações no payload
   assert.match(contributionUi, /const identity = \[household\.id, row\.commitment_key, row\.counterparty_id\]/);
   assert.match(contributionUi, /if \(uncertain\)[\s\S]*setRetryUncertain\(true\)/);
   assert.match(contributionUi, /disabled=\{saving \|\| retryUncertain\}/);
-  assert.match(contributionUi, /Tentar confirmar recebimento/);
+  assert.match(contributionUi, /Tentar confirmar recebimento/);\n  assert.match(contributionUi, /window\.localStorage\.setItem\(key, JSON\.stringify\(value\)\)/);\n  assert.match(contributionUi, /window\.localStorage\.getItem\(key\)/);\n  assert.match(contributionUi, /existingPending\?\.requestKey/);\n  assert.match(contributionUi, /!retryUncertain && numericAmount > row\.expected_contribution_amount/);
   assert.match(contributionUi, /releaseRetryStableRequestKey\('third-party-contribution-record', identity\)/);
 });
