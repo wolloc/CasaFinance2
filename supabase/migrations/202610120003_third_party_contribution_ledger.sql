@@ -55,6 +55,13 @@ begin
      or length(trim(coalesce(p_request_key,'')))=0
   then raise exception 'invalid third-party contribution command' using errcode='22023'; end if;
 
+  -- A contribution records cash already received, never a scheduled/future receipt.
+  -- Interpret the date in the product's Brazilian household context, not UTC.
+  if (p_occurred_at at time zone 'America/Sao_Paulo')::date >
+     (now() at time zone 'America/Sao_Paulo')::date then
+    raise exception 'third-party contribution date cannot be in the future' using errcode='22023';
+  end if;
+
   -- Serialize retries and different receipts against the same commitment.
   perform pg_advisory_xact_lock(hashtextextended(
     p_household_id::text||':third-party-contribution-request:'||trim(p_request_key),0
