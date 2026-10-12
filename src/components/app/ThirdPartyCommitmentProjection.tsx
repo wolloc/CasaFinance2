@@ -87,13 +87,15 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
   }, [rows]);
 
   const startContribution = (row: ThirdPartyCommitmentPosition) => {
+    const storageKey = pendingStorageKey(household?.id ?? '', row.commitment_key, row.counterparty_id);
+    const pending = readPendingContribution(storageKey);
     setActiveKey(row.commitment_key);
-    setAmount(row.expected_contribution_amount.toFixed(2));
-    setAccountId(accounts[0]?.id ?? '');
-    setOccurredAt(today());
-    setNotes('');
-    setFormError(null);
-    setRetryUncertain(false);
+    setAmount(pending?.amount ?? row.expected_contribution_amount.toFixed(2));
+    setAccountId(pending?.accountId ?? accounts[0]?.id ?? '');
+    setOccurredAt(pending?.occurredAt ?? today());
+    setNotes(pending?.notes ?? '');
+    setFormError(pending ? 'Existe um recebimento cuja confirmação ficou pendente. Os dados originais serão mantidos até confirmar o resultado.' : null);
+    setRetryUncertain(Boolean(pending));
     setNotice(null);
   };
 
@@ -107,29 +109,43 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
 
   const saveContribution = async (row: ThirdPartyCommitmentPosition) => {
     if (!supabase || !household?.id || saving) return;
-    const normalized = amount.trim().replace(',', '.');
+    const storageKey = pendingStorageKey(household.id, row.commitment_key, row.counterparty_id);
+    const existingPending = readPendingContribution(storageKey);
+    const normalized = (existingPending?.amount ?? amount).trim().replace(',', '.');
     const numericAmount = Number(normalized);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setFormError('Informe um valor maior que zero.');
       return;
     }
-    if (!retryUncertain && numericAmount > row.expected_contribution_amount + 0.000001) {
+    if (!existingPending && numericAmount > row.expected_contribution_amount + 0.000001) {
       setFormError('O valor não pode superar a contribuição ainda prevista.');
       return;
     }
-    if (!accountId) {
+    const submittedAccountId = existingPending?.accountId ?? accountId;
+    const submittedDate = existingPending?.occurredAt ?? occurredAt;
+    const submittedNotes = existingPending?.notes ?? notes.trim();
+    if (!submittedAccountId) {
       setFormError('Selecione a conta em que o dinheiro entrou.');
       return;
     }
-    if (!occurredAt) {
+    if (!submittedDate) {
       setFormError('Informe a data em que o dinheiro foi recebido.');
       return;
     }
 
-    // Keep one key per open commitment form, not per editable payload. If the
-    // response is ambiguous, the form is locked and retry replays the exact same payload.
     const identity = [household.id, row.commitment_key, row.counterparty_id];
-    const requestKey = getRetryStableRequestKey('third-party-contribution-record', identity);
+    const requestKey = existingPending?.requestKey ?? getRetryStableRequestKey('third-party-contribution-record', identity);
+    const intent: PendingContribution = existingPending ?? {
+      requestKey,
+      commitmentKey: row.commitment_key,
+      counterpartyId: row.counterparty_id,
+      amount: normalized,
+      accountId: submittedAccountId,
+      occurredAt: submittedDate,
+      notes: submittedNotes,
+    };
+    writePendingContribution(storageKey, intent);
+    const submittedAmount = Number(intent.amount);
     setSaving(true);
     setFormError(null);
     setNotice(null);
@@ -138,14 +154,15 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
         p_household_id: household.id,
         p_commitment_key: row.commitment_key,
         p_counterparty_id: row.counterparty_id,
-        p_destination_account_id: accountId,
-        p_amount: numericAmount,
-        p_occurred_at: new Date(`${occurredAt}T12:00:00.000Z`).toISOString(),
-        p_request_key: requestKey,
-        p_notes: notes.trim() || null,
+        p_destination_account_id: intent.accountId,
+        p_amount: submittedAmount,
+        p_occurred_at: new Date(`${intent.occurredAt}T12:00:00.000Z`).toISOString(),
+        p_request_key: intent.requestKey,
+        p_notes: intent.notes || null,
       });
       if (result.error) throw result.error;
       releaseRetryStableRequestKey('third-party-contribution-record', identity);
+      clearPendingContribution(storageKey);
       setRetryUncertain(false);
       setActiveKey(null);
       setNotice(`Contribuição de ${money(submittedAmount)} registrada como entrada de caixa, não como renda.`);
@@ -156,11 +173,12 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       const message = error instanceof Error ? error.message : '';
       const uncertain = /network|failed to fetch|fetch failed|connection (?:closed|reset)|econnreset|statement timeout|canceling statement due to statement timeout/i.test(message);
       if (uncertain) {
-        // Do not release the key or allow edits: retry must use the same key and payload.
         setRetryUncertain(true);
         setFormError('Não foi possível confirmar se o recebimento foi salvo. Os campos foram bloqueados para evitar duplicidade. Tente confirmar novamente com os mesmos dados.');
       } else {
         releaseRetryStableRequestKey('third-party-contribution-record', identity);
+        clearPendingContribution(storageKey);
+        setRetryUncertain(false);
         setFormError(friendlyError(error));
       }
     } finally {
