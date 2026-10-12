@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, LoaderCircle, Plus, Check, X } from 'lucide-react';
+import { CalendarClock, LoaderCircle, Plus, Check, X, UsersRound } from 'lucide-react';
 import { useSupabaseAuth } from '../../context/SupabaseAuthContext.js';
 import { supabase } from '../../lib/supabase.js';
 import { getRetryStableRequestKey, releaseRetryStableRequestKey } from '../../finance/retryIdempotency.js';
@@ -143,7 +143,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
     {notice && <p role="status" className="text-xs text-emerald-300">{notice}</p>}
     {loading ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-300" /> :
       failed ? <div role="status" className="flex items-center justify-between gap-3 text-sm text-amber-200"><span>Não foi possível carregar os valores com terceiros agora.</span><button type="button" onClick={() => void load()} className="min-h-10 rounded-lg border border-slate-700 px-3 text-sm font-semibold text-slate-200">Tentar novamente</button></div> :
-      grouped.length === 0 ? <p className="text-xs text-slate-500">Nenhuma contribuição prevista para este período.</p> :
+      grouped.length === 0 ? <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4"><div className="flex items-start gap-3"><UsersRound className="mt-0.5 h-5 w-5 text-slate-400" /><div><p className="text-sm font-semibold text-slate-200">Nenhuma contribuição prevista</p><p className="mt-1 text-sm text-slate-400">Quando houver valores atribuídos a outras pessoas, eles aparecerão aqui.</p></div></div></div> :
       <div className="space-y-2">
         {grouped.map(group => <details key={group.id} className="rounded-lg border border-slate-800/80 px-3 py-2" open={group.items.some(item => item.commitment_key === activeKey)}>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
