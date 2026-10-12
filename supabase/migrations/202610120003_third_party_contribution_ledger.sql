@@ -161,7 +161,7 @@ select
   r.responsibility_amount::numeric(19,2) as responsibility_amount,
   r.realized_responsibility_amount::numeric(19,2) as funded_responsibility_amount,
   coalesce(x.received_contribution_amount,0)::numeric(19,2) as received_contribution_amount,
-  greatest(r.responsibility_amount-coalesce(x.received_contribution_amount,0),0)::numeric(19,2) as expected_contribution_amount,
+  greatest(r.remaining_responsibility_amount-coalesce(x.received_contribution_amount,0),0)::numeric(19,2) as expected_contribution_amount,
   c.description,
   c.due_date,
   c.economic_date
@@ -175,6 +175,7 @@ left join contributions x
  and x.counterparty_id=r.responsible_party_id
 where r.responsible_party_id is not null
   and r.responsibility_amount>0
+  and r.remaining_responsibility_amount>0
   and r.commitment_state not in ('cancelled','reversed');
 
 comment on view public.financial_third_party_commitment_positions is
