@@ -33,7 +33,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       setRows([]);
       setAccounts([]);
       setLoading(false);
-      return;
+      return false;
     }
     setLoading(true);
     setFailed(false);
@@ -45,9 +45,11 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       if (accountResult.error) throw accountResult.error;
       setRows(positions);
       setAccounts((accountResult.data ?? []) as AccountOption[]);
+      return true;
     } catch (error) {
       console.error('Casa Finance: falha ao carregar contribuições de terceiros', error);
       setFailed(true);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -124,8 +126,9 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       if (result.error) throw result.error;
       releaseRetryStableRequestKey('third-party-contribution-record', identity);
       setActiveKey(null);
-      setNotice(`Contribuição de ${money(numericAmount)} registrada. Ela foi registrada como entrada de caixa, não como renda.`);
-      await load();
+      setNotice(`Contribuição de ${money(numericAmount)} registrada como entrada de caixa, não como renda.`);
+      const refreshed = await load();
+      if (!refreshed) setNotice(`Contribuição de ${money(numericAmount)} registrada, mas a tela não atualizou. Use “Tentar novamente” para conferir os valores.`);
     } catch (error) {
       console.error('Casa Finance: falha ao registrar contribuição de terceiro', error);
       setFormError(friendlyError(error));
