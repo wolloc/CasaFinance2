@@ -202,6 +202,7 @@ jobs:
             supabase/tests/pr_t_default_household_categories.test.sql
             supabase/tests/pr_u_member_position_transfer.test.sql
             supabase/tests/pr_v_invoice_payment_timeout.test.sql
+            supabase/tests/third_party_receivable_funding.test.sql
           )
 
           for test_file in "${tests[@]}"; do
