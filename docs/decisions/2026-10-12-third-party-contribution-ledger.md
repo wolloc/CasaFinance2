@@ -17,8 +17,9 @@ Uma contribuição recebida de terceiro é dinheiro real entrando em uma conta d
 - Esta PR ainda não cria recebível quando a Casa paga uma fatura.
 - Esta PR ainda não implementa baixa do recebível, renegociação ou perdão.
 - A projeção atual continua sendo apenas projeção; não deve ser apresentada como saldo disponível.
-- A UI para registrar uma contribuição e a conciliação com o funding real da fatura permanecem pendentes.
+- A UI para registrar uma contribuição está integrada ao bloco Valores com terceiros, com validações e retorno de erro amigável.
+- A conciliação com o funding real da fatura permanece pendente; não interpretar `funded_responsibility_amount` como prova suficiente de funding efetivo.
 - Não aplicar a migration no Staging até revisão e CI aprovados.
 
 ## Próxima etapa
-Integrar o comando ao fluxo de Valores com terceiros e conciliar, de forma atômica e idempotente, contribuições recebidas com o funding por fatura/parcela. O recebível deve representar apenas o valor efetivamente financiado pela Casa, líquido de contribuições, recebimentos posteriores e perdões.
+Conciliar, de forma atômica e idempotente, contribuições recebidas com o funding efetivo por fatura/parcela. O recebível deve representar apenas o valor efetivamente financiado pela Casa, líquido de contribuições, recebimentos posteriores e perdões.
