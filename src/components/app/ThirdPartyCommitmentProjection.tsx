@@ -25,6 +25,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
   const [occurredAt, setOccurredAt] = useState(today());
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [retryUncertain, setRetryUncertain] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -75,6 +76,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
     setOccurredAt(today());
     setNotes('');
     setFormError(null);
+    setRetryUncertain(false);
     setNotice(null);
   };
 
@@ -107,7 +109,9 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       return;
     }
 
-    const identity = [household.id, row.commitment_key, row.counterparty_id, accountId, normalized, occurredAt, notes.trim()];
+    // Keep one key per open commitment form, not per editable payload. If the
+    // response is ambiguous, the form is locked and retry replays the exact same payload.
+    const identity = [household.id, row.commitment_key, row.counterparty_id];
     const requestKey = getRetryStableRequestKey('third-party-contribution-record', identity);
     setSaving(true);
     setFormError(null);
@@ -125,13 +129,23 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
       });
       if (result.error) throw result.error;
       releaseRetryStableRequestKey('third-party-contribution-record', identity);
+      setRetryUncertain(false);
       setActiveKey(null);
       setNotice(`Contribuição de ${money(numericAmount)} registrada como entrada de caixa, não como renda.`);
       const refreshed = await load();
       if (!refreshed) setNotice(`Contribuição de ${money(numericAmount)} registrada, mas a tela não atualizou. Use “Tentar novamente” para conferir os valores.`);
     } catch (error) {
       console.error('Casa Finance: falha ao registrar contribuição de terceiro', error);
-      setFormError(friendlyError(error));
+      const message = error instanceof Error ? error.message : '';
+      const uncertain = /network|failed to fetch|fetch failed|connection (?:closed|reset)|econnreset|statement timeout|canceling statement due to statement timeout/i.test(message);
+      if (uncertain) {
+        // Do not release the key or allow edits: retry must use the same key and payload.
+        setRetryUncertain(true);
+        setFormError('Não foi possível confirmar se o recebimento foi salvo. Os campos foram bloqueados para evitar duplicidade. Tente confirmar novamente com os mesmos dados.');
+      } else {
+        releaseRetryStableRequestKey('third-party-contribution-record', identity);
+        setFormError(friendlyError(error));
+      }
     } finally {
       setSaving(false);
     }
@@ -168,24 +182,24 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
               </div>
               {activeKey === item.commitment_key ? <div className="space-y-2 rounded-lg bg-slate-900/80 p-3">
                 <label className="block text-[11px] text-slate-300">Valor recebido
-                  <input aria-label={`Valor recebido de ${group.name}`} type="number" min="0.01" max={item.expected_contribution_amount} step="0.01" value={amount} disabled={saving} onChange={event => setAmount(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label={`Valor recebido de ${group.name}`} type="number" min="0.01" max={item.expected_contribution_amount} step="0.01" value={amount} disabled={saving || retryUncertain} onChange={event => setAmount(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 <label className="block text-[11px] text-slate-300">Conta em que entrou
-                  <select aria-label="Conta de destino" value={accountId} disabled={saving} onChange={event => setAccountId(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white">
+                  <select aria-label="Conta de destino" value={accountId} disabled={saving || retryUncertain} onChange={event => setAccountId(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white">
                     <option value="">Selecione a conta</option>
                     {accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
                   </select>
                 </label>
                 <label className="block text-[11px] text-slate-300">Data do recebimento
-                  <input aria-label="Data do recebimento" type="date" value={occurredAt} disabled={saving} onChange={event => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label="Data do recebimento" type="date" value={occurredAt} disabled={saving || retryUncertain} onChange={event => setOccurredAt(event.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 <label className="block text-[11px] text-slate-300">Observação (opcional)
-                  <input aria-label="Observação da contribuição" value={notes} disabled={saving} onChange={event => setNotes(event.target.value)} maxLength={500} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
+                  <input aria-label="Observação da contribuição" value={notes} disabled={saving || retryUncertain} onChange={event => setNotes(event.target.value)} maxLength={500} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-white" />
                 </label>
                 {formError && <p role="alert" className="text-xs text-rose-300">{formError}</p>}
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => { setActiveKey(null); setFormError(null); }} disabled={saving} className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-300 disabled:opacity-50"><X className="h-3 w-3" /> Cancelar</button>
-                  <button type="button" onClick={() => void saveContribution(item)} disabled={saving || accounts.length === 0} className="inline-flex items-center gap-1 rounded-md bg-cyan-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Registrar recebimento</button>
+                  <button type="button" onClick={() => { setActiveKey(null); setFormError(null); }} disabled={saving || retryUncertain} className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-300 disabled:opacity-50"><X className="h-3 w-3" /> Cancelar</button>
+                  <button type="button" onClick={() => void saveContribution(item)} disabled={saving || accounts.length === 0} className="inline-flex items-center gap-1 rounded-md bg-cyan-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} {retryUncertain ? "Tentar confirmar recebimento" : "Registrar recebimento"}</button>
                 </div>
               </div> : <button type="button" onClick={() => startContribution(item)} className="inline-flex items-center gap-1 rounded-md border border-cyan-900 px-2 py-1.5 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-950/50"><Plus className="h-3 w-3" /> Registrar contribuição</button>}
             </div>)}
