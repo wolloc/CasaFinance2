@@ -55,8 +55,12 @@ begin
      or length(trim(coalesce(p_request_key,'')))=0
   then raise exception 'invalid third-party contribution command' using errcode='22023'; end if;
 
+  -- Serialize retries and different receipts against the same commitment.
   perform pg_advisory_xact_lock(hashtextextended(
-    p_household_id::text||':third-party-contribution:'||trim(p_request_key),0
+    p_household_id::text||':third-party-contribution-request:'||trim(p_request_key),0
+  ));
+  perform pg_advisory_xact_lock(hashtextextended(
+    p_household_id::text||':third-party-contribution-commitment:'||p_commitment_key||':'||p_counterparty_id::text,0
   ));
 
   select * into existing from public.third_party_contribution_events
@@ -72,14 +76,14 @@ begin
     return existing.id;
   end if;
 
-  perform 1 from public.financial_commitment_positions c
+  select c.source_transaction_id into result
+  from public.financial_commitment_positions c
   join public.financial_member_commitment_responsibility_positions r
     on r.household_id=c.household_id and r.commitment_key=c.commitment_key
   where c.household_id=p_household_id and c.commitment_key=p_commitment_key
     and r.responsible_party_id=p_counterparty_id
     and c.commitment_state not in ('cancelled','reversed')
-    and r.responsibility_amount>0
-  for update of c;
+    and r.responsibility_amount>0;
 
   if not found then
     raise exception 'active third-party commitment required' using errcode='23514';
