@@ -140,7 +140,7 @@ export function ThirdPartyCommitmentProjection({ financialMonth }: { financialMo
   return <section className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
     <div className="flex items-center gap-2">
       <CalendarClock className="h-4 w-4 text-cyan-300" />
-      <h3 className="text-xs font-bold text-slate-300">Valores com terceiros</h3>
+      <h3 className="text-xs font-bold text-slate-300">Contribuições previstas</h3>
       <span className="ml-auto text-xs text-slate-500">Contribuições previstas · Projeção · não é saldo disponível</span>
     </div>
     {notice && <p role="status" className="text-xs text-emerald-300">{notice}</p>}
