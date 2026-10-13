@@ -80,8 +80,8 @@ select is(
 );
 
 select is(
- (select count(*) from public.economic_allocations ea
-  join public.transactions t on t.id=ea.transaction_id
+ (select count(*) from public.transaction_splits ts
+  join public.transactions t on t.id=ts.transaction_id
   where t.household_id='c4000000-0000-4000-8000-000000000010'
     and t.description like 'PR-V mixed responsibility purchase %'),
  80::bigint,
