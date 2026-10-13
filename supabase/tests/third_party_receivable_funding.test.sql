@@ -1,5 +1,6 @@
 begin;
 
+-- Core invariant: an allocation is only a forecast; a receivable requires real funding evidence.
 create extension if not exists pgtap with schema extensions;
 select plan(4);
 
