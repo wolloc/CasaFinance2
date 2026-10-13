@@ -1,9 +1,8 @@
+# CI policy: keep full validation enabled for workflow-policy changes.
 name: CI
 
 on:
   pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:
@@ -54,6 +53,13 @@ jobs:
 
             while IFS= read -r file; do
               case "${file}" in
+                .github/workflows/*)
+                  # CI policy changes must validate the full pipeline, not only secret scanning.
+                  app=true
+                  browser=true
+                  database=true
+                  dependencies=true
+                  ;;
                 package.json|package-lock.json)
                   app=true
                   dependencies=true
@@ -130,7 +136,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Production build
-        if: steps.changes.outputs.app == 'true'
+        if: always() && steps.changes.outputs.app == 'true'
         env:
           VITE_SUPABASE_URL: https://release-contract.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_release_contract
@@ -154,7 +160,9 @@ jobs:
   database-security:
     name: Supabase RLS and database contracts
     needs: validate
-    if: needs.validate.outputs.database == 'true'
+    # Run database gates independently so an unrelated audit/build failure does not hide migration failures.
+    # The overall workflow remains failed if validate fails; this does not bypass release gates.
+    if: always() && needs.validate.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
