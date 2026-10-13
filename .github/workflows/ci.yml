@@ -1,3 +1,4 @@
+# CI policy: keep full validation enabled for workflow-policy changes.
 name: CI
 
 on:
