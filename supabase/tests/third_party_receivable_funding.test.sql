@@ -1,6 +1,8 @@
 begin;
 
 -- Core invariant: an allocation is only a forecast; a receivable requires real funding evidence.
+-- Release validation must also cover pre/post-funding receipts, partial settlement,
+-- idempotency, over-allocation, write-off, and installment isolation before Staging.
 create extension if not exists pgtap with schema extensions;
 select plan(4);
 
