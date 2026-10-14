@@ -114,8 +114,14 @@ begin
  update public.member_settlement_events e set state='cancelled',updated_at=now()
  where e.state='projected' and e.kind='responsibility_funding'
  and e.source_transaction_id in (
-   select distinct f.financed_transaction_id from public.funding_events f
-   where f.household_id=v_household_id and f.funding_transaction_id=p_payment_transaction_id
+   select distinct t.id
+   from public.funding_events f
+   join public.transactions t on t.id=f.financed_transaction_id
+   where f.household_id=v_household_id
+     and f.funding_transaction_id=p_payment_transaction_id
+     and t.household_id=v_household_id
+     and t.deleted_at is null
+     and t.type='expense'
  );
 
  with affected as materialized (
