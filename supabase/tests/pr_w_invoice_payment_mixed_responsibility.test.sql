@@ -2,7 +2,7 @@ begin;
 
 set local time zone 'America/Sao_Paulo';
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(8);
 
 insert into auth.users(
  id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -127,6 +127,16 @@ select is(
     and kind='invoice_payment'),
  4000.00::numeric,
  'M07 retry leaves exactly one cash outflow for the paid amount'
+);
+
+select is(
+ (select coalesce(sum(amount),0) from public.funding_events
+  where household_id='c4000000-0000-4000-8000-000000000010'
+    and invoice_id=(select invoice_id from public.transactions
+      where household_id='c4000000-0000-4000-8000-000000000010'
+        and description='PR-V mixed responsibility purchase 1')),
+ 4000.00::numeric,
+ 'M08 retry leaves funding reconciled to the paid invoice amount'
 );
 
 reset role;
