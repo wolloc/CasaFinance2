@@ -18,7 +18,7 @@ test('Home usa uma única hierarquia para títulos de seção',()=>{
   assert.match(priority,/\{children\}/);
   assert.match(upcoming,/embedded/);
   assert.match(upcoming,/Próximos 7 dias/);
-  assert.ok(settlements.includes('FinancialSectionHeading title="Valores com pessoas"'));
+  assert.ok(settlements.includes('FinancialSectionHeading title="Valores com outras pessoas"'));
 });
 
 test('escala de seção é definida em um único lugar',()=>{
