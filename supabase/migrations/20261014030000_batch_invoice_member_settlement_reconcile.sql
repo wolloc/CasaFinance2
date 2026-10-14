@@ -224,6 +224,19 @@ begin
     raise exception 'funder must be active in household' using errcode='23514';
   end if;
 
+  -- Validate the source account before creating any payment or cash-movement
+  -- rows. SECURITY DEFINER must not allow a cross-household or deactivated
+  -- account to be recorded as the source of a real invoice payment.
+  if not exists(
+    select 1
+      from public.accounts
+     where id=p_source_account_id
+       and household_id=p_household_id
+       and deactivated_at is null
+  ) then
+    raise exception 'source account must be active in household' using errcode='23514';
+  end if;
+
   insert into public.transactions(
     household_id,created_by_member_id,type,status,description,amount,
     transaction_date,competence_date,settled_at
