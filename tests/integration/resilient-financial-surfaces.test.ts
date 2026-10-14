@@ -50,7 +50,7 @@ test('Home consolida a posição mensal e mantém classes de recursos distintas'
  assert.match(map,/Onde está nosso dinheiro/);
  assert.match(map,/>Contas</);
  assert.match(map,/>Cartões</);
- assert.match(map,/Valores com terceiros/);
+ assert.match(map,/Valores com outras pessoas/);
  assert.doesNotMatch(map,/Valores a receber, a pagar e compromissos assumidos por outras pessoas/);
  assert.doesNotMatch(map,/Responsabilidade por compromissos/);
  assert.doesNotMatch(map,/Parte dos gastos assumida por terceiros/);
