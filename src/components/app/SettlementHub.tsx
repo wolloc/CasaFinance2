@@ -103,7 +103,7 @@ export function SettlementHub({onResolve,perspective='household',embedded=false,
     if(!includeThirdParties)return [];
     return [...groups.entries()].map(([counterpartyId,rows])=>{
       const net=rows.reduce((sum,row)=>sum+(row.kind==='receivable'?Number(row.outstanding_amount):-Number(row.outstanding_amount)),0);
-      const monthlyRows=financialMonth?rows.filter(row=>row.due_date?.slice(0,7)===financialMonth.slice(0,7)):rows;
+      const monthlyRows=financialMonth?rows.filter(row=>row.obligation_date.slice(0,7)===financialMonth.slice(0,7)):rows;
       const monthlyAmount=monthlyRows.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
       const totalOpen=rows.reduce((sum,row)=>sum+Number(row.outstanding_amount),0);
       const dueDates=monthlyRows.map(row=>row.due_date).filter((value):value is string=>Boolean(value)).sort();
