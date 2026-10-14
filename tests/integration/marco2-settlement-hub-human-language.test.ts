@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../../src/components/app/SettlementHub.tsx', import.meta.url), 'utf8');
 
-test('Valores com pessoas resume relações antes de expor detalhes', () => {
-  assert.match(source, /Valores com pessoas/);
+test('Valores com outras pessoas resume relações antes de expor detalhes', () => {
+  assert.match(source, /Valores com outras pessoas/);
   assert.match(source, /memberPairs/);
   assert.match(source, /thirdPartyGroups/);
   assert.match(source, /Wallace|memberName\(pair\.leftId\)/);
@@ -32,7 +32,7 @@ test('third parties show the person first and keep obligations inside the relati
 
 test('settlement hub empty state is compact and retry remains explicit', () => {
   assert.doesNotMatch(source, /Tudo equilibrado por enquanto/);
-  assert.match(source, /Não foi possível conferir os valores com pessoas agora/);
+  assert.match(source, /Não foi possível conferir os valores com outras pessoas agora/);
   assert.match(source, /Tentar novamente/);
 });
 

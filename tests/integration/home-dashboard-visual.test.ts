@@ -26,7 +26,7 @@ test('Home mantém o resumo mensal fora de listas redundantes',()=>{
 });
 
 test('posição entre moradores é informativa e abre histórico',()=>{
-  assert.match(settlements,/Valores com pessoas/);
+  assert.match(settlements,/Valores com outras pessoas/);
   assert.match(settlements,/Ver histórico e compromissos/);
   assert.doesNotMatch(settlements,/Acertar agora/);
 });
@@ -46,7 +46,7 @@ test('Mapa financeiro isola falhas entre blocos independentes',()=>{
   // Contrato de resiliência: uma falha local não deve derrubar os demais blocos.
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Contas"/);
   assert.match(financialMap,/HomeFinancialMapSectionBoundary label="Cartões"/);
-  assert.match(financialMap,/Valores com terceiros/);
+  assert.match(financialMap,/Valores com outras pessoas/);
   assert.doesNotMatch(financialMap,/Responsabilidade por compromissos/);
   assert.match(financialMap,/const safeResources=Array\.isArray\(resources\)\?resources:\[\]/);
   assert.match(financialMap,/const safeCards=Array\.isArray\(cards\)\?cards:\[\]/);
