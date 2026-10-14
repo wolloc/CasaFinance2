@@ -205,8 +205,8 @@ select is(
     and invoice_id=(select invoice_id from public.transactions
       where household_id='c4100000-0000-4000-8000-000000000010'
         and description='PR-X direct purchase 1')),
- 49::bigint,
- 'X13 exactly 49 funding rows cover 36 direct purchases and 13 installments'
+ 50::bigint,
+ 'X13 50 funding rows cover 49 invoice items because one item is funded by both partial payments'
 );
 
 select is(
