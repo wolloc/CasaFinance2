@@ -10,7 +10,7 @@ const settlements=fs.readFileSync(path.join(root,'src/components/app/SettlementH
 
 test('Home mostra terceiros envolvidos e valores atribuídos',()=>{
   assert.doesNotMatch(home,/Parte dos gastos assumida por terceiros/);
-  assert.match(home,/Valores com terceiros/);
+  assert.match(home,/Valores com outras pessoas/);
   assert.match(home,/SettlementHub perspective=\{perspective\} financialMonth=\{financialMonth\} onResolve=\{onSettlementAction\} embedded includeMembers=\{false\} includeThirdParties/);
   assert.match(settlements,/listOpenThirdPartyObligations/);
   assert.match(settlements,/financialMonth\?rows\.filter\(row=>row\.due_date\?\.slice\(0,7\)===financialMonth\.slice\(0,7\)\):rows/);
