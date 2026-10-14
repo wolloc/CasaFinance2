@@ -143,27 +143,34 @@ revoke all on function public.correct_expense_roles(uuid,uuid,uuid,jsonb,text,te
 grant execute on function public.correct_expense_roles(uuid,uuid,uuid,jsonb,text,text) to authenticated;
 
 -- Backfill only missing open/partially-settled receivables represented by the
--- current economic allocations. No existing obligation or settlement is changed.
-do $$
-declare row record;
-begin
-  for row in
-    select ea.household_id,ea.transaction_id,ea.responsible_party_id as party_id,
-           ea.amount,t.transaction_date,t.due_date,t.description,t.invoice_id
-    from public.economic_allocations ea
-    join public.transactions t on t.id=ea.transaction_id
-    where ea.responsible_party_id is not null and t.type='expense' and t.deleted_at is null
-      and not exists (
-        select 1 from public.financial_obligations fo
-        where fo.household_id=ea.household_id and fo.source_transaction_id=ea.transaction_id
-          and fo.counterparty_id=ea.responsible_party_id and fo.kind='receivable'
-          and fo.state not in ('cancelled','written_off')
-      )
-  loop
-    perform public.create_financial_obligation(
-      row.household_id,'receivable','shared_expense',row.party_id,row.amount,
-      row.transaction_date,row.due_date,'Valor de terceiro: '||row.description,
-      row.transaction_id,row.invoice_id,null,null
-    );
-  end loop;
-end $$;
+-- current economic allocations. The migration runs without an authenticated
+-- session, so this backfill inserts the canonical row directly.
+
+insert into public.financial_obligations(
+  household_id,created_by_member_id,kind,origin_kind,counterparty_id,
+  source_transaction_id,invoice_id,original_amount,obligation_date,due_date,
+  description,notes
+)
+select
+  ea.household_id,
+  coalesce(t.buyer_member_id,(
+    select hm.id from public.household_members hm
+    where hm.household_id=ea.household_id and hm.deactivated_at is null
+    order by hm.created_at limit 1
+  )),
+  'receivable','shared_expense',ea.responsible_party_id,
+  ea.transaction_id,t.invoice_id,ea.amount,t.transaction_date,t.due_date,
+  'Valor de terceiro: '||t.description,null
+from public.economic_allocations ea
+join public.transactions t on t.id=ea.transaction_id
+where ea.responsible_party_id is not null
+  and t.type='expense'
+  and t.deleted_at is null
+  and not exists (
+    select 1 from public.financial_obligations fo
+    where fo.household_id=ea.household_id
+      and fo.source_transaction_id=ea.transaction_id
+      and fo.counterparty_id=ea.responsible_party_id
+      and fo.kind='receivable'
+      and fo.state not in ('cancelled','written_off')
+  );
