@@ -2,7 +2,7 @@ begin;
 
 set local time zone 'America/Sao_Paulo';
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(13);
 
 insert into auth.users(
  id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -187,6 +187,43 @@ select is(
         and description='PR-X direct purchase 1')),
  4000.00::numeric,
  'X11 funding total remains equal to the amount paid'
+);
+
+
+select is(
+ (select count(*) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and t.description like 'PR-X direct purchase %'
+    and t.description not in (
+      'PR-X direct purchase 1','PR-X direct purchase 2','PR-X direct purchase 3',
+      'PR-X direct purchase 4','PR-X direct purchase 5','PR-X direct purchase 6',
+      'PR-X direct purchase 7','PR-X direct purchase 8','PR-X direct purchase 9',
+      'PR-X direct purchase 10'
+    )
+    and e.kind='responsibility_funding'
+    and e.state='realized'
+    and e.source_funding_event_id is not null),
+ 26::bigint,
+ 'X12 all 26 owner-responsible purchases receive realized funding settlements'
+);
+
+select is(
+ (select coalesce(sum(e.amount),0) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and t.description like 'PR-X direct purchase %'
+    and t.description not in (
+      'PR-X direct purchase 1','PR-X direct purchase 2','PR-X direct purchase 3',
+      'PR-X direct purchase 4','PR-X direct purchase 5','PR-X direct purchase 6',
+      'PR-X direct purchase 7','PR-X direct purchase 8','PR-X direct purchase 9',
+      'PR-X direct purchase 10'
+    )
+    and e.kind='responsibility_funding'
+    and e.state='realized'
+    and e.source_funding_event_id is not null),
+ 975.00::numeric,
+ 'X13 realized settlements preserve the expected R$975 allocation'
 );
 
 reset role;
