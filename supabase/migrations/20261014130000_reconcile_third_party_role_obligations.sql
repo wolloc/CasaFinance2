@@ -156,7 +156,7 @@ select
   coalesce(t.buyer_member_id,(
     select hm.id from public.household_members hm
     where hm.household_id=ea.household_id and hm.deactivated_at is null
-    order by hm.created_at limit 1
+    order by hm.id limit 1
   )),
   'receivable','shared_expense',ea.responsible_party_id,
   ea.transaction_id,t.invoice_id,ea.amount,t.transaction_date,t.due_date,
