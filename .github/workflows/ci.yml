@@ -211,6 +211,7 @@ jobs:
             supabase/tests/pr_u_member_position_transfer.test.sql
             supabase/tests/pr_v_invoice_payment_timeout.test.sql
             supabase/tests/pr_w_invoice_payment_mixed_responsibility.test.sql
+            supabase/tests/pr_x_invoice_payment_mixed_installments.test.sql
           )
 
           for test_file in "${tests[@]}"; do
