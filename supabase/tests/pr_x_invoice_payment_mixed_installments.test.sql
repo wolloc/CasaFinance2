@@ -2,7 +2,7 @@ begin;
 
 set local time zone 'America/Sao_Paulo';
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 insert into auth.users(
  id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -224,6 +224,18 @@ select is(
     and e.source_funding_event_id is not null),
  975.00::numeric,
  'X13 realized settlements preserve the expected R$975 allocation'
+);
+
+
+select is(
+ (select count(*) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and (t.description like 'PR-X direct purchase %' or t.description like 'PR-X installment purchase %')
+    and e.kind='responsibility_funding'
+    and e.state='projected'),
+ 0::bigint,
+ 'X14 mixed invoice leaves no projected settlement where future responsibility and funding are balanced'
 );
 
 reset role;
