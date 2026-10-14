@@ -17,7 +17,7 @@ test('exclusão da posição inicial não exige invoice_id no lançamento de ori
 
 test('Casa apresenta responsabilidades e acertos no mapa de pessoas',()=>{
   assert.doesNotMatch(home,/Responsabilidade por compromissos/);
-  assert.match(home,/Valores com terceiros/);
+  assert.match(home,/Valores com outras pessoas/);
   assert.match(home,/includeThirdParties/);
   assert.match(settlements,/listOpenThirdPartyObligations/);
   assert.match(settlements,/Registrar recebimento/);
