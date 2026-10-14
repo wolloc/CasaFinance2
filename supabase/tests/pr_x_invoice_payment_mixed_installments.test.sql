@@ -130,7 +130,7 @@ select is(
 
 set local statement_timeout='8s';
 
-select lives_ok($
+select lives_ok($$
  select public.pay_card_invoice_idempotent(
   'c4100000-0000-4000-8000-000000000010',
   (select invoice_id from public.transactions
@@ -140,7 +140,7 @@ select lives_ok($
   'c4100000-0000-4000-8000-000000000021',
   2000.00,now(),'pr-x-mixed-installment-partial-1'
  )
-$,'X06 first partial payment completes within 8 seconds');
+$$,'X06 first partial payment completes within 8 seconds');
 
 select is(
  (select settled_amount from public.card_invoices
@@ -160,7 +160,7 @@ select is(
  'X08 invoice remains open after partial payment'
 );
 
-select lives_ok($
+select lives_ok($$
  select public.pay_card_invoice_idempotent(
   'c4100000-0000-4000-8000-000000000010',
   (select invoice_id from public.transactions
@@ -170,9 +170,9 @@ select lives_ok($
   'c4100000-0000-4000-8000-000000000021',
   2000.00,now(),'pr-x-mixed-installment-partial-2'
  )
-$,'X09 second partial payment completes within 8 seconds');
+$$,'X09 second partial payment completes within 8 seconds');
 
-select lives_ok($
+select lives_ok($$
  select public.pay_card_invoice_idempotent(
   'c4100000-0000-4000-8000-000000000010',
   (select invoice_id from public.transactions
@@ -182,7 +182,7 @@ select lives_ok($
   'c4100000-0000-4000-8000-000000000021',
   2000.00,now(),'pr-x-mixed-installment-partial-2'
  )
-$,'X10 retry of second partial payment succeeds');
+$$,'X10 retry of second partial payment succeeds');
 
 select is(
  (select count(*) from public.card_invoice_payments
