@@ -31,7 +31,7 @@ begin
     if split ? 'party_id' then
       party_id:=(split->>'party_id')::uuid;
       update public.financial_obligations o
-      set due_date=p_receivable_due_date,
+      set due_date=coalesce(p_receivable_due_date,o.due_date),
           updated_at=now()
       where o.household_id=p_household_id
         and o.source_transaction_id=tx
