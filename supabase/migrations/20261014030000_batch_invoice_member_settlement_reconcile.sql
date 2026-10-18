@@ -9,7 +9,7 @@
 
 create or replace function public.reconcile_member_settlements(p_transaction_id uuid)
 returns void language plpgsql security definer set search_path=public,pg_temp as $$
-declare tx public.transactions; c record; fe record; debtor uuid; creditor uuid; effect numeric; tx_total numeric;
+declare tx public.transactions; c record; fe record; debtor uuid; creditor uuid; effect numeric; tx_total numeric; funded_total numeric;
 begin
  select * into tx from public.transactions where id=p_transaction_id and deleted_at is null;
  if tx.id is null or tx.type<>'expense' then return; end if;
