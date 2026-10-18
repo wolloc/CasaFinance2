@@ -17,6 +17,7 @@ begin
   where source_transaction_id=tx.id and state='projected' and kind='responsibility_funding';
  if tx.economic_state in ('cancelled','reversed') then return; end if;
  tx_total:=public.financial_effective_total_amount(tx.economic_state,tx.estimated_amount,tx.confirmed_amount,tx.realized_amount,tx.amount);
+ if tx_total<=0 then return; end if;
 
  -- Keep the canonical realized-funding semantics: validate the actual funder and
  -- source account; split account funding only for exactly two active owners;
