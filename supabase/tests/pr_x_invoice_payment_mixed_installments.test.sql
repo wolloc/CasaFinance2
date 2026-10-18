@@ -2,7 +2,7 @@ begin;
 
 set local time zone 'America/Sao_Paulo';
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(18);
 
 insert into auth.users(
  id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -138,9 +138,27 @@ select lives_ok($$
      and description='PR-X direct purchase 1'),
   'c4100000-0000-4000-8000-000000000031',
   'c4100000-0000-4000-8000-000000000021',
-  4000.00,now(),'pr-x-mixed-installment-pay'
+  2000.00,now(),'pr-x-mixed-installment-partial-1'
  )
-$$,'X06 mixed direct + installment invoice payment completes within 8 seconds');
+$$,'X06 first partial payment completes within 8 seconds');
+
+select is(
+ (select settled_amount from public.card_invoices
+  where id=(select invoice_id from public.transactions
+    where household_id='c4100000-0000-4000-8000-000000000010'
+      and description='PR-X direct purchase 1')),
+ 2000.00::numeric,
+ 'X07 partial payment updates settled amount to R$2,000'
+);
+
+select is(
+ (select status from public.card_invoices
+  where id=(select invoice_id from public.transactions
+    where household_id='c4100000-0000-4000-8000-000000000010'
+      and description='PR-X direct purchase 1')),
+ 'open',
+ 'X08 invoice remains open after partial payment'
+);
 
 select lives_ok($$
  select public.pay_card_invoice_idempotent(
@@ -150,15 +168,27 @@ select lives_ok($$
      and description='PR-X direct purchase 1'),
   'c4100000-0000-4000-8000-000000000031',
   'c4100000-0000-4000-8000-000000000021',
-  4000.00,now(),'pr-x-mixed-installment-pay'
+  2000.00,now(),'pr-x-mixed-installment-partial-2'
  )
-$$,'X07 retry with same idempotency key succeeds');
+$$,'X09 second partial payment completes within 8 seconds');
+
+select lives_ok($$
+ select public.pay_card_invoice_idempotent(
+  'c4100000-0000-4000-8000-000000000010',
+  (select invoice_id from public.transactions
+   where household_id='c4100000-0000-4000-8000-000000000010'
+     and description='PR-X direct purchase 1'),
+  'c4100000-0000-4000-8000-000000000031',
+  'c4100000-0000-4000-8000-000000000021',
+  2000.00,now(),'pr-x-mixed-installment-partial-2'
+ )
+$$,'X10 retry of second partial payment succeeds');
 
 select is(
  (select count(*) from public.card_invoice_payments
   where household_id='c4100000-0000-4000-8000-000000000010'),
- 1::bigint,
- 'X08 retry leaves exactly one canonical invoice payment'
+ 2::bigint,
+ 'X11 two partial payments leave exactly two canonical invoice payments'
 );
 
 select is(
@@ -166,7 +196,7 @@ select is(
   where household_id='c4100000-0000-4000-8000-000000000010'
     and kind='invoice_payment'),
  4000.00::numeric,
- 'X09 retry leaves exactly one R$4,000 cash outflow'
+ 'X12 partial payments create a single total R$4,000 cash outflow'
 );
 
 select is(
@@ -175,8 +205,8 @@ select is(
     and invoice_id=(select invoice_id from public.transactions
       where household_id='c4100000-0000-4000-8000-000000000010'
         and description='PR-X direct purchase 1')),
- 49::bigint,
- 'X10 exactly 49 funding rows cover 36 direct purchases and 13 installments'
+ 50::bigint,
+ 'X13 50 funding rows cover 49 invoice items because one item is funded by both partial payments'
 );
 
 select is(
@@ -186,7 +216,74 @@ select is(
       where household_id='c4100000-0000-4000-8000-000000000010'
         and description='PR-X direct purchase 1')),
  4000.00::numeric,
- 'X11 funding total remains equal to the amount paid'
+ 'X14 funding total remains equal to the amount paid'
+);
+
+
+select is(
+ (select count(*) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and t.description like 'PR-X direct purchase %'
+    and t.description not in (
+      'PR-X direct purchase 1','PR-X direct purchase 2','PR-X direct purchase 3',
+      'PR-X direct purchase 4','PR-X direct purchase 5','PR-X direct purchase 6',
+      'PR-X direct purchase 7','PR-X direct purchase 8','PR-X direct purchase 9',
+      'PR-X direct purchase 10'
+    )
+    and e.kind='responsibility_funding'
+    and e.state='realized'
+    and e.source_funding_event_id is not null),
+ 26::bigint,
+ 'X15 all 26 owner-responsible purchases receive realized funding settlements'
+);
+
+select is(
+ (select count(distinct e.source_transaction_id) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and t.description like 'PR-X direct purchase %'
+    and t.description not in (
+      'PR-X direct purchase 1','PR-X direct purchase 2','PR-X direct purchase 3',
+      'PR-X direct purchase 4','PR-X direct purchase 5','PR-X direct purchase 6',
+      'PR-X direct purchase 7','PR-X direct purchase 8','PR-X direct purchase 9',
+      'PR-X direct purchase 10'
+    )
+    and e.kind='responsibility_funding'
+    and e.state='realized'
+    and e.source_funding_event_id is not null),
+  26::bigint,
+ 'X16 each owner-responsible purchase has a distinct realized settlement source'
+);
+
+select is(
+ (select coalesce(sum(e.amount),0) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and t.description like 'PR-X direct purchase %'
+    and t.description not in (
+      'PR-X direct purchase 1','PR-X direct purchase 2','PR-X direct purchase 3',
+      'PR-X direct purchase 4','PR-X direct purchase 5','PR-X direct purchase 6',
+      'PR-X direct purchase 7','PR-X direct purchase 8','PR-X direct purchase 9',
+      'PR-X direct purchase 10'
+    )
+    and e.kind='responsibility_funding'
+    and e.state='realized'
+    and e.source_funding_event_id is not null),
+ 975.00::numeric,
+ 'X17 realized settlements preserve the expected R$975 allocation'
+);
+
+
+select is(
+ (select count(*) from public.member_settlement_events e
+  join public.transactions t on t.id=e.source_transaction_id
+  where t.household_id='c4100000-0000-4000-8000-000000000010'
+    and (t.description like 'PR-X direct purchase %' or t.description like 'PR-X installment purchase %')
+    and e.kind='responsibility_funding'
+    and e.state='projected'),
+ 0::bigint,
+ 'X18 mixed invoice leaves no projected settlement where future responsibility and funding are balanced'
 );
 
 reset role;
