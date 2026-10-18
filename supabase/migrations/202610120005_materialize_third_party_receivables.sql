@@ -28,6 +28,7 @@ declare
   receivable_id uuid;
   link_id uuid;
   receivable_amount numeric(19,2);
+  prior_receivable_amount numeric(19,2);
   remaining numeric(19,2);
   contribution record;
   available_offset numeric(19,2);
@@ -66,7 +67,24 @@ begin
       commitment.commitment_key||':'||allocation.responsible_party_id::text,0
     ));
 
-    receivable_amount := round(new.amount * allocation.percentage / 100, 2);
+    -- Allocate cumulative cents, not a rounded share per funding event.
+    -- This makes the sum of tranches equal the rounded canonical funded share.
+    select coalesce(sum(x.funded_responsibility_amount),0)::numeric(19,2)
+      into prior_receivable_amount
+    from public.third_party_commitment_receivables x
+    where x.household_id=new.household_id
+      and x.commitment_key=commitment.commitment_key
+      and x.counterparty_id=allocation.responsible_party_id;
+
+    select coalesce(sum(f.amount),0)::numeric(19,2)
+      into receivable_amount
+    from public.funding_events f
+    where f.household_id=new.household_id
+      and f.financed_transaction_id=new.financed_transaction_id
+      and f.installment_id is not distinct from new.installment_id;
+
+    receivable_amount := round(receivable_amount * allocation.percentage / 100, 2)
+      - prior_receivable_amount;
     if receivable_amount <= 0 then continue; end if;
 
     -- Idempotent even if a funding-event retry reaches this trigger.
